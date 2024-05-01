@@ -1,6 +1,0 @@
-# Gitignore settings for ESPHome
-/.esphome/
-secrets.yaml
-
-# macOS files
-.DS_Store

@@ -47,3 +47,12 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# ignore ESPHome
+/.esphome/
+
+# don't upload secrets
+secrets.yaml
+
+# remove any wayward macOS files
+.DS_Store
