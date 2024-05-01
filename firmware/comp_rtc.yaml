@@ -1,0 +1,28 @@
+# SAMBA v2 FIRMWARE
+# configure RTC device on SAMBA
+# written by Thomas Parkinson, May 2024
+
+
+# Define RTC device
+# https://esphome.io/components/time/ds1307.html
+time:
+  - platform: ds1307
+    id: ds1307_time
+    address: 0x68
+    update_interval: never
+
+# also use SNTP server for time
+  - platform: sntp
+    id: sntp_time
+    timezone: "Australia/Sydney"
+    servers:
+     - 0.pool.ntp.org
+     - 1.pool.ntp.org
+     - 2.pool.ntp.org
+
+# synchronise RTC with SNTP time
+    on_time_sync:
+      then:
+        - ds1307.write_time:
+            id: ds1307_time
+        - logger.log: "Synchronized system clock"

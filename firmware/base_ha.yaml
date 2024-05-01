@@ -1,0 +1,18 @@
+# SAMBA v2 FIRMWARE
+# configure SAMBA to use Home Assistant
+# written by Thomas Parkinson, May 2024
+
+
+# Enable Home Assistant API
+# https://esphome.io/components/api.html
+api:
+
+# Enable OTA access
+# https://esphome.io/components/ota.html
+ota:
+
+# Use GitHub to import details into ESPHome Add-on
+# https://esphome.io/guides/creators.html
+# dashboard_import:
+#  package_import_url: github://IEQLab/samba/firmware/main.yaml@main
+#  import_full_config: true

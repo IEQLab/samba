@@ -1,0 +1,46 @@
+# SAMBA v2 FIRMWARE
+# configure ESP device for SAMBA
+# written by Thomas Parkinson, May 2024
+
+
+# Define ESP32 board
+# https://www.adafruit.com/product/5400
+esp32:
+  board: adafruit_feather_esp32_v2 #esp32dev
+
+# Set logging to errors only
+# https://esphome.io/components/logger.html
+logger:
+  logs:
+    component: ERROR
+
+# Configure UART
+# https://esphome.io/components/uart.html
+uart:
+  - id: uart_1
+    rx_pin: 7
+    tx_pin: 8
+    baud_rate: 9600
+
+# Define i2c pins
+# https://esphome.io/components/i2c.html
+i2c:
+  - id: bus_a
+    sda: 22
+    scl: 20
+    scan: true
+
+# Configure i2s
+# https://esphome.io/components/i2s_audio.html
+i2s:
+  bck_pin: 32
+  ws_pin: 25
+  din_pin: 33
+  sample_rate: 48000
+  bits_per_sample: 32
+  dma_buf_count: 8
+  dma_buf_len: 256
+  use_apll: true  # default: false
+  channel: right
+  bits_shift: 8   # default: 0
+

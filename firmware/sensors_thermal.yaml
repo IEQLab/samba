@@ -1,0 +1,71 @@
+# SAMBA v2 FIRMWARE
+# configure thermal sensors on SAMBA
+# written by Thomas Parkinson, May 2024
+
+
+# SHT Temp and RH sensor
+# https://esphome.io/components/sensor/sht4x.html
+sensor:
+  - platform: sht4x
+    address: 0x44
+    update_interval: 30s
+    temperature:
+      id: sht_temperature
+      name: "Temperature"
+      accuracy_decimals: 1
+      device_class: temperature
+      icon: "mdi:thermometer"
+      filters:
+        - median:
+            window_size: 10
+            send_every: 10
+            send_first_at: 10
+    humidity:
+      id: sht_humidity
+      name: "Relative Humidity"
+      accuracy_decimals: 0
+      device_class: humidity
+      icon: "mdi:water-percent"
+      filters:
+        - median:
+            window_size: 10
+            send_every: 10
+            send_first_at: 10
+
+# BME280
+# https://esphome.io/components/sensor/bme280.html
+
+# NTC Thermistor
+# give product spec here
+ # - platform: ntc
+ #   id: ntc_temp
+ #   name: "Globe Temperature"
+ #   sensor: ntc_input
+ #   calibration:
+ #     b_constant: 3950
+ #     reference_temperature: 25°C
+ #     reference_resistance: 10kOhm
+
+# Air Speed
+# give product spec here
+  - platform: ads1115
+    ads1115_id: ads_dac
+    multiplexer: 'A0_GND'
+    gain: 1.024
+    update_interval: 1s
+    id: as_1
+    name: "Air Speed 1"
+    accuracy_decimals: 2
+    device_class: speed
+    icon: "mdi:weather-windy"
+    filters:
+      - median:
+          window_size: 300
+          send_every: 300
+          send_first_at: 300
+      - calibrate_linear:
+          method: least_squares
+          datapoints:
+            - 0.0 -> 0.0
+            - 1.0 -> 1.0
+            - 2.0 -> 2.0

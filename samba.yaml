@@ -1,0 +1,33 @@
+# SAMBA v2 FIRMWARE
+# base configuration file for SAMBA using ESPHome
+# written by Thomas Parkinson, April 2024
+
+
+# Define substitutions for device
+substitutions:
+  device_name: samba
+  friendly_name: SAMBA IEQ Monitor
+  project_version: "1.99.0"
+  device_description: "Monitor indoor environmental quality using low-cost sensors - developed by the IEQ Lab"
+
+# Define ESPHome settings
+esphome:
+  name: '${device_name}'
+  comment: '${device_description}'
+  name_add_mac_suffix: true
+  project:
+    name: "ieqlab.samba-v2"
+    version: "${project_version}"
+
+# Use packages to modularise codebase
+packages:
+  device_base: !include firmware/base_esp.yaml
+  network: !include firmware/base_wifi.yaml
+  home_assistant: !include firmware/base_ha.yaml
+  clock: !include firmware/comp_rtc.yaml
+  a_to_d: !include firmware/comp_adc.yaml
+  thermal: !include firmware/sensors_thermal.yaml
+  air_quality: !include firmware/sensors_iaq.yaml
+  acoustics: !include firmware/sensors_sound.yaml
+  lighting: !include firmware/sensors_light.yaml
+  diagnostics: !include firmware/sensors_diagnostic.yaml

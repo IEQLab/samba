@@ -1,0 +1,11 @@
+# SAMBA v2 FIRMWARE
+# configure ADC component of SAMBA
+# written by Thomas Parkinson, May 2024
+
+
+# Define ADC component
+# https://esphome.io/components/sensor/ads1115.html
+ads1115:
+  - address: 0x48
+    continuous_mode: off
+    id: ads_dac

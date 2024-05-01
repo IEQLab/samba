@@ -1,0 +1,79 @@
+# SAMBA v2 FIRMWARE
+# configure IAQ sensors on SAMBA
+# written by Thomas Parkinson, May 2024
+
+
+# Sensirion CO2 sensor
+# https://esphome.io/components/sensor/scd4x.html
+sensor:
+  - platform: scd4x
+    address: 0x62
+    update_interval: 30s
+    measurement_mode: "periodic"
+    temperature_offset: 4°C
+    automatic_self_calibration: true
+    co2:
+      id: scd_co2
+      name: "CO2"
+      accuracy_decimals: 0
+      device_class: carbon_dioxide
+      icon: "mdi:molecule-co2"
+      filters:
+        - median:
+            window_size: 10
+            send_every: 10
+            send_first_at: 10
+    temperature:
+      name: "CO2 Temperature"
+      accuracy_decimals: 1
+      internal: true
+    humidity:
+      name: "CO2 Humidity"
+      accuracy_decimals: 0
+      internal: true
+
+# Particulate Matter
+# https://esphome.io/components/sensor/pmsx003.html
+  - platform: pmsx003
+    type: PMSX003
+    uart_id: uart_1
+    pm_2_5:
+      id: pms_pm25
+      name: "PM 2.5"
+      device_class: pm25
+      accuracy_decimals: 1
+      icon: "mdi:molecule"
+      filters:
+        - median:
+            window_size: 300
+            send_every: 300
+            send_first_at: 300
+
+# TVOC / NOx sensor
+# https://esphome.io/components/sensor/sgp4x.html
+  - platform: sgp4x
+    update_interval: 60s
+    compensation:
+      temperature_source: sht_temperature
+      humidity_source: sht_humidity
+    voc:
+      id: sgp_voc
+      name: "VOC Index"
+      accuracy_decimals: 0
+      device_class: aqi
+      icon: "mdi:radiator"
+      filters:
+        - median:
+            window_size: 5
+            send_every: 5
+            send_first_at: 5
+    nox:
+      id: sgp_nox
+      name: "NOx Index"
+      device_class: aqi
+      icon: "mdi:radiator"
+      filters:
+        - median:
+            window_size: 5
+            send_every: 5
+            send_first_at: 5
