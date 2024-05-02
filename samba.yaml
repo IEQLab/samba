@@ -26,6 +26,7 @@ packages:
   home_assistant: !include firmware/base_ha.yaml
   clock: !include firmware/comp_rtc.yaml
   a_to_d: !include firmware/comp_adc.yaml
+  status_leds: !include firmware/comp_led.yaml
   thermal: !include firmware/sensors_thermal.yaml
   air_quality: !include firmware/sensors_iaq.yaml
   acoustics: !include firmware/sensors_sound.yaml
