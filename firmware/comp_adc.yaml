@@ -9,3 +9,30 @@ ads1115:
   - address: 0x48
     continuous_mode: off
     id: ads_dac
+
+# Define raw measurements for sensors
+sensor:
+# NTC thermistor
+  - platform: ads1115
+    ads1115_id: ads_dac
+    multiplexer: 'A0_GND'
+    gain: 1.024
+    update_interval: 10s
+    id: ntc_raw
+    internal: true
+# Air speed sensor 1
+  - platform: ads1115
+    ads1115_id: ads_dac
+    multiplexer: 'A1_GND'
+    gain: 1.024
+    update_interval: 1s
+    id: as1_raw
+    internal: true
+# Air speed sensor 2
+  - platform: ads1115
+    ads1115_id: ads_dac
+    multiplexer: 'A2_GND'
+    gain: 1.024
+    update_interval: 1s
+    id: as2_raw
+    internal: true
