@@ -1,0 +1,38 @@
+# SAMBA v2 FIRMWARE
+# configure LED component of SAMBA
+# written by Thomas Parkinson, May 2024
+
+
+# Define Status LED component
+# https://esphome.io/components/status_led
+status_led:
+ pin:
+   number: GPIO13
+
+# Define other LED component
+output:
+  - platform: gpio
+    pin: GPIO12
+    id: output_blue
+    inverted: false
+  - platform: gpio
+    pin: GPIO27
+    id: output_red
+    inverted: false
+
+light:
+  - platform: binary
+    internal: true
+    id: led_red
+    name: "Red LED"
+    output: output_red
+
+# Test LED by flashing
+interval:
+  - interval: 500ms
+    then:
+      - light.turn_on:
+          id: led_red
+      - delay: 250ms
+      - light.turn_off:
+          id: led_red
