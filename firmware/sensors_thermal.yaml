@@ -3,7 +3,7 @@
 # written by Thomas Parkinson, May 2024
 
 
-# SHT Temp and RH sensor
+# Define SHT device
 # https://esphome.io/components/sensor/sht4x.html
 sensor:
   - platform: sht4x
@@ -15,8 +15,9 @@ sensor:
       filters:
         - median:
             window_size: 10
-            send_every: 1
-            send_first_at: 1
+            send_every: 2
+            send_first_at: 2
+
     humidity:
       id: sht_humidity
       internal: true
@@ -24,63 +25,78 @@ sensor:
         - median:
             window_size: 10
             send_every: 2
-            send_first_at: 1
+            send_first_at: 2
 
-# testing template sensor
+# temperature and humidity sensors
+# https://esphome.io/components/sensor/template.html
   - platform: template
     id: sensor_temperature
-    name: "Temperature"
-    accuracy_decimals: 1
-    update_interval: 30s
+    name: "Air Temperature"
+    update_interval: never
+    accuracy_decimals: 2
     device_class: temperature
     icon: "mdi:thermometer"
     lambda: |-
       return id(sht_temperature).state;
+
   - platform: template
     id: sensor_humidity
     name: "Relative Humidity"
-    accuracy_decimals: 0
-    update_interval: 30s
+    update_interval: never
+    accuracy_decimals: 1
     device_class: humidity
     icon: "mdi:water-percent"
+    lambda: |-
+      return id(sht_humidity).state;
 
-# BME280
-# https://esphome.io/components/sensor/bme280.html
 
-# NTC Thermistor
+# Define NTC Thermistor
 # https://esphome.io/components/sensor/ntc.html
   - platform: resistance
     id: ntc_resistance
-    name: "NTC Resistance"
-    sensor: ntc_raw
+    internal: true
+    sensor: ads_ntc
     configuration: DOWNSTREAM
     resistor: 5.6kOhm
-    internal: true
 
 # https://www.murata.com/en-us/products/productdetail?partno=NXRT15XH103FA1B040
   - platform: ntc
     id: ntc_temp
-    name: "Globe Temperature"
     sensor: ntc_resistance
+    internal: true
     calibration:
       b_constant: 3380
       reference_temperature: 25°C
       reference_resistance: 10kOhm
+    filters:
+      - median:
+          window_size: 10
+          send_every: 2
+          send_first_at: 2
+
+# globe temperature sensor
+  - platform: template
+    id: sensor_globe
+    name: "Globe Temperature"
+    update_interval: never
+    accuracy_decimals: 2
+    device_class: temperature
+    icon: "mdi:thermometer"
+    lambda: |-
+      return id(ntc_temp).state;
+
 
 # Air Speed
 # https://moderndevice.com/products/wind-sensor
   - platform: copy
     id: as_1
-    name: "Air Speed 1"
-    source_id: as1_raw
-    accuracy_decimals: 2
-    device_class: speed
-    icon: "mdi:weather-windy"
+    source_id: ads_as1
+    internal: true
     filters:
       - median:
           window_size: 300
-          send_every: 300
-          send_first_at: 300
+          send_every: 60
+          send_first_at: 60
       - calibrate_linear:
           method: least_squares
           datapoints:
@@ -91,18 +107,40 @@ sensor:
   - platform: copy
     id: as_2
     name: "Air Speed 2"
-    source_id: as2_raw
-    accuracy_decimals: 2
+    source_id: ads_as2
+    internal: true
+    accuracy_decimals: 3
     device_class: speed
     icon: "mdi:weather-windy"
     filters:
       - median:
           window_size: 300
-          send_every: 300
-          send_first_at: 300
+          send_every: 60
+          send_first_at: 60
       - calibrate_linear:
           method: least_squares
           datapoints:
             - 0.0 -> 0.0
             - 1.0 -> 1.0
             - 2.0 -> 2.0
+
+# air speed sensors
+  - platform: template
+    id: sensor_as1
+    name: "Air Speed 1"
+    update_interval: never
+    accuracy_decimals: 3
+    device_class: speed
+    icon: "mdi:weather-windy"
+    lambda: |-
+      return id(as_1).state;
+
+  - platform: template
+    id: sensor_as2
+    name: "Air Speed 2"
+    update_interval: never
+    accuracy_decimals: 3
+    device_class: speed
+    icon: "mdi:weather-windy"
+    lambda: |-
+      return id(as_2).state;
