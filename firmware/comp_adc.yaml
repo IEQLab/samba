@@ -15,24 +15,24 @@ sensor:
 # NTC thermistor
   - platform: ads1115
     ads1115_id: ads_dac
+    id: ads_ntc
     multiplexer: 'A0_GND'
     gain: 1.024
-    update_interval: 10s
-    id: ntc_raw
+    update_interval: 30s
     internal: true
 # Air speed sensor 1
   - platform: ads1115
     ads1115_id: ads_dac
+    id: ads_as1
     multiplexer: 'A1_GND'
     gain: 1.024
     update_interval: 1s
-    id: as1_raw
     internal: true
 # Air speed sensor 2
   - platform: ads1115
     ads1115_id: ads_dac
+    id: ads_as2
     multiplexer: 'A2_GND'
     gain: 1.024
     update_interval: 1s
-    id: as2_raw
     internal: true
