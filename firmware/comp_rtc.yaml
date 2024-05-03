@@ -10,15 +10,34 @@ time:
     id: ds1307_time
     address: 0x68
     update_interval: never
+
 # Define loop for sensor measurements
 # https://esphome.io/guides/automations.html#component-update-action
     on_time:
       - seconds: 0
-        minutes: /5
+        minutes: /1
         then:
-          - lambda: |-
-              id(sys_time).state
-          - component.update: sht_temperature
+          - light.turn_on:
+              id: led_esp
+          - component.update: sys_time
+#          - sensor.template.publish: 
+#              id: sys_time
+#              state: !lambda 'return id(sys_time).state;'
+          - component.update: sensor_temperature
+          - sensor.template.publish: 
+              id: sensor_temperature
+              state: !lambda 'return id(sensor_temperature).state;'
+          - logger.log:
+              level: INFO
+              format: "Sample taken at %s"
+              args: ['id(sys_time).state.c_str()']
+          - logger.log:
+              level: INFO
+              format: "Temperature is %f"
+              args: ['id(sensor_temperature).state']
+          - delay: 250ms
+          - light.turn_off:
+              id: led_esp
 
 # also use SNTP server for time
   - platform: sntp
@@ -32,6 +51,9 @@ time:
       then:
         - ds1307.write_time:
             id: ds1307_time
+        - logger.log:
+            level: INFO
+            format: "RTC synchronised with SNTP"
 
 # Define timestamp sensor
 # https://esphome.io/components/text_sensor/index.html
@@ -39,7 +61,6 @@ text_sensor:
   - platform: template
     id: sys_time
     name: "System Time"
-    device_class: timestamp
     internal: true
     lambda: |-
       auto time_str = id(ds1307_time).now().strftime("%Y-%m-%d %H:%M:%S");
