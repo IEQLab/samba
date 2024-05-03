@@ -11,26 +11,38 @@ sensor:
     update_interval: 30s
     temperature:
       id: sht_temperature
-      name: "Temperature"
-      accuracy_decimals: 1
-      device_class: temperature
-      icon: "mdi:thermometer"
+      internal: true
       filters:
         - median:
             window_size: 10
-            send_every: 10
-            send_first_at: 10
+            send_every: 1
+            send_first_at: 1
     humidity:
       id: sht_humidity
-      name: "Relative Humidity"
-      accuracy_decimals: 0
-      device_class: humidity
-      icon: "mdi:water-percent"
+      internal: true
       filters:
         - median:
             window_size: 10
-            send_every: 10
-            send_first_at: 10
+            send_every: 2
+            send_first_at: 1
+
+# testing template sensor
+  - platform: template
+    id: sensor_temperature
+    name: "Temperature"
+    accuracy_decimals: 1
+    update_interval: 30s
+    device_class: temperature
+    icon: "mdi:thermometer"
+    lambda: |-
+      return id(sht_temperature).state;
+  - platform: template
+    id: sensor_humidity
+    name: "Relative Humidity"
+    accuracy_decimals: 0
+    update_interval: 30s
+    device_class: humidity
+    icon: "mdi:water-percent"
 
 # BME280
 # https://esphome.io/components/sensor/bme280.html
