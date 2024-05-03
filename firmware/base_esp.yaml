@@ -11,7 +11,9 @@ esp32:
 # Set logging to errors only
 # https://esphome.io/components/logger.html
 logger:
+  level: INFO
   logs:
+    main: INFO
     component: ERROR
 
 # Configure UART
