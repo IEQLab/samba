@@ -27,7 +27,7 @@ sensor:
     filters:
       - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
 
-# Report the duraiton of time the device has been up for
+# Report the duration of time the device has been up for
   - platform: uptime
     id: device_uptime
     name: "Device Uptime"
