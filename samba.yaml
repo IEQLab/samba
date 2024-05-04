@@ -18,6 +18,10 @@ esphome:
   project:
     name: "ieqlab.samba-v2"
     version: "${project_version}"
+  on_boot:
+    - priority: -100
+      then: 
+        - component.update: sys_uptime
 
 # Use packages to modularise codebase
 packages:
