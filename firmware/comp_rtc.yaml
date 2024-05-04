@@ -31,6 +31,12 @@ time:
                 - component.update: sensor_globe
                 - component.update: sensor_as1
                 - component.update: sensor_as2
+                - component.update: sensor_co2
+                - component.update: sensor_pm25
+                - component.update: sensor_voc
+                - component.update: sensor_nox
+                - component.update: sensor_lux
+                - component.update: sensor_spl
                 - delay: 200ms
                 - text_sensor.template.publish: 
                     id: sys_time
@@ -50,6 +56,24 @@ time:
                 - sensor.template.publish: 
                     id: sensor_as2
                     state: !lambda 'return id(sensor_as2).state;'
+                - sensor.template.publish: 
+                    id: sensor_co2
+                    state: !lambda 'return id(sensor_co2).state;'
+                - sensor.template.publish: 
+                    id: sensor_pm25
+                    state: !lambda 'return id(sensor_pm25).state;'
+                - sensor.template.publish: 
+                    id: sensor_voc
+                    state: !lambda 'return id(sensor_voc).state;'
+                - sensor.template.publish: 
+                    id: sensor_nox
+                    state: !lambda 'return id(sensor_nox).state;'
+                - sensor.template.publish: 
+                    id: sensor_lux
+                    state: !lambda 'return id(sensor_lux).state;'
+                - sensor.template.publish: 
+                    id: sensor_spl
+                    state: !lambda 'return id(sensor_spl).state;'
                 - logger.log:
                     level: INFO
                     format: "Sample taken at %s"
@@ -59,7 +83,7 @@ time:
               else:
                 - logger.log: 
                     level: INFO
-                    format: "Warming up device"
+                    format: "Please wait...warming up SAMBA device"
 
 # also use SNTP server for time
   - platform: sntp

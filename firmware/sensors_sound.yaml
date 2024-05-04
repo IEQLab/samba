@@ -11,7 +11,7 @@ external_components:
 # https://github.com/stas-sl/esphome-sound-level-meter/tree/main
 sound_level_meter:
   id: sound_spl
-  update_interval: 60s
+  update_interval: 30s
   is_on: true
   buffer_size: 1024  # buffer_size in samples
   warmup_interval: 1000ms # ignore audio data at startup
@@ -40,8 +40,7 @@ sound_level_meter:
         # group 1.1 (no weighting)
         - sensors:
             - type: eq
-              name: LZeq_1min
-              id: LZeq_1min
+              id: spl_lzeq
               unit_of_measurement: dBZ
               internal: true
 
@@ -57,18 +56,14 @@ sound_level_meter:
           
           sensors:
             - type: eq
-              id: LAeq_5s
-              name: "SPL"
-              update_interval: 1s
-              accuracy_decimals: 1
-              unit_of_measurement: dBA
-              device_class: sound_pressure
-              icon: "mdi:volume-high"
+              id: spl_laeq
+              update_interval: 500ms
+              internal: true
               filters:
                 - median:
-                    window_size: 9
-                    send_every: 5
-                    send_first_at: 1
+                    window_size: 600
+                    send_every: 60
+                    send_first_at: 60
 
         # group 1.3 (C-weighting)
         - filters:
@@ -82,7 +77,20 @@ sound_level_meter:
           
           sensors:
             - type: eq
-              name: LCeq_1min
-              id: LCeq_1min
+              id: spl_lceq
               unit_of_measurement: dBC
               internal: true
+
+
+# SPL sensor
+sensor:
+  - platform: template
+    id: sensor_spl
+    name: "Sound Pressure Level"
+    update_interval: never
+    accuracy_decimals: 1
+    unit_of_measurement: dBA
+    device_class: sound_pressure
+    icon: "mdi:volume-high"
+    lambda: |-
+      return id(spl_laeq).state;

@@ -3,7 +3,7 @@
 # written by Thomas Parkinson, May 2024
 
 
-# Lux sensor
+# Define TSL2591 device
 # https://esphome.io/components/sensor/tsl2591.html
 sensor:
   - platform: tsl2591
@@ -14,28 +14,37 @@ sensor:
     glass_attenuation_factor: 14.4
     calculated_lux:
       id: tsl_lux
-      name: "Illuminance"
-      accuracy_decimals: 0
-      device_class: illuminance
-      icon: "mdi:sun-wireless-outline"
+      internal: true
       filters:
+        - clamp:
+            min_value: 0
+            max_value: 10000
+            ignore_out_of_range: true
         - median:
             window_size: 30
-            send_every: 30
-            send_first_at: 30
+            send_every: 3
+            send_first_at: 3
     actual_gain:
-      id: "tsl_gain"
-      name: "TSL2591 actual gain"
+      id: tsl_gain
       internal: true
     visible:
-      name: "TSL2591 visible light"
+      id: tsl_vis
       internal: true
     infrared:
-      name: "TSL2591 infrared light"
+      id: tsl_ir
       internal: true
     full_spectrum:
-      name: "TSL2591 full spectrum light"
+      id: tsl_full
       internal: true
 
-## VEML7700 lux sensor
-# https://esphome.io/components/sensor/veml7700.html
+# illuminance sensor
+  - platform: template
+    id: sensor_lux
+    name: "Illuminance"
+    update_interval: never
+    accuracy_decimals: 0
+    device_class: illuminance
+    icon: "mdi:sun-wireless-outline"
+    lambda: |-
+      return id(tsl_lux).state;
+

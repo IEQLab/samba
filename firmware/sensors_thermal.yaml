@@ -13,19 +13,27 @@ sensor:
       id: sht_temperature
       internal: true
       filters:
+        - clamp:
+            min_value: -10
+            max_value: 60
+            ignore_out_of_range: true
         - median:
             window_size: 10
-            send_every: 2
-            send_first_at: 2
+            send_every: 1
+            send_first_at: 1
 
     humidity:
       id: sht_humidity
       internal: true
       filters:
+        - clamp:
+            min_value: 0
+            max_value: 100
+            ignore_out_of_range: true
         - median:
             window_size: 10
-            send_every: 2
-            send_first_at: 2
+            send_every: 1
+            send_first_at: 1
 
 # temperature and humidity sensors
 # https://esphome.io/components/sensor/template.html
@@ -69,10 +77,14 @@ sensor:
       reference_temperature: 25°C
       reference_resistance: 10kOhm
     filters:
+      - clamp:
+          min_value: -10
+          max_value: 60
+          ignore_out_of_range: true
       - median:
           window_size: 10
-          send_every: 2
-          send_first_at: 2
+          send_every: 1
+          send_first_at: 1
 
 # globe temperature sensor
   - platform: template
@@ -86,43 +98,47 @@ sensor:
       return id(ntc_temp).state;
 
 
-# Air Speed
+# Define anemometers
 # https://moderndevice.com/products/wind-sensor
   - platform: copy
     id: as_1
     source_id: ads_as1
     internal: true
     filters:
-      - median:
-          window_size: 300
-          send_every: 60
-          send_first_at: 60
       - calibrate_linear:
           method: least_squares
           datapoints:
             - 0.0 -> 0.0
             - 1.0 -> 1.0
             - 2.0 -> 2.0
+      - clamp:
+          min_value: 0
+          max_value: 5
+          ignore_out_of_range: true
+      - median:
+          window_size: 300
+          send_every: 30
+          send_first_at: 30
 
   - platform: copy
     id: as_2
-    name: "Air Speed 2"
     source_id: ads_as2
     internal: true
-    accuracy_decimals: 3
-    device_class: speed
-    icon: "mdi:weather-windy"
     filters:
-      - median:
-          window_size: 300
-          send_every: 60
-          send_first_at: 60
       - calibrate_linear:
           method: least_squares
           datapoints:
             - 0.0 -> 0.0
             - 1.0 -> 1.0
             - 2.0 -> 2.0
+      - clamp:
+          min_value: 0
+          max_value: 5
+          ignore_out_of_range: true
+      - median:
+          window_size: 300
+          send_every: 30
+          send_first_at: 30
 
 # air speed sensors
   - platform: template
