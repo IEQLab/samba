@@ -1,0 +1,27 @@
+# SAMBA v2 FIRMWARE
+# configure LED component of SAMBA
+# written by Thomas Parkinson, May 2024
+
+
+# Define Status LED component
+# https://esphome.io/components/status_led
+#status_led:
+# pin:
+#   number: GPIO13
+
+# Define LED device as an output component
+# https://esphome.io/components/output/index.html
+output:
+  - platform: gpio
+    pin: GPIO13
+    id: output_led
+    inverted: false
+
+# Define light component using LED
+# https://esphome.io/components/light/index.html
+light:
+  - platform: binary
+    internal: true
+    id: led_esp
+    name: "ESP Feather LED"
+    output: output_led

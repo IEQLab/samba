@@ -1,0 +1,71 @@
+# SAMBA v2 FIRMWARE
+# configure diagnostic sensors on SAMBA
+# written by Thomas Parkinson, May 2024
+
+
+# Report the WiFi signal strength/RSSI in dB
+# https://esphome.io/components/sensor/wifi_signal.html
+sensor:
+  - platform: wifi_signal
+    id: sys_wifi
+    name: "WiFi Signal dB"
+    update_interval: 12h
+    accuracy_decimals: 0
+    device_class: signal_strength
+    icon: "mdi:wifi-strength-3"
+    entity_category: "diagnostic"
+
+# Report the WiFi signal strength in %
+  - platform: copy
+    source_id: sys_wifi
+    id: sys_wifiperc
+    name: "WiFi Signal Percent"
+    accuracy_decimals: 0
+    unit_of_measurement: "%"
+    device_class: signal_strength
+    icon: "mdi:wifi-strength-3"
+    entity_category: "diagnostic"
+    filters:
+      - lambda: |- 
+          return min(max(2 * (x + 100.0), 0.0), 100.0);
+
+# Report the duration of time the device has been up for
+  - platform: uptime
+    id: sys_uptime
+    name: "Device Uptime"
+    update_interval: 12h
+    accuracy_decimals: 0
+    device_class: duration
+    icon: "mdi:clock-check-outline"
+    entity_category: "diagnostic"
+
+# Report the available memory
+  - platform: template
+    id: sys_memory
+    icon: mdi:memory
+    name: "Available Memory"
+    update_interval: 12h
+    lambda: |-
+      return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
+    unit_of_measurement: 'kB'
+    state_class: measurement
+    entity_category: "diagnostic"
+
+# Report network information
+# https://esphome.io/components/text_sensor/wifi_info.html
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      id: sys_ip
+      name: "IP Address"
+      update_interval: 12h
+      entity_category: "diagnostic"
+      icon: "mdi:ip-network-outline"
+    ssid:
+      id: sys_ssid
+      name: "Connected SSID"
+      update_interval: 12h
+      entity_category: "diagnostic"
+      icon: "mdi:wifi-check"
+
+    

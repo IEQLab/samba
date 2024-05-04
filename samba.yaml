@@ -25,14 +25,19 @@ esphome:
 
 # Use packages to modularise codebase
 packages:
-  device_base: !include firmware/base_esp.yaml
-  network: !include firmware/base_wifi.yaml
-  home_assistant: !include firmware/base_ha.yaml
-  clock: !include firmware/comp_rtc.yaml
-  a_to_d: !include firmware/comp_adc.yaml
-  status_leds: !include firmware/comp_led.yaml
-  thermal: !include firmware/sensors_thermal.yaml
-  air_quality: !include firmware/sensors_iaq.yaml
-  acoustics: !include firmware/sensors_sound.yaml
-  lighting: !include firmware/sensors_light.yaml
-  diagnostics: !include firmware/sensors_diagnostic.yaml
+  device_base: !include firmware/base/esp32.yaml
+  device_wifi: !include firmware/base/wifi.yaml
+  home_assistant: !include firmware/base/homeassistant.yaml
+  component_adc: !include firmware/components/adc.yaml
+  component_led: !include firmware/components/led.yaml
+  component_rtc: !include firmware/components/rtc.yaml
+  sensor_iaq: !include firmware/sensors/iaq.yaml
+  sensor_light: !include firmware/sensors/light.yaml
+  sensor_sound: !include firmware/sensors/sound.yaml
+  sensor_thermal: !include firmware/sensors/thermal.yaml
+  diagnostics: !include firmware/sensors/diagnostic.yaml
+
+# load external components
+external_components:
+  - source: firmware/external_components
+
