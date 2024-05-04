@@ -48,11 +48,14 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# ignore ESPHome
+# macOS files
+.DS_Store
+
+# ESPHome compile files
 /.esphome/
 
-# don't upload secrets
+# ESPHome secrets
 secrets.yaml
 
-# remove any wayward macOS files
-.DS_Store
+# External component build files
+/firmware/external_components/influxdb/__pycache__/

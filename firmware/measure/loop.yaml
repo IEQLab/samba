@@ -1,0 +1,77 @@
+# SAMBA v2 FIRMWARE
+# configure sampling loop SAMBA
+# written by Thomas Parkinson, May 2024
+
+
+# Define scipt to update measurement values
+# https://esphome.io/guides/automations.html#script-component
+script:
+  - id: sensor_sample
+    then:
+      - component.update: sys_uptime
+      - if:
+          condition: 
+            lambda: |-
+              return id(sys_uptime).state > 120;
+          then:
+            - light.turn_on:
+                id: led_esp
+            - component.update: sys_time
+            - component.update: sensor_temperature
+            - component.update: sensor_humidity
+            - component.update: sensor_globe
+            - component.update: sensor_as1
+            - component.update: sensor_as2
+            - component.update: sensor_co2
+            - component.update: sensor_pm25
+            - component.update: sensor_voc
+            - component.update: sensor_nox
+            - component.update: sensor_lux
+            - component.update: sensor_spl
+            - delay: 200ms
+            - text_sensor.template.publish: 
+                id: sys_time
+                state: !lambda 'return id(sys_time).state;'
+            - sensor.template.publish: 
+                id: sensor_temperature
+                state: !lambda 'return id(sensor_temperature).state;'
+            - sensor.template.publish: 
+                id: sensor_humidity
+                state: !lambda 'return id(sensor_humidity).state;'
+            - sensor.template.publish: 
+                id: sensor_globe
+                state: !lambda 'return id(sensor_globe).state;'
+            - sensor.template.publish: 
+                id: sensor_as1
+                state: !lambda 'return id(sensor_as1).state;'
+            - sensor.template.publish: 
+                id: sensor_as2
+                state: !lambda 'return id(sensor_as2).state;'
+            - sensor.template.publish: 
+                id: sensor_co2
+                state: !lambda 'return id(sensor_co2).state;'
+            - sensor.template.publish: 
+                id: sensor_pm25
+                state: !lambda 'return id(sensor_pm25).state;'
+            - sensor.template.publish: 
+                id: sensor_voc
+                state: !lambda 'return id(sensor_voc).state;'
+            - sensor.template.publish: 
+                id: sensor_nox
+                state: !lambda 'return id(sensor_nox).state;'
+            - sensor.template.publish: 
+                id: sensor_lux
+                state: !lambda 'return id(sensor_lux).state;'
+            - sensor.template.publish: 
+                id: sensor_spl
+                state: !lambda 'return id(sensor_spl).state;'
+            - logger.log:
+                level: INFO
+                format: "Sample taken at %s"
+                args: ['id(sys_time).state.c_str()']
+            - light.turn_off:
+                id: led_esp
+          else:
+            - logger.log: 
+                level: INFO
+                format: "Please wait...warming up SAMBA device"

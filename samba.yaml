@@ -31,6 +31,8 @@ packages:
   component_adc: !include firmware/components/adc.yaml
   component_led: !include firmware/components/led.yaml
   component_rtc: !include firmware/components/rtc.yaml
+  #measure_influx: !include firmware/measure/influx.yaml
+  measure_loop: !include firmware/measure/loop.yaml
   sensor_iaq: !include firmware/sensors/iaq.yaml
   sensor_light: !include firmware/sensors/light.yaml
   sensor_sound: !include firmware/sensors/sound.yaml
@@ -40,4 +42,3 @@ packages:
 # load external components
 external_components:
   - source: firmware/external_components
-

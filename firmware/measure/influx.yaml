@@ -6,7 +6,7 @@
 # Define InfluxDB connection
 # https://github.com/jabastien/esphome-influxdb
 influxdb:
-  host: "influxdb-host"
+  host: "https://us-east-1-1.aws.cloud2.influxdata.com"
   database: "samba"
   username: !secret influx_username
   password: !secret influx_password
