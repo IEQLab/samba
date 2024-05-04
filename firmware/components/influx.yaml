@@ -1,0 +1,13 @@
+# SAMBA v2 FIRMWARE
+# configure remote InfluxDB server for SAMBA data
+# written by Thomas Parkinson, May 2024
+
+
+# Define InfluxDB connection
+# https://github.com/jabastien/esphome-influxdb
+influxdb:
+  host: "influxdb-host"
+  database: "samba"
+  username: !secret influx_username
+  password: !secret influx_password
+  publish_all: true
