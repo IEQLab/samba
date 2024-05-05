@@ -58,4 +58,4 @@ rsconnect/
 secrets.yaml
 
 # External component build files
-/firmware/external_components/influxdb/__pycache__/
+/firmware/external_components/**/**/*.pyc
