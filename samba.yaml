@@ -21,7 +21,9 @@ esphome:
   on_boot:
     - priority: -100
       then: 
-        - component.update: sys_uptime
+        - logger.log: 
+            level: INFO
+            format: "A SAMBA is born :-)"
 
 # Use packages to modularise codebase
 packages:
