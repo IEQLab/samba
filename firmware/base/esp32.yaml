@@ -15,9 +15,14 @@ esphome:
   on_boot:
     - priority: -100
       then: 
+        - component.update: sys_ip
         - logger.log: 
             level: INFO
             format: "A SAMBA is born :-)"
+        - logger.log: 
+            level: INFO
+            format: "IP address is %s"
+            args: ['id(sys_ip).state.c_str()']
 
 # Define ESP32 board
 # https://www.adafruit.com/product/5400
