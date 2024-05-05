@@ -62,8 +62,8 @@ sensor:
 # https://esphome.io/components/sensor/ntc.html
   - platform: resistance
     id: ntc_resistance
-    internal: true
     sensor: ads_ntc
+    internal: true
     configuration: DOWNSTREAM
     resistor: 5.6kOhm
 
