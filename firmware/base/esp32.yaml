@@ -4,13 +4,13 @@
 
 
 # Define ESPHome settings
-# https://esphome.io/components/esphome#project-information
+# https://esphome.io/components/esphome
 esphome:
   name: '${device_name}'
   comment: '${device_description}'
   name_add_mac_suffix: true
   project:
-    name: "ieqlab.samba"
+    name: "IEQLab.SAMBA"
     version: "${project_version}"
   on_boot:
     - priority: -100
@@ -30,7 +30,7 @@ esp32:
   board: adafruit_feather_esp32_v2 #esp32dev
 
 # Set logging to errors only
-# https://esphome.io/components/logger.html
+# https://esphome.io/components/logger
 logger:
   level: INFO
   logs:
@@ -38,7 +38,7 @@ logger:
     component: ERROR
 
 # Configure UART
-# https://esphome.io/components/uart.html
+# https://esphome.io/components/uart
 uart:
   - id: uart_1
     rx_pin: 7
@@ -46,7 +46,7 @@ uart:
     baud_rate: 9600
 
 # Define i2c pins
-# https://esphome.io/components/i2c.html
+# https://esphome.io/components/i2c
 i2c:
   - id: bus_a
     sda: 22
@@ -54,7 +54,7 @@ i2c:
     scan: true
 
 # Configure i2s
-# https://esphome.io/components/i2s_audio.html
+# https://github.com/stas-sl/esphome-sound-level-meter
 i2s:
   bck_pin: 32
   ws_pin: 25
@@ -66,4 +66,3 @@ i2s:
   use_apll: true  # default: false
   channel: right
   bits_shift: 8   # default: 0
-
