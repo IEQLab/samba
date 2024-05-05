@@ -8,7 +8,6 @@
 script:
   - id: sensor_sample
     then:
-      - component.update: sys_uptime
       - if:
           condition: 
             lambda: |-
@@ -75,3 +74,4 @@ script:
             - logger.log: 
                 level: INFO
                 format: "Please wait...warming up SAMBA device"
+            - component.update: sys_uptime
