@@ -94,8 +94,8 @@ sensor:
       filters:
         - median:
             window_size: 5
-            send_every: 5
-            send_first_at: 5
+            send_every: 1
+            send_first_at: 1
 
 # TVOC / NOx index sensors
   - platform: template
