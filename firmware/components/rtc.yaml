@@ -15,7 +15,7 @@ time:
 # https://esphome.io/guides/automations.html#component-update-action
     on_time:
       - seconds: 0
-        minutes: /1
+        minutes: /5
         then:
           - script.execute: sensor_sample
 
