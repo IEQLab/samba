@@ -10,27 +10,23 @@ substitutions:
   project_version: "1.99.0"
   device_description: "Monitor indoor environmental quality using low-cost sensors - developed by the IEQ Lab"
 
-# Use packages to modularise codebase
+# Use packages to import config files from Github
 packages:
   remote_package:
     url: https://github.com/IEQLab/samba
     ref: main
-    files: [esphome/base/esp32.yaml,
-            esphome/base/wifi.yaml,
-            esphome/base/homeassistant.yaml,
-            esphome/base/ota.yaml,
-            esphome/peripherals/adc.yaml,
-            esphome/peripherals/led.yaml,
-            esphome/peripherals/rtc.yaml,
-            esphome/measure/loop.yaml,
-            esphome/sensors/iaq.yaml,
-            esphome/sensors/light.yaml,
-            esphome/sensors/sound.yaml,
-            esphome/sensors/thermal.yaml,
-            esphome/sensors/diagnostic.yaml]
-    refresh: 900s
-
-# load external components
-external_components:
-   - source: github://IEQLab/samba@main
-     components: [ i2s,  influxdb, sound_level_meter ]
+    files: 
+      - esphome/base/esp32.yaml
+      - esphome/base/wifi.yaml
+      - esphome/base/homeassistant.yaml
+      - esphome/base/ota.yaml
+      - esphome/peripherals/adc.yaml
+      - esphome/peripherals/led.yaml
+      - esphome/peripherals/rtc.yaml
+      - esphome/measure/loop.yaml
+      - esphome/sensors/iaq.yaml
+      - esphome/sensors/light.yaml
+      - esphome/sensors/sound.yaml
+      - esphome/sensors/thermal.yaml
+      - esphome/sensors/diagnostic.yaml
+    refresh: 1d

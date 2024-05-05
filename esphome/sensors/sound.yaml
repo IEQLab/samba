@@ -3,10 +3,6 @@
 # written by Thomas Parkinson, May 2024
 
 
-# load external component from Github (credit to Stas Slunkov)
-external_components:
-  - source: github://stas-sl/esphome-sound-level-meter
-
 # define SPL sensor
 # https://github.com/stas-sl/esphome-sound-level-meter/tree/main
 sound_level_meter:
