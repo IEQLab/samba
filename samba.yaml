@@ -12,29 +12,25 @@ substitutions:
 
 # Use packages to modularise codebase
 packages:
-  device_base: !include esphome/base/esp32.yaml
-  device_wifi: !include esphome/base/wifi.yaml
-  home_assistant: !include esphome/base/homeassistant.yaml
-  device_ota: !include esphome/base/ota.yaml
-  periph_adc: !include esphome/peripherals/adc.yaml
-  periph_led: !include esphome/peripherals/led.yaml
-  periph_rtc: !include esphome/peripherals/rtc.yaml
-  #measure_influx: !include esphome/measure/influx.yaml
-  measure_loop: !include esphome/measure/loop.yaml
-  sensor_iaq: !include esphome/sensors/iaq.yaml
-  sensor_light: !include esphome/sensors/light.yaml
-  sensor_sound: !include esphome/sensors/sound.yaml
-  sensor_thermal: !include esphome/sensors/thermal.yaml
-  diagnostics: !include esphome/sensors/diagnostic.yaml
-  # remote_package:
-  #   url: https://IEQLab/samba@main
-  #   files: [firmware/base/esp32.yaml, 
-  #           firmware/base/wifi.yaml]
-  #   refresh: 1d
-
+  remote_package:
+    url: https://github.com/IEQLab/samba
+    ref: main
+    files: [esphome/base/esp32.yaml,
+            esphome/base/wifi.yaml,
+            esphome/base/homeassistant.yaml,
+            esphome/base/ota.yaml,
+            esphome/peripherals/adc.yaml,
+            esphome/peripherals/led.yaml,
+            esphome/peripherals/rtc.yaml,
+            esphome/measure/loop.yaml,
+            esphome/sensors/iaq.yaml,
+            esphome/sensors/light.yaml,
+            esphome/sensors/sound.yaml,
+            esphome/sensors/thermal.yaml,
+            esphome/sensors/diagnostic.yaml]
+    refresh: 900s
 
 # load external components
 external_components:
-  - source: components
-  # - source: github://IEQLab/samba@main
-  #  components: [ i2s,  influxdb, sound_level_meter ]
+   - source: github://IEQLab/samba@main
+     components: [ i2s,  influxdb, sound_level_meter ]
