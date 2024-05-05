@@ -5,8 +5,8 @@
 
 # Define substitutions for device
 substitutions:
-  device_name: samba
-  friendly_name: SAMBA IEQ Monitor
+  device_name: "samba"
+  friendly_name: "SAMBA IEQ Monitor"
   project_version: "1.99.0"
   device_description: "Monitor indoor environmental quality using low-cost sensors - developed by the IEQ Lab"
 
@@ -19,7 +19,7 @@ packages:
   component_adc: !include firmware/components/adc.yaml
   component_led: !include firmware/components/led.yaml
   component_rtc: !include firmware/components/rtc.yaml
-  measure_influx: !include firmware/measure/influx.yaml
+  #measure_influx: !include firmware/measure/influx.yaml
   measure_loop: !include firmware/measure/loop.yaml
   sensor_iaq: !include firmware/sensors/iaq.yaml
   sensor_light: !include firmware/sensors/light.yaml
