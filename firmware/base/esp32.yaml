@@ -3,6 +3,22 @@
 # written by Thomas Parkinson, May 2024
 
 
+# Define ESPHome settings
+# https://esphome.io/components/esphome#project-information
+esphome:
+  name: '${device_name}'
+  comment: '${device_description}'
+  name_add_mac_suffix: true
+  project:
+    name: "ieqlab.samba"
+    version: "${project_version}"
+  on_boot:
+    - priority: -100
+      then: 
+        - logger.log: 
+            level: INFO
+            format: "A SAMBA is born :-)"
+
 # Define ESP32 board
 # https://www.adafruit.com/product/5400
 esp32:

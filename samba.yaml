@@ -10,21 +10,6 @@ substitutions:
   project_version: "1.99.0"
   device_description: "Monitor indoor environmental quality using low-cost sensors - developed by the IEQ Lab"
 
-# Define ESPHome settings
-esphome:
-  name: '${device_name}'
-  comment: '${device_description}'
-  name_add_mac_suffix: true
-  project:
-    name: "ieqlab.samba"
-    version: "${project_version}"
-  on_boot:
-    - priority: -100
-      then: 
-        - logger.log: 
-            level: INFO
-            format: "A SAMBA is born :-)"
-
 # Use packages to modularise codebase
 packages:
   device_base: !include firmware/base/esp32.yaml
