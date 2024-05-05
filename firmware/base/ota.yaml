@@ -1,0 +1,24 @@
+# SAMBA v2 FIRMWARE
+# configure OTA support for SAMBA using ESPHome
+# written by Thomas Parkinson, May 2024
+
+
+# Enable OTA access
+# https://esphome.io/components/ota.html
+ota:
+  on_begin:
+    then:
+      - logger.log: "OTA update started"
+  on_progress:
+    then:
+      - logger.log:
+          format: "OTA progress %0.1f%%"
+          args: ["x"]
+  on_end:
+    then:
+      - logger.log: "OTA update completed"
+  on_error:
+    then:
+      - logger.log:
+          format: "OTA update error %d"
+          args: ["x"]

@@ -16,7 +16,7 @@ esphome:
   comment: '${device_description}'
   name_add_mac_suffix: true
   project:
-    name: "ieqlab.samba-v2"
+    name: "ieqlab.samba"
     version: "${project_version}"
   on_boot:
     - priority: -100
@@ -30,6 +30,7 @@ packages:
   device_base: !include firmware/base/esp32.yaml
   device_wifi: !include firmware/base/wifi.yaml
   home_assistant: !include firmware/base/homeassistant.yaml
+  device_ota: !include firmware/base/ota.yaml
   component_adc: !include firmware/components/adc.yaml
   component_led: !include firmware/components/led.yaml
   component_rtc: !include firmware/components/rtc.yaml

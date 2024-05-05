@@ -7,10 +7,6 @@
 # https://esphome.io/components/api.html
 api:
 
-# Enable OTA access
-# https://esphome.io/components/ota.html
-ota:
-
 # Use GitHub to import details into ESPHome Add-on
 # https://esphome.io/guides/creators.html
 # dashboard_import:
