@@ -8,7 +8,7 @@
 sensor:
   - platform: wifi_signal
     id: sys_wifi
-    name: "WiFi Signal dB"
+    name: "WiFi Signal"
     update_interval: 12h
     accuracy_decimals: 0
     device_class: signal_strength
@@ -19,7 +19,7 @@ sensor:
   - platform: copy
     source_id: sys_wifi
     id: sys_wifiperc
-    name: "WiFi Signal Percent"
+    name: "WiFi Signal"
     accuracy_decimals: 0
     unit_of_measurement: "%"
     device_class: signal_strength

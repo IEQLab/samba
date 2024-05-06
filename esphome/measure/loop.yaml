@@ -16,54 +16,54 @@ script:
             - light.turn_on:
                 id: led_esp
             - component.update: sys_time
-            - component.update: sensor_temperature
-            - component.update: sensor_humidity
-            - component.update: sensor_globe
-            - component.update: sensor_as1
-            - component.update: sensor_as2
-            - component.update: sensor_co2
-            - component.update: sensor_pm25
-            - component.update: sensor_voc
-            - component.update: sensor_nox
-            - component.update: sensor_lux
-            - component.update: sensor_spl
+            - component.update: samba_temperature
+            - component.update: samba_humidity
+            - component.update: samba_globe
+            - component.update: samba_as1
+            - component.update: samba_as2
+            - component.update: samba_co2
+            - component.update: samba_pm25
+            - component.update: samba_voc
+            - component.update: samba_nox
+            - component.update: samba_lux
+            - component.update: samba_spl
             - delay: 200ms
             - text_sensor.template.publish: 
                 id: sys_time
                 state: !lambda 'return id(sys_time).state;'
             - sensor.template.publish: 
-                id: sensor_temperature
-                state: !lambda 'return id(sensor_temperature).state;'
+                id: samba_temperature
+                state: !lambda 'return id(samba_temperature).state;'
             - sensor.template.publish: 
-                id: sensor_humidity
-                state: !lambda 'return id(sensor_humidity).state;'
+                id: samba_humidity
+                state: !lambda 'return id(samba_humidity).state;'
             - sensor.template.publish: 
-                id: sensor_globe
-                state: !lambda 'return id(sensor_globe).state;'
+                id: samba_globe
+                state: !lambda 'return id(samba_globe).state;'
             - sensor.template.publish: 
-                id: sensor_as1
-                state: !lambda 'return id(sensor_as1).state;'
+                id: samba_as1
+                state: !lambda 'return id(samba_as1).state;'
             - sensor.template.publish: 
-                id: sensor_as2
-                state: !lambda 'return id(sensor_as2).state;'
+                id: samba_as2
+                state: !lambda 'return id(samba_as2).state;'
             - sensor.template.publish: 
-                id: sensor_co2
-                state: !lambda 'return id(sensor_co2).state;'
+                id: samba_co2
+                state: !lambda 'return id(samba_co2).state;'
             - sensor.template.publish: 
-                id: sensor_pm25
-                state: !lambda 'return id(sensor_pm25).state;'
+                id: samba_pm25
+                state: !lambda 'return id(samba_pm25).state;'
             - sensor.template.publish: 
-                id: sensor_voc
-                state: !lambda 'return id(sensor_voc).state;'
+                id: samba_voc
+                state: !lambda 'return id(samba_voc).state;'
             - sensor.template.publish: 
-                id: sensor_nox
-                state: !lambda 'return id(sensor_nox).state;'
+                id: samba_nox
+                state: !lambda 'return id(samba_nox).state;'
             - sensor.template.publish: 
-                id: sensor_lux
-                state: !lambda 'return id(sensor_lux).state;'
+                id: samba_lux
+                state: !lambda 'return id(samba_lux).state;'
             - sensor.template.publish: 
-                id: sensor_spl
-                state: !lambda 'return id(sensor_spl).state;'
+                id: samba_spl
+                state: !lambda 'return id(samba_spl).state;'
             - logger.log:
                 level: INFO
                 format: "Sample taken at %s"

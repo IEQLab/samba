@@ -39,7 +39,7 @@ sensor:
 
 # illuminance sensor
   - platform: template
-    id: sensor_lux
+    id: samba_lux
     name: "Illuminance"
     update_interval: never
     accuracy_decimals: 0

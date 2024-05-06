@@ -38,7 +38,7 @@ sensor:
 # temperature and humidity sensors
 # https://esphome.io/components/sensor/template.html
   - platform: template
-    id: sensor_temperature
+    id: samba_temperature
     name: "Air Temperature"
     update_interval: never
     accuracy_decimals: 2
@@ -48,7 +48,7 @@ sensor:
       return id(sht_temperature).state;
 
   - platform: template
-    id: sensor_humidity
+    id: samba_humidity
     name: "Relative Humidity"
     update_interval: never
     accuracy_decimals: 1
@@ -88,7 +88,7 @@ sensor:
 
 # globe temperature sensor
   - platform: template
-    id: sensor_globe
+    id: samba_globe
     name: "Globe Temperature"
     update_interval: never
     accuracy_decimals: 2
@@ -142,7 +142,7 @@ sensor:
 
 # air speed sensors
   - platform: template
-    id: sensor_as1
+    id: samba_as1
     name: "Air Speed 1"
     update_interval: never
     accuracy_decimals: 3
@@ -152,7 +152,7 @@ sensor:
       return id(as_1).state;
 
   - platform: template
-    id: sensor_as2
+    id: samba_as2
     name: "Air Speed 2"
     update_interval: never
     accuracy_decimals: 3

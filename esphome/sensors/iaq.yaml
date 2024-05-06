@@ -33,7 +33,7 @@ sensor:
 
 # CO2 sensor
   - platform: template
-    id: sensor_co2
+    id: samba_co2
     name: "Carbon Dioxide"
     update_interval: never
     accuracy_decimals: 0
@@ -63,7 +63,7 @@ sensor:
 
 # PM2.5 sensor
   - platform: template
-    id: sensor_pm25
+    id: samba_pm25
     name: "PM2.5"
     update_interval: never
     accuracy_decimals: 0
@@ -99,7 +99,7 @@ sensor:
 
 # TVOC / NOx index sensors
   - platform: template
-    id: sensor_voc
+    id: samba_voc
     name: "VOC Index"
     update_interval: never
     accuracy_decimals: 0
@@ -109,7 +109,7 @@ sensor:
       return id(sgp_voc).state;
 
   - platform: template
-    id: sensor_nox
+    id: samba_nox
     name: "NOx Index"
     update_interval: never
     accuracy_decimals: 0

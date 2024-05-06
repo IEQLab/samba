@@ -81,7 +81,7 @@ sound_level_meter:
 # SPL sensor
 sensor:
   - platform: template
-    id: sensor_spl
+    id: samba_spl
     name: "Sound Pressure Level"
     update_interval: never
     accuracy_decimals: 1
