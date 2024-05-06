@@ -10,23 +10,23 @@ substitutions:
   project_version: "1.99.0"
   device_description: "Monitor indoor environmental quality using low-cost sensors - developed by the IEQ Lab"
 
-# Use packages to import config files from Github
+# Use packages to modularise codebase
 packages:
-  remote_package:
-    url: https://github.com/IEQLab/samba
-    ref: main
-    files: 
-      - esphome/base/esp32.yaml
-      - esphome/base/wifi.yaml
-      - esphome/base/homeassistant.yaml
-      - esphome/base/ota.yaml
-      - esphome/peripherals/adc.yaml
-      - esphome/peripherals/led.yaml
-      - esphome/peripherals/rtc.yaml
-      - esphome/measure/loop.yaml
-      - esphome/sensors/iaq.yaml
-      - esphome/sensors/light.yaml
-      - esphome/sensors/sound.yaml
-      - esphome/sensors/thermal.yaml
-      - esphome/sensors/diagnostic.yaml
-    refresh: 1d
+  device_base: !include esphome/base/esp32.yaml
+  device_wifi: !include esphome/base/wifi.yaml
+  device_ota: !include esphome/base/ota.yaml
+  device_adc: !include esphome/base/adc.yaml
+  device_led: !include esphome/base/led.yaml
+  device_rtc: !include esphome/base/rtc.yaml
+  device_ha: !include esphome/base/homeassistant.yaml
+  measure_loop: !include esphome/measure/loop.yaml
+  #measure_influx: !include esphome/measure/influx.yaml
+  sensor_iaq: !include esphome/sensors/iaq.yaml
+  sensor_light: !include esphome/sensors/light.yaml
+  sensor_sound: !include esphome/sensors/sound.yaml
+  sensor_thermal: !include esphome/sensors/thermal.yaml
+  sensor_diagnostics: !include esphome/sensors/diagnostic.yaml
+
+# load external components
+external_components:
+  - source: esphome/components
