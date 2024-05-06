@@ -6,3 +6,5 @@
 # Enable OTA access
 # https://esphome.io/components/ota.html
 ota:
+  safe_mode: true
+  password: !secret ota_password
