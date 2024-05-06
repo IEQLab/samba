@@ -40,7 +40,7 @@ time:
 text_sensor:
   - platform: template
     id: sys_time
-    name: "System Time"
+    name: "Sample Time"
     update_interval: never
     device_class: timestamp
     lambda: |-
