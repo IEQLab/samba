@@ -58,4 +58,4 @@ rsconnect/
 secrets.yaml
 
 # External component build files
-/components/**/**/*.pyc
+/components/**/*/*
