@@ -39,8 +39,8 @@ time:
 # https://esphome.io/components/text_sensor/index.html
 text_sensor:
   - platform: template
-    id: sys_time
-    name: "Sample Time"
+    id: samba_timestamp
+    name: "Last Sample"
     update_interval: never
     device_class: timestamp
     lambda: |-

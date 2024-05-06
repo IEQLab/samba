@@ -15,7 +15,7 @@ script:
           then:
             - light.turn_on:
                 id: led_esp
-            - component.update: sys_time
+            - component.update: samba_timestamp
             - component.update: samba_temperature
             - component.update: samba_humidity
             - component.update: samba_globe
@@ -28,8 +28,8 @@ script:
             - component.update: samba_spl
             - delay: 200ms
             - text_sensor.template.publish: 
-                id: sys_time
-                state: !lambda 'return id(sys_time).state;'
+                id: samba_timestamp
+                state: !lambda 'return id(samba_timestamp).state;'
             - sensor.template.publish: 
                 id: samba_temperature
                 state: !lambda 'return id(samba_temperature).state;'
@@ -63,11 +63,11 @@ script:
             - logger.log:
                 level: INFO
                 format: "Sample taken at %s"
-                args: ['id(sys_time).state.c_str()']
+                args: ['id(samba_timestamp).state.c_str()']
             - light.turn_off:
                 id: led_esp
           else:
             - component.update: sys_uptime
             - logger.log: 
                 level: INFO
-                format: "Please wait...warming up SAMBA device"
+                format: "Warming up SAMBA device"
