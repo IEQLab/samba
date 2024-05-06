@@ -142,21 +142,11 @@ sensor:
 
 # air speed sensors
   - platform: template
-    id: samba_as1
-    name: "Air Speed 1"
+    id: samba_airspeed
+    name: "Air Speed"
     update_interval: never
     accuracy_decimals: 3
     device_class: speed
     icon: "mdi:weather-windy"
     lambda: |-
-      return id(as_1).state;
-
-  - platform: template
-    id: samba_as2
-    name: "Air Speed 2"
-    update_interval: never
-    accuracy_decimals: 3
-    device_class: speed
-    icon: "mdi:weather-windy"
-    lambda: |-
-      return id(as_2).state;
+      return std::min({id(as_1).state, id(as_2).state});
