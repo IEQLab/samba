@@ -35,14 +35,13 @@ time:
             level: INFO
             format: "RTC synchronised with SNTP"
 
-# Define timestamp sensor
+# Define timestamp text sensor
 # https://esphome.io/components/text_sensor/index.html
-# TODO: use this instead https://esphome.io/components/datetime/#config-datetime
 text_sensor:
   - platform: template
     id: sys_time
     name: "System Time"
-    internal: true
+    update_interval: never
+    device_class: timestamp
     lambda: |-
-      auto time_str = id(ds1307_time).now().strftime("%Y-%m-%d %H:%M:%S");
-      return { time_str };
+        return (ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00"));

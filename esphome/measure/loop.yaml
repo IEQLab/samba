@@ -67,7 +67,7 @@ script:
             - light.turn_off:
                 id: led_esp
           else:
+            - component.update: sys_uptime
             - logger.log: 
                 level: INFO
                 format: "Please wait...warming up SAMBA device"
-            - component.update: sys_uptime
