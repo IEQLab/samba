@@ -43,5 +43,6 @@ text_sensor:
     name: "Last Sample"
     update_interval: never
     device_class: timestamp
+    icon: "mdi:clock-plus-outline"
     lambda: |-
         return (ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00"));
