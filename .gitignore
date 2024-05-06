@@ -61,4 +61,4 @@ secrets.yaml
 /esphome/components/**/**/*.pyc
 
 # Temporary local file used for development
-samba_local.yaml
+samba_remote.yaml

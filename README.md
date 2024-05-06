@@ -2,7 +2,7 @@
 
 This repository contains all the firmware files for SAMBA v2. The SAMBA system was developed by the [IEQ Lab](https://www.sydney.edu.au/architecture/our-research/research-labs-and-facilities/indoor-environmental-quality-lab.html) at The University of Sydney. The latest version runs on [ESPHome](https://esphome.io), which is an actively-maintained open source system designed to control microcontrollers for home automation tasks.
 
-### Structure
+### Configuration
 
 ESPHome devices are configured using [YAML](https://yaml.org). YAML is commonly used for configuration files as it is human-readable. Settings are expressed as key-value pairs. There are many [YAML guides](https://www.cloudbees.com/blog/yaml-tutorial-everything-you-need-get-started) that you can follow if you are unfamiliar.
 
@@ -10,28 +10,58 @@ The repository is structured to allow easy modification of the configuration fil
 
 ```         
 ├── esphome
-|   ├── base
-|   ├── components
-|   ├── measure
-|   ├── peripherals
-|   ├── sensors
+|   ├── base        # esp32, wifi, OTA, RTC, ADC, LED, Home Assistant
+|   ├── components  # i2s, InfluxDB, sound level meter
+|   ├── measure     # sampling loop, data upload
+|   ├── sensors     # ta/rh, ntc, airspeed, pm2.5, co2, tvoc/nox, lux, spl
 |   └── ...
 ```
 
-The directory structure is based on subdirectories that group individual config files based on their type. For example, the configuration files for all sensor components are in the `sensors` subdirectory. `base` has config files for the board, wifi, over-the-air updates, and home assistant. `periphals` includes the real-time clock, analog to digital converter, and LEDs. And `measure` includes the script that handles the measurement loop and the config file for the InfluxDB upload.
+The directory structure is based on subdirectories that group individual config files based on their type. For example, the configuration files for all sensor components are in the `sensors` subdirectory. `base` has config files for the board, wifi, over-the-air updates, real-time clock, analog to digital converter, LED, and home assistant. And `measure` includes the script that handles the measurement loop and the config file for the InfluxDB upload.
+
+The configuration of these components has been setup for the reliable operation of SAMBA as per the IEQ Lab specification. However, it is possible for someone to modify the way it works by editing these files. An example configuration for the temperature and humidity sensor is as follows:
+
+.. code-block:: yaml
+
+    sensor:
+      - platform: sht4x
+        temperature:
+          name: "Temperature"
+        humidity:
+          name: "Relative Humidity"
+
+This is a basic configuration that will report temperature and relative humidity. The full set of configuration options are given on the [SHT4X device page](https://esphome.io/components/sensor/sht4x.html) of ESPHome. Comments throughout the .yaml files point the interested user to the relevant documentation. Note that modifications are the responsibility of the user and are not supported by the IEQ Lab.
+
+The `components` subdirectory is where ESPHome expects to find [external components](https://esphome.io/components/external_components.html) that additional functionality beyond what is offered natively in ESPHome. We are using three external components in SAMBA: `i2s` to sample from the microphone, `influxDB` for uploading samples to the InfluxDB bucket, and `sound_level_meter` for calculating SPL (eq, dBA, dBC).
 
 ### Sensors
 
-The following sensors are installed on SAMBA and configured using .yaml files in the `sensors` subdirectory. All of the sensors are natively supported by ESPHome through what are known as .components'.
+The following sensors are installed on SAMBA and configured using .yaml files in the `sensors` subdirectory. All of the sensors are natively supported by ESPHome through what are known as 'components'.
 
 |     Parameter     |                              Sensor                              |                                         Config                                         |                        Component                         |
 |:--------------------:|:---------------:|:---------------:|:---------------:|
 |  Air Temperature  | [Sensirion SHT40](https://sensirion.com/products/catalog/SHT40/) | [thermal.yaml](https://github.com/IEQLab/samba/blob/b07876be9d153c4315995ed3d519412e2f8a302a/esphome/sensors/thermal.yaml#L9-L23) | [sht4x](https://esphome.io/components/sensor/sht4x.html) |
 | Relative Humidity | [Sensirion SHT40](https://sensirion.com/products/catalog/SHT40/) | [thermal.yaml](https://github.com/IEQLab/samba/blob/b07876be9d153c4315995ed3d519412e2f8a302a/esphome/sensors/thermal.yaml#L25-L36) | [sht4x](https://esphome.io/components/sensor/sht4x.html) |
+| Globe Temperature | [NTC Thermistor](https://www.murata.com/en-us/products/productdetail?partno=NXRT15XH103FA1B040) | [thermal.yaml](https://github.com/IEQLab/samba/blob/main/esphome/sensors/thermal.yaml) | [ntc](https://esphome.io/components/sensor/ntc.html) |
+| Air Speed | [Thermal Anemometer](https://moderndevice.com/products/wind-sensor) | [thermal.yaml](https://github.com/IEQLab/samba/blob/main/esphome/sensors/thermal.yaml) | [ads1115](https://esphome.io/components/sensor/ads1115.html) |
 
 ### Sampling
 
-A key part of the SAMBA configuration is the sampling routine.
+A key part of the SAMBA configuration is the sampling routine. SAMBA is configured to constantly measure environmental parameters and then periodically summarise those measurements at a set interval before uploading them to the database.
+
+Measurements are made at set frequencies
+
+Some basic quality assurance is done on the measurements to ensure they are reliable.
+
+Loop checks the template sensor
+
+Data is sent to server.
+
+The following table summarises the sampling process used in the default SAMBA configuration. Again, users are free to modify this but no support will be offered by the IEQ Lab.
+
+| Table |  Here |
+|: *** :|: *** :|
+| value | value |
 
 ### Setup
 
