@@ -36,14 +36,18 @@ The `components` subdirectory is where ESPHome expects to find [external compone
 
 ### Sensors
 
-The following sensors are installed on SAMBA and configured using .yaml files in the `sensors` subdirectory. All of the sensors are natively supported by ESPHome through what are known as 'components'.
+The following sensors are installed on SAMBA and configured using .yaml files in the `sensors` subdirectory. Most of the sensors are natively supported by ESPHome through what are known as 'components'. The sensors are commonly used in the hobbyist and home automation communities. The only sensor not directly supported by ESPHome is the microphone, which uses the `i2s` and `sound_level_meter` external components.
 
 |     Parameter     |                              Sensor                              |                                         Config                                         |                        Component                         |
 |:--------------------:|:---------------:|:---------------:|:---------------:|
-|  Air Temperature  | [Sensirion SHT40](https://sensirion.com/products/catalog/SHT40/) | [thermal.yaml](https://github.com/IEQLab/samba/blob/b07876be9d153c4315995ed3d519412e2f8a302a/esphome/sensors/thermal.yaml#L9-L23) | [sht4x](https://esphome.io/components/sensor/sht4x.html) |
-| Relative Humidity | [Sensirion SHT40](https://sensirion.com/products/catalog/SHT40/) | [thermal.yaml](https://github.com/IEQLab/samba/blob/b07876be9d153c4315995ed3d519412e2f8a302a/esphome/sensors/thermal.yaml#L25-L36) | [sht4x](https://esphome.io/components/sensor/sht4x.html) |
+|  Temperature/RH  | [Sensirion SHT40](https://sensirion.com/products/catalog/SHT40/) | [thermal.yaml](https://github.com/IEQLab/samba/blob/b07876be9d153c4315995ed3d519412e2f8a302a/esphome/sensors/thermal.yaml#L9-L23) | [sht4x](https://esphome.io/components/sensor/sht4x.html) |
 | Globe Temperature | [NTC Thermistor](https://www.murata.com/en-us/products/productdetail?partno=NXRT15XH103FA1B040) | [thermal.yaml](https://github.com/IEQLab/samba/blob/main/esphome/sensors/thermal.yaml) | [ntc](https://esphome.io/components/sensor/ntc.html) |
 | Air Speed | [Thermal Anemometer](https://moderndevice.com/products/wind-sensor) | [thermal.yaml](https://github.com/IEQLab/samba/blob/main/esphome/sensors/thermal.yaml) | [ads1115](https://esphome.io/components/sensor/ads1115.html) |
+| CO2 | [CO2Meter K30](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module) | [iaq.yaml](https://github.com/IEQLab/samba/blob/main/esphome/sensors/iaq.yaml) | [TBD](https://github.com/esphome/feature-requests/issues/1587) |
+| PM2.5 | [Plantower PMS5003](https://www.plantower.com/en/products_33/74.html) | [iaq.yaml](https://github.com/IEQLab/samba/blob/main/esphome/sensors/iaq.yaml) | [pmsx003](https://esphome.io/components/sensor/pmsx003.html) |
+| VOC/NOx Index | [Sensirion SGP40](https://sensirion.com/products/catalog/SGP40/) | [iaq.yaml](https://github.com/IEQLab/samba/blob/main/esphome/sensors/iaq.yaml) | [sgp4x](https://esphome.io/components/sensor/sgp4x.html) |
+| Illuminance | [OSRAM TSL2591](https://sensirion.com/products/catalog/SGP40/) | [light.yaml](https://github.com/IEQLab/samba/blob/main/esphome/sensors/light.yaml) | [tsl2591](https://esphome.io/components/sensor/tsl2591.html) |
+| Sound Pressure Level | [ICS-43434 MEMS Micrphone](https://invensense.tdk.com/products/ics-43434/) | [sound.yaml](https://github.com/IEQLab/samba/blob/main/esphome/sensors/light.yaml) | [sound_level_meter](https://github.com/stas-sl/esphome-sound-level-meter) |
 
 ### Sampling
 
