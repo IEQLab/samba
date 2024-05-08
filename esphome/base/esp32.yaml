@@ -13,15 +13,14 @@ esphome:
     name: "IEQLab.SAMBA"
     version: "${project_version}"
   on_boot:
+    - priority: 600
+      then:
+        - ds1307.read_time:
     - priority: -100
       then: 
         - logger.log: 
             level: INFO
             format: "A SAMBA is born :-)"
-        - wait_until:  
-            condition:
-              wifi.connected: 
-            timeout: 30s      
         - component.update: sys_uptime
         - component.update: sys_ip
         - logger.log: 
