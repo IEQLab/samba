@@ -65,7 +65,7 @@ sensor:
     sensor: ads_ntc
     internal: true
     configuration: DOWNSTREAM
-    resistor: 5.6kOhm
+    resistor: 10kOhm
 
 # https://www.murata.com/en-us/products/productdetail?partno=NXRT15XH103FA1B040
   - platform: ntc
@@ -73,7 +73,7 @@ sensor:
     sensor: ntc_resistance
     internal: true
     calibration:
-      b_constant: 3380
+      b_constant: 3950
       reference_temperature: 25°C
       reference_resistance: 10kOhm
     filters:

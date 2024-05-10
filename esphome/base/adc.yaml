@@ -17,7 +17,7 @@ sensor:
     ads1115_id: ads_dac
     id: ads_ntc
     multiplexer: 'A0_GND'
-    gain: 1.024
+    gain: 6.144
     update_interval: 30s
     internal: true
 # Air speed sensor 1
@@ -25,7 +25,7 @@ sensor:
     ads1115_id: ads_dac
     id: ads_as1
     multiplexer: 'A1_GND'
-    gain: 1.024
+    gain: 6.144
     update_interval: 1s
     internal: true
 # Air speed sensor 2
@@ -33,6 +33,6 @@ sensor:
     ads1115_id: ads_dac
     id: ads_as2
     multiplexer: 'A2_GND'
-    gain: 1.024
+    gain: 6.144
     update_interval: 1s
     internal: true
