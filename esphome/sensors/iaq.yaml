@@ -5,31 +5,52 @@
 
 # Define Sensirion CO2 sensor
 # https://esphome.io/components/sensor/scd4x.html
+# sensor:
+#   - platform: scd4x
+#     address: 0x62
+#     update_interval: 30s
+#     measurement_mode: "periodic"
+#     temperature_offset: 4°C
+#     automatic_self_calibration: true
+#     co2:
+#       id: scd_co2
+#       internal: true
+#       filters:
+#         - clamp:
+#             min_value: 400
+#             max_value: 2000
+#             ignore_out_of_range: true
+#         - median:
+#             window_size: 10
+#             send_every: 1
+#             send_first_at: 1
+#     temperature:
+#       id: scd_temperature
+#       internal: true
+#     humidity:
+#       id: scd_humidity
+#       internal: true
+
+# define K30 sensor
 sensor:
-  - platform: scd4x
-    address: 0x62
-    update_interval: 30s
-    measurement_mode: "periodic"
-    temperature_offset: 4°C
-    automatic_self_calibration: true
-    co2:
-      id: scd_co2
-      internal: true
-      filters:
-        - clamp:
-            min_value: 400
-            max_value: 2000
-            ignore_out_of_range: true
-        - median:
-            window_size: 10
-            send_every: 1
-            send_first_at: 1
-    temperature:
-      id: scd_temperature
-      internal: true
-    humidity:
-      id: scd_humidity
-      internal: true
+  - platform: modbus_controller
+    modbus_controller_id: modbus_co2
+    id: k30_co2
+    internal: true
+    unit_of_measurement: "ppm"
+    address: 3
+    register_type: "read"
+    value_type: U_WORD
+    accuracy_decimals: 0
+    filters:
+      - clamp:
+          min_value: 350
+          max_value: 2000
+          ignore_out_of_range: true
+      - median:
+          window_size: 10
+          send_every: 1
+          send_first_at: 1
 
 # CO2 sensor
   - platform: template
@@ -40,14 +61,14 @@ sensor:
     device_class: carbon_dioxide
     icon: "mdi:molecule-co2"
     lambda: |-
-      return id(scd_co2).state;
+      return id(k30_co2).state;
 
 
 # Particulate Matter
 # https://esphome.io/components/sensor/pmsx003.html
   - platform: pmsx003
     type: PMSX003
-    uart_id: uart_1
+    uart_id: uart_pm
     pm_2_5:
       id: pms_pm25
       internal: true

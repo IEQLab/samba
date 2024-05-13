@@ -41,14 +41,6 @@ logger:
     main: INFO
     component: ERROR
 
-# Configure UART
-# https://esphome.io/components/uart
-uart:
-  - id: uart_1
-    rx_pin: 7
-    tx_pin: 8
-    baud_rate: 9600
-
 # Define i2c pins
 # https://esphome.io/components/i2c
 i2c:
@@ -56,6 +48,35 @@ i2c:
     sda: 22
     scl: 20
     scan: true
+
+# Configure UART
+# https://esphome.io/components/uart
+uart:
+  - id: uart_pm
+    rx_pin: 7
+    tx_pin: 8
+    baud_rate: 9600
+  - id: uart_co2
+    rx_pin: 27
+    tx_pin: 15
+    baud_rate: 9600
+    stop_bits: 1
+    parity: none
+
+# Configure modbus controller for K30 CO2 sensor
+# https://esphome.io/components/modbus_controller.html
+modbus:
+  send_wait_time: 200ms
+  uart_id: uart_co2
+  id: bus_co2
+
+modbus_controller:
+  - id: modbus_co2
+    address: 0xFE
+    modbus_id: bus_co2
+    command_throttle: 500ms
+    setup_priority: -10
+    update_interval: 30s
 
 # Configure i2s
 # https://github.com/stas-sl/esphome-sound-level-meter
