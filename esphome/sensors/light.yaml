@@ -6,36 +6,52 @@
 # Define TSL2591 device
 # https://esphome.io/components/sensor/tsl2591.html
 sensor:
-  - platform: tsl2591
-    address: 0x29
-    update_interval: 10s
-    gain: auto
-    device_factor: 53
-    glass_attenuation_factor: 14.4
-    calculated_lux:
-      id: tsl_lux
-      internal: true
-      filters:
-        - clamp:
-            min_value: 0
-            max_value: 10000
-            ignore_out_of_range: true
-        - median:
-            window_size: 30
-            send_every: 3
-            send_first_at: 3
-    actual_gain:
-      id: tsl_gain
-      internal: true
-    visible:
-      id: tsl_vis
-      internal: true
-    infrared:
-      id: tsl_ir
-      internal: true
-    full_spectrum:
-      id: tsl_full
-      internal: true
+  # - platform: tsl2591
+  #   address: 0x29
+  #   update_interval: 10s
+  #   gain: auto
+  #   device_factor: 53
+  #   glass_attenuation_factor: 14.4
+  #   calculated_lux:
+  #     id: tsl_lux
+  #     internal: true
+  #     filters:
+  #       - clamp:
+  #           min_value: 0
+  #           max_value: 10000
+  #           ignore_out_of_range: true
+  #       - median:
+  #           window_size: 30
+  #           send_every: 3
+  #           send_first_at: 3
+  #   actual_gain:
+  #     id: tsl_gain
+  #     internal: true
+  #   visible:
+  #     id: tsl_vis
+  #     internal: true
+  #   infrared:
+  #     id: tsl_ir
+  #     internal: true
+  #   full_spectrum:
+  #     id: tsl_full
+  #     internal: true
+
+# Define OPT3001 device
+# https://github.com/esphome/esphome/pull/6625
+  - platform: opt3001
+    id: opt_lux
+    internal: true
+    filters:
+      - clamp:
+          min_value: 0
+          max_value: 10000
+          ignore_out_of_range: true
+      - median:
+          window_size: 30
+          send_every: 3
+          send_first_at: 3
+
 
 # illuminance sensor
   - platform: template
