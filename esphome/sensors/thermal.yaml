@@ -149,4 +149,4 @@ sensor:
     device_class: speed
     icon: "mdi:weather-windy"
     lambda: |-
-      return std::min({id(as_1).state, id(as_2).state});
+      return std::max(id(as_1).state, id(as_2).state);
