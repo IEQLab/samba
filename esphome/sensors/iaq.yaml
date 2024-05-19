@@ -104,6 +104,8 @@ sensor:
     voc:
       id: sgp_voc
       internal: true
+      algorithm_tuning:
+        learning_time_offset_hours: 720
       filters:
         - median:
             window_size: 5
@@ -121,13 +123,13 @@ sensor:
 # TVOC / NOx index sensors
   - platform: template
     id: samba_voc
-    name: "VOC Index"
+    name: "TVOC"
     update_interval: never
     accuracy_decimals: 0
-    device_class: aqi
+    device_class: volatile_organic_compounds
     icon: "mdi:radiator"
     lambda: |-
-      return id(sgp_voc).state;
+      return ((std::log(501 − id(sgp_voc).state) − 6.24) * (−996.94));
 
   - platform: template
     id: samba_nox
