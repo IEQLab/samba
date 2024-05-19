@@ -62,5 +62,5 @@ sensor:
     device_class: illuminance
     icon: "mdi:sun-wireless-outline"
     lambda: |-
-      return id(tsl_lux).state;
+      return id(opt_lux).state;
 
