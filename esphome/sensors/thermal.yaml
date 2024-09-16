@@ -9,6 +9,7 @@ sensor:
   - platform: sht4x
     address: 0x44
     update_interval: 30s
+    heater_max_duty: 0
     temperature:
       id: sht_temperature
       internal: true
@@ -66,6 +67,7 @@ sensor:
     internal: true
     configuration: DOWNSTREAM
     resistor: 10kOhm
+    reference_voltage : 4.0
 
 # https://www.murata.com/en-us/products/productdetail?partno=NXRT15XH103FA1B040
   - platform: ntc
@@ -73,7 +75,7 @@ sensor:
     sensor: ntc_resistance
     internal: true
     calibration:
-      b_constant: 3950
+      b_constant: 3977
       reference_temperature: 25°C
       reference_resistance: 10kOhm
     filters:
