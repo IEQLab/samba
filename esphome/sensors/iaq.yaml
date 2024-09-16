@@ -3,69 +3,42 @@
 # written by Thomas Parkinson, May 2024
 
 
-# Define Sensirion CO2 sensor
-# https://esphome.io/components/sensor/scd4x.html
+# # define K30 sensor
 # sensor:
-#   - platform: scd4x
-#     address: 0x62
-#     update_interval: 30s
-#     measurement_mode: "periodic"
-#     temperature_offset: 4°C
-#     automatic_self_calibration: true
-#     co2:
-#       id: scd_co2
-#       internal: true
-#       filters:
-#         - clamp:
-#             min_value: 400
-#             max_value: 2000
-#             ignore_out_of_range: true
-#         - median:
-#             window_size: 10
-#             send_every: 1
-#             send_first_at: 1
-#     temperature:
-#       id: scd_temperature
-#       internal: true
-#     humidity:
-#       id: scd_humidity
-#       internal: true
+#   - platform: modbus_controller
+#     modbus_controller_id: modbus_co2
+#     id: k30_co2
+#     internal: true
+#     unit_of_measurement: "ppm"
+#     address: 3
+#     register_type: "read"
+#     value_type: U_WORD
+#     accuracy_decimals: 0
+#     filters:
+#       - clamp:
+#           min_value: 350
+#           max_value: 2000
+#           ignore_out_of_range: true
+#       - median:
+#           window_size: 10
+#           send_every: 1
+#           send_first_at: 1
 
-# define K30 sensor
-sensor:
-  - platform: modbus_controller
-    modbus_controller_id: modbus_co2
-    id: k30_co2
-    internal: true
-    unit_of_measurement: "ppm"
-    address: 3
-    register_type: "read"
-    value_type: U_WORD
-    accuracy_decimals: 0
-    filters:
-      - clamp:
-          min_value: 350
-          max_value: 2000
-          ignore_out_of_range: true
-      - median:
-          window_size: 10
-          send_every: 1
-          send_first_at: 1
-
-# CO2 sensor
-  - platform: template
-    id: samba_co2
-    name: "Carbon Dioxide"
-    update_interval: never
-    accuracy_decimals: 0
-    device_class: carbon_dioxide
-    icon: "mdi:molecule-co2"
-    lambda: |-
-      return id(k30_co2).state;
+# # CO2 sensor
+#   - platform: template
+#     id: samba_co2
+#     name: "Carbon Dioxide"
+#     update_interval: never
+#     accuracy_decimals: 0
+#     device_class: carbon_dioxide
+#     icon: "mdi:molecule-co2"
+#     lambda: |-
+#       return id(k30_co2).state;
 
 
 # Particulate Matter
 # https://esphome.io/components/sensor/pmsx003.html
+sensor:
   - platform: pmsx003
     type: PMSX003
     uart_id: uart_pm
@@ -89,7 +62,7 @@ sensor:
     update_interval: never
     accuracy_decimals: 0
     device_class: pm25
-    icon: "mdi:molecule"
+    icon: mdi:molecule
     lambda: |-
       return id(pms_pm25).state;
 
@@ -127,16 +100,16 @@ sensor:
     update_interval: never
     accuracy_decimals: 0
     device_class: volatile_organic_compounds
-    icon: "mdi:radiator"
+    icon: mdi:radiator
     lambda: |-
-      return ((std::log(501 − id(sgp_voc).state) − 6.24) * (−996.94));
-
+      return {(std::log(501 - id(sgp_voc).state) - 6.24) * (-996.94)};
+    
   - platform: template
     id: samba_nox
     name: "NOx Index"
     update_interval: never
     accuracy_decimals: 0
     device_class: aqi
-    icon: "mdi:radiator"
+    icon: mdi:radiator
     lambda: |-
       return id(sgp_nox).state;
