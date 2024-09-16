@@ -13,14 +13,14 @@ script:
             lambda: |-
               return id(sys_uptime).state > 60;
           then:
-            - light.turn_on:
-                id: led_esp
+            #- light.turn_on:
+            #    id: led_esp
             - component.update: samba_timestamp
             - component.update: samba_temperature
             - component.update: samba_humidity
             - component.update: samba_globe
             - component.update: samba_airspeed
-            - component.update: samba_co2
+            #- component.update: samba_co2
             - component.update: samba_pm25
             - component.update: samba_voc
             - component.update: samba_nox
@@ -42,9 +42,9 @@ script:
             - sensor.template.publish: 
                 id: samba_airspeed
                 state: !lambda 'return id(samba_airspeed).state;'
-            - sensor.template.publish: 
-                id: samba_co2
-                state: !lambda 'return id(samba_co2).state;'
+            #- sensor.template.publish: 
+            #    id: samba_co2
+            #    state: !lambda 'return id(samba_co2).state;'
             - sensor.template.publish: 
                 id: samba_pm25
                 state: !lambda 'return id(samba_pm25).state;'
@@ -64,8 +64,8 @@ script:
                 level: INFO
                 format: "Sample taken at %s"
                 args: ['id(samba_timestamp).state.c_str()']
-            - light.turn_off:
-                id: led_esp
+            #- light.turn_off:
+            #    id: led_esp
           else:
             - component.update: sys_uptime
             - logger.log: 
