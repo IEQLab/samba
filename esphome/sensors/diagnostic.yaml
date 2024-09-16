@@ -12,8 +12,9 @@ sensor:
     update_interval: 12h
     accuracy_decimals: 0
     device_class: signal_strength
-    icon: "mdi:wifi-strength-3"
+    icon: mdi:wifi-strength-3
     entity_category: "diagnostic"
+    internal: true
 
 # Report the WiFi signal strength in %
   - platform: copy
@@ -23,10 +24,10 @@ sensor:
     accuracy_decimals: 0
     unit_of_measurement: "%"
     device_class: signal_strength
-    icon: "mdi:wifi-strength-3"
+    icon: mdi:wifi-strength-3
     entity_category: "diagnostic"
     filters:
-      - lambda: |- 
+      - lambda: |-
           return min(max(2 * (x + 100.0), 0.0), 100.0);
 
 # Report the duration of time the device has been up for
@@ -36,20 +37,20 @@ sensor:
     update_interval: 12h
     accuracy_decimals: 0
     device_class: duration
-    icon: "mdi:clock-check-outline"
+    icon: mdi:clock-check-outline
     entity_category: "diagnostic"
 
 # Report the available memory
   - platform: template
     id: sys_memory
-    icon: mdi:memory
     name: "Available Memory"
     update_interval: 12h
-    lambda: |-
-      return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
+    icon: mdi:memory
     unit_of_measurement: 'kB'
     state_class: measurement
     entity_category: "diagnostic"
+    lambda: |-
+      return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
 
 # Report network information
 # https://esphome.io/components/text_sensor/wifi_info.html
@@ -58,14 +59,24 @@ text_sensor:
     ip_address:
       id: sys_ip
       name: "IP Address"
+      icon: mdi:ip-network-outline
       update_interval: 12h
       entity_category: "diagnostic"
-      icon: "mdi:ip-network-outline"
     ssid:
       id: sys_ssid
       name: "Connected SSID"
+      icon: mdi:wifi-check
       update_interval: 12h
       entity_category: "diagnostic"
-      icon: "mdi:wifi-check"
 
-    
+# Report timestamp of last sample
+  - platform: template
+    id: samba_timestamp
+    name: "Last Sample"
+    update_interval: never
+    device_class: timestamp
+    icon: mdi:clock-plus-outline
+    entity_category: "diagnostic"
+    lambda: |-
+        return (ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00"));
+  
