@@ -12,13 +12,6 @@ namespace esphome
 {
   namespace influxdb
   {
-
-    // struct SensorConfig {
-    //   bool ignore;
-    //   std::string measurement;
-    //   std:vector<std::pair<std::string, std::string>> tags;
-    // }
-
     class InfluxDBWriter : public Component
     {
     public:
@@ -38,11 +31,14 @@ namespace esphome
       float get_setup_priority() const;
 
       void set_host(std::string host) { this->host = host; };
+      void set_use_ssl(bool use_ssl) { this->use_ssl = use_ssl; }
       void set_port(uint16_t port) { this->port = port; };
 
-      void set_username(std::string username) { this->username = username; };
-      void set_password(std::string password) { this->password = password; };
-      void set_database(std::string database) { this->database = database; };
+      void set_bucket(std::string bucket) { this->bucket = bucket; };
+      void set_token(std::string token) { this->token = token; this->auth_string = "Token " + token; };
+      void set_org(std::string org) { this->org = org; };
+      void set_orgId(std::string orgId) { this->orgId = orgId; };
+      void set_precision(std::string precision) { this->precision = precision; };
       void set_send_timeout(int timeout) { send_timeout = timeout; };
 
       void set_tags(std::string tags) { this->tags = tags; };
@@ -54,10 +50,14 @@ namespace esphome
 
       uint16_t port;
       std::string host;
+      bool use_ssl;
 
-      std::string username;
-      std::string password;
-      std::string database;
+      std::string bucket;
+      std::string token;
+      std::string auth_string;
+      std::string org;
+      std::string orgId;
+      std::string precision;
       std::string service_url;
 
       int send_timeout;

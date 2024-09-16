@@ -20,39 +20,32 @@ namespace esphome
             for (auto fun : setup_callbacks)
                 objs.push_back(fun());
 
-            this->service_url = "http://"+this->host+":"+to_string(this->port)+"/write?db="+this->database;
+            if (this->use_ssl) this->service_url = "https://";
+            else this->service_url = "http://";
+
+            this->service_url += this->host+":"+to_string(this->port)+"/api/v2/write?bucket="+this->bucket+"&precision="+this->precision;
+            if (this->org.length() > 0) this->service_url += "&org="+this->org;
+            if (this->orgId.length() > 0) this->service_url += "&orgID="+this->orgId;
 
             this->request_ = new http_request::HttpRequestComponent();
             this->request_->setup();
 
             std::list<http_request::Header> headers;
-            http_request::Header header;
-            header.name = "Content-Type";
-            header.value = "text/plain";
-            headers.push_back(header);
-            if ((this->username.length() > 0) && (this->password.length() > 0))
-            {
-                header.name = "u";
-                header.value = this->username.c_str();
-                headers.push_back(header);
-                header.name = "p";
-                header.value = this->password.c_str();
-                headers.push_back(header);
-            }
+
+            http_request::Header auth_header;
+            auth_header.name = "Authorization";
+            auth_header.value = this->auth_string.c_str();
+            headers.push_back(auth_header);
+
+            http_request::Header content_header;
+            content_header.name = "Content-Type";
+            content_header.value = "text/plain";
+            headers.push_back(content_header);
+
             this->request_->set_headers(headers);
-            this->request_->set_method("GET");
+            this->request_->set_method("POST");
             this->request_->set_useragent("ESPHome InfluxDB Bot");
             this->request_->set_timeout(this->send_timeout);
-
-            //Let's create the database
-            this->request_->set_url("http://"+this->host+":"+to_string(this->port)+"/query?q=CREATE+DATABASE+"+this->database);
-            this->request_->send(
-                std::vector<
-                    esphome::http_request::HttpRequestResponseTrigger *>{});
-            this->request_->close();
-
-            // From now own all request are POST.
-            this->request_->set_method("POST");
 
             if (publish_all)
             {
@@ -82,14 +75,7 @@ namespace esphome
 
         float InfluxDBWriter::get_setup_priority() const { return setup_priority::AFTER_CONNECTION; }
 
-        void InfluxDBWriter::loop()
-        {
-            // if (packet_size > 0 && millis() >= packet_timeout)
-            // {
-            //     udp.endPacket();
-            //     packet_size = 0;
-            // }
-        }
+        void InfluxDBWriter::loop() {}
 
         void InfluxDBWriter::write(std::string measurement, std::string tags, const std::string value, bool is_string)
         {
@@ -97,15 +83,15 @@ namespace esphome
             this->request_->set_url(this->service_url);
             this->request_->set_body(line.c_str());
             this->request_->send(
-                std::vector<
+                    std::vector<
                     esphome::http_request::HttpRequestResponseTrigger *>{});
 
-            // String response = this->request_->get_string();
-            // if (response.length() == 0) {
-            //     ESP_LOGD(TAG, "Got empty response for method POST.");
-            // } else {
-            //     ESP_LOGD(TAG, "InfluxDB packet: %s", line.c_str());
-            // }
+//             String response = this->request_->get_string();
+//             if (response.length() == 0) {
+//                 ESP_LOGD(TAG, "Got empty response for method POST.");
+//             } else {
+//                 ESP_LOGD(TAG, "Response: %s", response.c_str());
+//             }
 
             this->request_->close();
 
@@ -116,7 +102,7 @@ namespace esphome
         {
             ESP_LOGCONFIG(TAG, "InfluxDB Writer:");
             ESP_LOGCONFIG(TAG, "  Address: %s:%u", host.c_str(), port);
-            ESP_LOGCONFIG(TAG, "  Database: %s", database.c_str());
+            ESP_LOGCONFIG(TAG, "  Bucket: %s", bucket.c_str());
         }
 
 #ifdef USE_BINARY_SENSOR
@@ -135,7 +121,7 @@ namespace esphome
 #endif
 
 #ifdef USE_TEXT_SENSOR
-        void InfluxDBWriter::on_sensor_update(text_sensor::TextSensor *obj, std::string measurement, std::string tags, std::string state)
+        void InfluxDBWriter::on_sensor_u    pdate(text_sensor::TextSensor *obj, std::string measurement, std::string tags, std::string state)
         {
             write(measurement, tags, state, true);
         }
