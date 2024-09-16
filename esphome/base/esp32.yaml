@@ -31,12 +31,13 @@ esphome:
 # Define ESP32 board
 # https://www.adafruit.com/product/5400
 esp32:
-  board: adafruit_feather_esp32_v2 #esp32dev
+  board: esp32dev
+  flash_size: 16MB
 
 # Set logging to errors only
 # https://esphome.io/components/logger
 logger:
-  level: INFO
+  level: DEBUG
   logs:
     main: INFO
     component: ERROR
@@ -45,49 +46,28 @@ logger:
 # https://esphome.io/components/i2c
 i2c:
   - id: bus_a
-    sda: 22
-    scl: 20
+    scl: GPIO25
+    sda: GPIO26
     scan: true
 
 # Configure UART
 # https://esphome.io/components/uart
 uart:
   - id: uart_pm
-    rx_pin: 7
-    tx_pin: 8
+    rx_pin: GPIO16
+    tx_pin: GPIO17
     baud_rate: 9600
-  - id: uart_co2
-    rx_pin: 27
-    tx_pin: 15
-    baud_rate: 9600
-    stop_bits: 1
-    parity: none
-
-# Configure modbus controller for K30 CO2 sensor
-# https://esphome.io/components/modbus_controller.html
-modbus:
-  send_wait_time: 200ms
-  uart_id: uart_co2
-  id: bus_co2
-
-modbus_controller:
-  - id: modbus_co2
-    address: 0xFE
-    modbus_id: bus_co2
-    command_throttle: 500ms
-    setup_priority: -10
-    update_interval: 30s
 
 # Configure i2s
 # https://github.com/stas-sl/esphome-sound-level-meter
 i2s:
-  bck_pin: 32
-  ws_pin: 25
-  din_pin: 33
+  bck_pin: GPIO13
+  ws_pin: GPIO33
+  din_pin: GPIO32
   sample_rate: 48000
   bits_per_sample: 32
   dma_buf_count: 8
   dma_buf_len: 256
   use_apll: true  # default: false
-  channel: right
+  channel: left
   bits_shift: 8   # default: 0
