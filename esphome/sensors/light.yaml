@@ -8,6 +8,7 @@
 sensor:
   - platform: opt3001
     id: opt_lux
+    update_interval: 5s
     internal: true
     address: 0x45
     filters:
@@ -16,9 +17,9 @@ sensor:
           max_value: 10000
           ignore_out_of_range: true
       - median:
-          window_size: 30
-          send_every: 3
-          send_first_at: 3
+          window_size: 6
+          send_every: 6
+          send_first_at: 6
 
 
 # illuminance sensor
@@ -28,7 +29,8 @@ sensor:
     update_interval: never
     accuracy_decimals: 0
     device_class: illuminance
-    icon: "mdi:sun-wireless-outline"
+    unit_of_measurement: "lx"
+    icon: mdi:sun-wireless-outline
     lambda: |-
       return id(opt_lux).state;
 
