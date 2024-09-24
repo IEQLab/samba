@@ -72,7 +72,6 @@ text_sensor:
       id: sys_mac
       name: "Mac Address"
       icon: mdi:network-pos
-      update_interval: 12h
       entity_category: "diagnostic"      
 
 # Report timestamp of last sample
