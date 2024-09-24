@@ -42,9 +42,10 @@ sensor:
     id: samba_temperature
     name: "Air Temperature"
     update_interval: never
-    accuracy_decimals: 2
+    accuracy_decimals: 1
     device_class: temperature
-    icon: "mdi:thermometer"
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
     lambda: |-
       return id(sht_temperature).state;
 
@@ -52,9 +53,10 @@ sensor:
     id: samba_humidity
     name: "Relative Humidity"
     update_interval: never
-    accuracy_decimals: 1
+    accuracy_decimals: 0
     device_class: humidity
-    icon: "mdi:water-percent"
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
     lambda: |-
       return id(sht_humidity).state;
 
@@ -93,9 +95,10 @@ sensor:
     id: samba_globe
     name: "Globe Temperature"
     update_interval: never
-    accuracy_decimals: 2
+    accuracy_decimals: 1
     device_class: temperature
-    icon: "mdi:thermometer"
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
     lambda: |-
       return id(ntc_temp).state;
 
@@ -115,12 +118,8 @@ sensor:
           window_size: 300
           send_every: 120
           send_first_at: 120
-      - calibrate_linear:
-          method: least_squares
-          datapoints:
-            - 0.0 -> 0.0
-            - 1.0 -> 1.0
-            - 2.0 -> 2.0
+      - lambda: |-
+          return {0.00000000000162713705587024 * pow(x, 17.7238215290214)};
       - clamp:
           min_value: 0.05
           max_value: 1.5
@@ -149,9 +148,9 @@ sensor:
     id: samba_airspeed
     name: "Air Speed"
     update_interval: never
-    accuracy_decimals: 3
+    accuracy_decimals: 2
     device_class: speed
     unit_of_measurement: "m/s"
-    icon: "mdi:weather-windy"
+    icon: mdi:weather-windy
     lambda: |-
       return std::max(id(as_1).state, id(as_2).state);
