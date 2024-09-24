@@ -20,7 +20,8 @@ esphome:
       then: 
         - logger.log: 
             level: INFO
-            format: "A SAMBA is born :-)"
+            format: "A SAMBA is born (%s) :-)"
+            args: ['id(sys_mac).state.c_str()']
         - component.update: sys_uptime
         - component.update: sys_ip
         - logger.log: 
