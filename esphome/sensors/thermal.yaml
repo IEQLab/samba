@@ -107,6 +107,14 @@ sensor:
     source_id: ads_as1
     internal: true
     filters:
+      - clamp:
+          min_value: 0
+          max_value: 5
+          ignore_out_of_range: true
+      - median:
+          window_size: 300
+          send_every: 120
+          send_first_at: 120
       - calibrate_linear:
           method: least_squares
           datapoints:
@@ -114,33 +122,27 @@ sensor:
             - 1.0 -> 1.0
             - 2.0 -> 2.0
       - clamp:
-          min_value: 0
-          max_value: 5
-          ignore_out_of_range: true
-      - median:
-          window_size: 300
-          send_every: 30
-          send_first_at: 30
+          min_value: 0.05
+          max_value: 1.5
 
   - platform: copy
     id: as_2
     source_id: ads_as2
     internal: true
     filters:
-      - calibrate_linear:
-          method: least_squares
-          datapoints:
-            - 0.0 -> 0.0
-            - 1.0 -> 1.0
-            - 2.0 -> 2.0
       - clamp:
           min_value: 0
           max_value: 5
           ignore_out_of_range: true
       - median:
           window_size: 300
-          send_every: 30
-          send_first_at: 30
+          send_every: 120
+          send_first_at: 120
+      - lambda: |-
+          return {0.110619801169189 * pow(x, 3.93850903242043)};
+      - clamp:
+          min_value: 0.05
+          max_value: 1.5
 
 # air speed sensors
   - platform: template
@@ -149,6 +151,7 @@ sensor:
     update_interval: never
     accuracy_decimals: 3
     device_class: speed
+    unit_of_measurement: "m/s"
     icon: "mdi:weather-windy"
     lambda: |-
       return std::max(id(as_1).state, id(as_2).state);
