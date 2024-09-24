@@ -62,6 +62,7 @@ sensor:
     update_interval: never
     accuracy_decimals: 0
     device_class: pm25
+    unit_of_measurement: "µg/m3"
     icon: mdi:molecule
     lambda: |-
       return id(pms_pm25).state;
@@ -100,6 +101,7 @@ sensor:
     update_interval: never
     accuracy_decimals: 0
     device_class: volatile_organic_compounds
+    unit_of_measurement: "ppb"
     icon: mdi:radiator
     lambda: |-
       return {(std::log(501 - id(sgp_voc).state) - 6.24) * (-996.94)};
