@@ -19,15 +19,17 @@ esphome:
     - priority: -100
       then: 
         - logger.log: 
-            level: INFO
             format: "A SAMBA is born (%s) :-)"
             args: ['id(sys_mac).state.c_str()']
+            level: INFO
+            tag: "samba"
         - component.update: sys_uptime
         - component.update: sys_ip
         - logger.log: 
-            level: INFO
             format: "IP address is %s"
             args: ['id(sys_ip).state.c_str()']
+            level: INFO
+            tag: "samba"
 
 # Define ESP32 board
 # https://www.adafruit.com/product/5400
@@ -38,10 +40,18 @@ esp32:
 # Set logging to errors only
 # https://esphome.io/components/logger
 logger:
-  level: DEBUG
+  level: INFO
   logs:
     main: INFO
-    component: ERROR
+    component: NONE
+    sensor: INFO
+    ads1115.sensor: INFO
+    ntc: INFO
+    opt3001.sensor: INFO
+    pmsx003: INFO
+    sgp4x: NONE
+    sound_level_meter: INFO
+    wire.cpp: NONE
 
 # Define i2c pins
 # https://esphome.io/components/i2c
