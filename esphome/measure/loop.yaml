@@ -3,7 +3,7 @@
 # written by Thomas Parkinson, May 2024
 
 
-# Define scipt to update measurement values
+# Define script to update measurement values
 # https://esphome.io/guides/automations.html#script-component
 script:
   - id: sensor_sample
