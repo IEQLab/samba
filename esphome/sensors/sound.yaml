@@ -87,8 +87,8 @@ sensor:
     name: "Sound Pressure Level"
     update_interval: never
     accuracy_decimals: 1
-    unit_of_measurement: dBA
     device_class: sound_pressure
-    icon: "mdi:volume-high"
+    unit_of_measurement: "dBA"
+    icon: mdi:volume-high
     lambda: |-
       return id(spl_laeq).state;
