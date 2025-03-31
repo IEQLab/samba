@@ -3,25 +3,13 @@
 # written by Thomas Parkinson, May 2024
 
 
-# Define Status LED component
-# https://esphome.io/components/status_led
-#status_led:
-# pin:
-#   number: GPIO13
-
-# Define LED device as an output component
-# https://esphome.io/components/output/index.html
-output:
-  - platform: gpio
-    pin: GPIO13
-    id: output_led
-    inverted: false
-
-# Define light component using LED
-# https://esphome.io/components/light/index.html
+# Define LED component
+# https://esphome.io/components/light/esp32_rmt_led_strip.html
 light:
-  - platform: binary
-    internal: true
-    id: led_esp
-    name: "ESP Feather LED"
-    output: output_led
+  - platform: esp32_rmt_led_strip
+    id: samba_led
+    rgb_order: GRB
+    pin: GPIO27
+    num_leds: 1
+    rmt_channel: 0
+    chipset: ws2812

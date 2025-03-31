@@ -18,6 +18,9 @@ esphome:
         - ds1307.read_time:
     - priority: -100
       then: 
+        - light.turn_on:
+            id: samba_led
+            brightness: 0.25
         - logger.log: 
             format: "A SAMBA is born (%s) :-)"
             args: ['id(sys_mac).state.c_str()']
@@ -30,9 +33,12 @@ esphome:
             args: ['id(sys_ip).state.c_str()']
             level: INFO
             tag: "samba"
+        - delay: 1000ms
+        - light.turn_off:
+            id: samba_led
 
 # Define ESP32 board
-# https://www.adafruit.com/product/5400
+# https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
 esp32:
   board: esp32dev
   flash_size: 16MB
