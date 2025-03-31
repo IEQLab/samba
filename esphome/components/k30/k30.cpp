@@ -39,7 +39,6 @@ void K30Component::setup() {
   }
   // Calculate the checksum. The checksum is stripped to 8 bits.
   uint8_t checksum = this->calculate_checksum_(data, 2);
-  ESP_LOGE(TAG, "Received from K30: %02X %02X %02X", data[0], data[1], data[2]);
   if (checksum != data[2]) {
     ESP_LOGE(TAG, "Checksum error when reading meter control byte");
     this->mark_failed();

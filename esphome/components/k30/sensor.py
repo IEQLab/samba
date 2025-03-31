@@ -17,7 +17,7 @@ DEPENDENCIES = ["i2c"]
 k30_ns = cg.esphome_ns.namespace("k30")
 K30Component = k30_ns.class_("K30Component", cg.PollingComponent, i2c.I2CDevice)
 
-CONF_AUTOMATIC_SELF_CALIBRATION = "use_abc"
+CONF_USE_ABC = "use_abc"
 
 CONFIG_SCHEMA = (
     cv.Schema(
@@ -30,7 +30,7 @@ CONFIG_SCHEMA = (
                 device_class=DEVICE_CLASS_CARBON_DIOXIDE,
                 state_class=STATE_CLASS_MEASUREMENT,
             ),
-            cv.Optional(CONF_AUTOMATIC_SELF_CALIBRATION, default=True): cv.boolean,
+            cv.Optional(CONF_USE_ABC, default=True): cv.boolean,
             cv.Optional(CONF_UPDATE_INTERVAL, default="60s"): cv.All(
                 cv.positive_time_period_seconds,
                 cv.Range(
@@ -49,7 +49,7 @@ async def to_code(config):
     await cg.register_component(var, config)
     await i2c.register_i2c_device(var, config)
 
-    cg.add(var.set_automatic_self_calibration(config[CONF_AUTOMATIC_SELF_CALIBRATION]))
+    cg.add(var.set_automatic_self_calibration(config[CONF_USE_ABC]))
     cg.add(var.set_update_interval(config[CONF_UPDATE_INTERVAL]))
 
     if CONF_CO2 in config:

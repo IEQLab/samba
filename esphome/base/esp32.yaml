@@ -49,6 +49,7 @@ logger:
     ntc: INFO
     opt3001.sensor: INFO
     pmsx003: INFO
+    k30: INFO
     sgp4x: NONE
     sound_level_meter: INFO
     wire.cpp: NONE

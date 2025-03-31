@@ -21,7 +21,7 @@ script:
             - component.update: samba_humidity
             - component.update: samba_globe
             - component.update: samba_airspeed
-            #- component.update: samba_co2
+            - component.update: samba_co2
             - component.update: samba_pm25
             - component.update: samba_voc
             - component.update: samba_nox
@@ -43,9 +43,9 @@ script:
             - sensor.template.publish: 
                 id: samba_airspeed
                 state: !lambda 'return id(samba_airspeed).state;'
-            #- sensor.template.publish: 
-            #    id: samba_co2
-            #    state: !lambda 'return id(samba_co2).state;'
+            - sensor.template.publish: 
+                id: samba_co2
+                state: !lambda 'return id(samba_co2).state;'
             - sensor.template.publish: 
                 id: samba_pm25
                 state: !lambda 'return id(samba_pm25).state;'
