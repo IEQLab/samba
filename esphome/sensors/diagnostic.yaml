@@ -70,7 +70,7 @@ text_sensor:
       entity_category: "diagnostic"
     mac_address:
       id: sys_mac
-      name: "Mac Address"
+      name: "MAC Address"
       icon: mdi:network-pos
       entity_category: "diagnostic"      
 
