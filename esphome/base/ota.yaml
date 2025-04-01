@@ -8,3 +8,35 @@
 ota:
   - platform: esphome
     password: !secret ota_password
+    on_begin:
+      then:
+        - logger.log: "Updating SAMBA through esphome"
+  - platform: http_request
+    on_begin:
+      then:
+        - logger.log: "Updating SAMBA remotely"
+        - logger.log:
+            format: "Remote update progress %0.1f%%"
+            args: ["x"]
+        - logger.log:
+            format: "Remote update error %d"
+            args: ["x"]
+
+# Enable HTTP Request component required for remote OTA
+# https://esphome.io/components/http_request.html
+http_request:
+    verify_ssl: false
+
+# Explicitly enable safe mode
+# https://esphome.io/components/safe_mode
+safe_mode:
+  on_safe_mode:
+    then:
+      - logger.log: "Restoring SAMBA due to an unknown error"
+      - light.turn_on:
+          id: samba_led
+          effect: alert_strobe
+      - ota.http_request.flash:
+          md5_url: http://github.com/IEQLab/samba/firmware.md5
+          url: https://example.com/firmware.ota.bin
+
