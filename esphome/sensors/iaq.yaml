@@ -33,7 +33,7 @@ sensor:
     unit_of_measurement: "ppm"
     icon: mdi:molecule-co2
     lambda: |-
-      return id(k30_co2).state;
+      return ((${calibration_co2_m} * id(k30_co2).state) + ${calibration_co2_b});
 
 
 # Particulate Matter
@@ -125,7 +125,7 @@ sensor:
     unit_of_measurement: "ppb"
     icon: mdi:radiator
     lambda: |-
-      return (std::log(501.0 - id(sgp_voc).state) - 6.24) * (-996.94);
+      return (log(501.0 - id(sgp_voc).state) - 6.24) * (-996.94);
     
   - platform: template
     id: samba_nox

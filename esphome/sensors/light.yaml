@@ -32,5 +32,5 @@ sensor:
     unit_of_measurement: "lx"
     icon: mdi:sun-wireless-outline
     lambda: |-
-      return id(opt_lux).state;
+      return ((${calibration_lux_m} * id(opt_lux).state) + ${calibration_lux_b});
 

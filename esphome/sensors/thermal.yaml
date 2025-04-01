@@ -47,7 +47,7 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
-      return id(sht_temperature).state;
+      return ((${calibration_ta_m} * id(sht_temperature).state) + ${calibration_ta_b});
 
   - platform: template
     id: samba_humidity
@@ -58,7 +58,7 @@ sensor:
     unit_of_measurement: "%"
     icon: mdi:water-percent
     lambda: |-
-      return id(sht_humidity).state;
+      return ((${calibration_rh_m} * id(sht_humidity).state) + ${calibration_rh_b});
 
 
 # Define NTC Thermistor
@@ -73,7 +73,7 @@ sensor:
 
 # https://www.murata.com/en-us/products/productdetail?partno=NXRT15XH103FA1B040
   - platform: ntc
-    id: ntc_temp
+    id: ntc_temperature
     sensor: ntc_resistance
     internal: true
     calibration:
@@ -100,7 +100,7 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
-      return id(ntc_temp).state;
+      return ((${calibration_tg_m} * id(ntc_temperature).state) + ${calibration_tg_b});
 
 
 # Define anemometers
@@ -119,7 +119,7 @@ sensor:
           send_every: 120
           send_first_at: 120
       - lambda: |-
-          return (0.00000000000162713705587024 * pow(x, 17.7238215290214));
+          return (${calibration_as1_x} * pow(x, ${calibration_as1_n}));
       - clamp:
           min_value: 0.05
           max_value: 1.5
@@ -138,7 +138,7 @@ sensor:
           send_every: 120
           send_first_at: 120
       - lambda: |-
-          return (0.110619801169189 * pow(x, 3.93850903242043));
+          return (${calibration_as2_x} * pow(x, ${calibration_as2_n}));
       - clamp:
           min_value: 0.05
           max_value: 1.5
@@ -153,4 +153,4 @@ sensor:
     unit_of_measurement: "m/s"
     icon: mdi:weather-windy
     lambda: |-
-      return std::max(id(as_1).state, id(as_2).state);
+      return max(id(as_1).state, id(as_2).state);

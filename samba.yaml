@@ -3,12 +3,23 @@
 # written by Thomas Parkinson, April 2024
 
 
-# Define substitutions for device
+# Define substitutions for SAMBA device
 substitutions:
-  device_name: "samba"
-  friendly_name: "SAMBA IEQ Monitor"
   project_version: "1.99.32"
-  device_description: "Monitor indoor environmental quality using low-cost sensors - developed by the IEQ Lab"
+  calibration_co2_m: '1'
+  calibration_co2_b: '0'
+  calibration_lux_m: '1'
+  calibration_lux_b: '0'
+  calibration_ta_m: '1'
+  calibration_ta_b: '0'
+  calibration_rh_m: '1'
+  calibration_rh_b: '0'
+  calibration_tg_m: '1'
+  calibration_tg_b: '0'
+  calibration_as1_x: '0.00000000000162713705587024'
+  calibration_as1_n: '17.7238215290214'
+  calibration_as2_x: '0.110619801169189'
+  calibration_as2_n: '3.93850903242043'
 
 # Use packages to modularise codebase
 packages:
