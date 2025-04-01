@@ -13,13 +13,14 @@ sensor:
     co2:
       id: k30_co2
       filters:
+        - filter_out: NAN
         - clamp:
             min_value: 350
             max_value: 10000
             ignore_out_of_range: true
         - median:
             window_size: 30
-            send_every: 1
+            send_every: 3
             send_first_at: 1
 
 # CO2 sensor
