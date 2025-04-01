@@ -10,17 +10,23 @@ ota:
     password: !secret ota_password
     on_begin:
       then:
-        - logger.log: "Updating SAMBA through esphome"
+        - logger.log: 
+            format: "Updating SAMBA through esphome"
+            tag: "samba"
   - platform: http_request
+    name: "Firmware Update"
+    source: https://github.com/IEQLab/samba/manifest.json
     on_begin:
       then:
         - logger.log: "Updating SAMBA remotely"
         - logger.log:
             format: "Remote update progress %0.1f%%"
             args: ["x"]
+            tag: "samba"
         - logger.log:
             format: "Remote update error %d"
             args: ["x"]
+            tag: "samba"
 
 # Enable HTTP Request component required for remote OTA
 # https://esphome.io/components/http_request.html
