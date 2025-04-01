@@ -13,3 +13,28 @@ light:
     num_leds: 1
     rmt_channel: 0
     chipset: ws2812
+    effects:
+      - pulse:
+          name: "slow_pulse"
+          transition_length: 500ms
+          update_interval: 1s
+          max_brightness: 0.25
+      - strobe:
+          name: "alert_strobe"
+          colors:
+            - state: true
+              brightness: 0.5
+              red: 1.0
+              green: 0.0
+              blue: 0.0
+              duration: 450ms
+            - state: false
+              duration: 100ms
+            - state: true
+              brightness: 0.5
+              red: 1.0
+              green: 0.0
+              blue: 0.0
+              duration: 450ms
+            - state: false
+              duration: 1000ms
