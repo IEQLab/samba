@@ -86,7 +86,7 @@ sensor:
       } else if(id(pms_pm25).state < 260) {
         return ((0.69 * (id(pms_pm25).state)/50 -21/5) + 0.786 * (1 - (id(pms_pm25).state)/50 -21/5) * id(pms_pm25).state);
       } else {
-        return 0;
+        return id(pms_pm25).state;
       }
 
 # Define TVOC / NOx sensor
