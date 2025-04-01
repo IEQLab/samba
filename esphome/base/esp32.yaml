@@ -6,8 +6,9 @@
 # Define ESPHome settings
 # https://esphome.io/components/esphome
 esphome:
-  name: '${device_name}'
-  comment: '${device_description}'
+  name: "samba"
+  friendly_name: "SAMBA IEQ Monitor"
+  comment: "Monitor IEQ using low-cost sensors - developed by the IEQ Lab"
   name_add_mac_suffix: true
   project:
     name: "IEQLab.SAMBA"
@@ -43,7 +44,7 @@ esp32:
   board: esp32dev
   flash_size: 16MB
   framework:
-    type: esp-idf
+    type: arduino
 
 # Set logging to errors only
 # https://esphome.io/components/logger

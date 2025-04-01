@@ -9,11 +9,11 @@ wifi:
   networks:
   - ssid: !secret wifi_ssid
     password: !secret wifi_password
-  - ssid: !secret enterprise_ssid
-    eap:
-      username: !secret enterprise_user
-      password: !secret enterprise_password
-      ttls_phase_2: mschapv2
+#  - ssid: !secret enterprise_ssid
+#    eap:
+#      username: !secret enterprise_user
+#      password: !secret enterprise_password
+#      ttls_phase_2: mschapv2
   power_save_mode: none
 #  manual_ip: 
 #    static_ip: 192.168.1.253
