@@ -14,8 +14,6 @@ ota:
             format: "Updating SAMBA through esphome"
             tag: "samba"
   - platform: http_request
-    name: "Firmware Update"
-    source: https://github.com/IEQLab/samba/manifest.json
     on_begin:
       then:
         - logger.log: "Updating SAMBA remotely"
@@ -32,6 +30,13 @@ ota:
 # https://esphome.io/components/http_request.html
 http_request:
     verify_ssl: false
+
+# Use managed updates
+# https://esphome.io/components/update/http_request.html#
+update:
+  - platform: http_request
+    name: Firmware Update
+    source: http://github.com/IEQLab/samba/manifest.json
 
 # Explicitly enable safe mode
 # https://esphome.io/components/safe_mode
