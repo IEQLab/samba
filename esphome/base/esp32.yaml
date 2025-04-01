@@ -42,6 +42,8 @@ esphome:
 esp32:
   board: esp32dev
   flash_size: 16MB
+  framework:
+    type: esp-idf
 
 # Set logging to errors only
 # https://esphome.io/components/logger

@@ -7,7 +7,7 @@
 substitutions:
   device_name: "samba"
   friendly_name: "SAMBA IEQ Monitor"
-  project_version: "1.99.31"
+  project_version: "1.99.32"
   device_description: "Monitor indoor environmental quality using low-cost sensors - developed by the IEQ Lab"
 
 # Use packages to modularise codebase
