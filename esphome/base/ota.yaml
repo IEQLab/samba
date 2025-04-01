@@ -48,6 +48,6 @@ safe_mode:
           id: samba_led
           effect: alert_strobe
       - ota.http_request.flash:
-          md5_url: http://github.com/IEQLab/samba/firmware.md5
-          url: https://example.com/firmware.ota.bin
+          md5_url: http://github.com/IEQLab/samba/restore/firmware.md5
+          url: http://github.com/IEQLab/samba/restore/firmware.ota.bin
 
