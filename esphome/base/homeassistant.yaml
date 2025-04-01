@@ -7,8 +7,23 @@
 # https://esphome.io/components/api.html
 api:
 
-# Use GitHub to import details into ESPHome Add-on
-# https://esphome.io/guides/creators.html
-# dashboard_import:
-#  package_import_url: github://IEQLab/samba/firmware/main.yaml@main
-#  import_full_config: true
+# Add restart button to Home Assistant
+# https://esphome.io/components/button/restart
+button:
+  - platform: restart
+    name: "Restart SAMBA"
+    icon: mdi:restart
+    entity_category: "config"
+
+# Add shutdown button to Home Assistant
+# https://esphome.io/components/button/shutdown
+  - platform: shutdown
+    name: "Shutdown SAMBA"
+    icon: mdi:power
+    entity_category: "config"
+
+# Add safe mode button to Home Assistant
+  - platform: safe_mode
+    name: "Restart SAMBA (Safe Mode)"
+    icon: mdi:backup-restore
+    entity_category: "config"
