@@ -85,8 +85,9 @@ sensor:
         return ((0.786 * (id(pms_pm25).state)) - (0.0862 * id(pms_rh).state) + 5.75);
       } else if(id(pms_pm25).state < 260) {
         return ((0.69 * (id(pms_pm25).state)/50 -21/5) + 0.786 * (1 - (id(pms_pm25).state)/50 -21/5) * id(pms_pm25).state);
+      } else {
+        return 0;
       }
-
 
 # Define TVOC / NOx sensor
 # https://esphome.io/components/sensor/sgp4x.html
@@ -124,7 +125,7 @@ sensor:
     unit_of_measurement: "ppb"
     icon: mdi:radiator
     lambda: |-
-      return {(std::log(501.0 - id(sgp_voc).state) - 6.24) * (-996.94)};
+      return (std::log(501.0 - id(sgp_voc).state) - 6.24) * (-996.94);
     
   - platform: template
     id: samba_nox
