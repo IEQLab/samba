@@ -69,6 +69,7 @@ i2c:
     scl: GPIO25
     sda: GPIO26
     scan: true
+    frequency: 50kHz
 
 # Configure UART
 # https://esphome.io/components/uart
