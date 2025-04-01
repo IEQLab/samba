@@ -21,7 +21,7 @@ esphome:
       then: 
         - light.turn_on:
             id: samba_led
-            brightness: 0.25
+            effect: slow_pulse
         - logger.log: 
             format: "A SAMBA is born (%s) :-)"
             args: ['id(sys_mac).state.c_str()']
@@ -35,8 +35,6 @@ esphome:
             level: INFO
             tag: "samba"
         - delay: 1000ms
-        - light.turn_off:
-            id: samba_led
 
 # Define ESP32 board
 # https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
