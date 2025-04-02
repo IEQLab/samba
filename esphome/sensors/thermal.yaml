@@ -67,9 +67,9 @@ sensor:
     id: ntc_resistance
     sensor: ads_ntc
     internal: true
-    configuration: DOWNSTREAM
+    configuration: UPSTREAM
     resistor: 10kOhm
-    reference_voltage: 4.0
+    reference_voltage: 4.096
 
 # https://www.murata.com/en-us/products/productdetail?partno=NXRT15XH103FA1B040
   - platform: ntc
