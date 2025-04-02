@@ -8,7 +8,7 @@
 sensor:
   - platform: opt3001
     id: opt_lux
-    update_interval: 5s
+    update_interval: 20s
     internal: true
     address: 0x45
     filters:
