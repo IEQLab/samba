@@ -22,7 +22,7 @@ time:
 # use SNTP server to set RTC time
   - platform: sntp
     id: sntp_time
-    timezone: "Australia/Sydney"
+    timezone: "${local_timezone}"
     servers:
      - 0.pool.ntp.org
      - 1.pool.ntp.org

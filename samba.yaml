@@ -6,6 +6,7 @@
 # Define substitutions for SAMBA device
 substitutions:
   project_version: "1.99.32"
+  local_timezone: "Australia/Sydney"
   calibration_co2_m: '1'
   calibration_co2_b: '0'
   calibration_lux_m: '1'
