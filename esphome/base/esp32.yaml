@@ -7,7 +7,7 @@
 # https://esphome.io/components/esphome
 esphome:
   name: "samba"
-  friendly_name: "SAMBA IEQ Monitor"
+  friendly_name: "SAMBA"
   comment: "Monitor IEQ using low-cost sensors - developed by the IEQ Lab"
   name_add_mac_suffix: true
   project:
@@ -68,7 +68,7 @@ i2c:
     scl: GPIO25
     sda: GPIO26
     scan: true
-    frequency: 50kHz
+    frequency: 100kHz
 
 # Configure UART
 # https://esphome.io/components/uart
