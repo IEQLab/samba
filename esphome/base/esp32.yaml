@@ -14,16 +14,21 @@ esphome:
     name: "IEQLab.SAMBA"
     version: "${project_version}"
   on_boot:
-    - priority: 600
+    - priority: 250
       then:
         - ds1307.read_time:
+        - logger.log: 
+            format: "Time read from RTC (%s)"
+            args: ['ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str()']
+            level: INFO
+            tag: "samba"
     - priority: -100
       then: 
         - light.turn_on:
             id: samba_led
             effect: slow_pulse
         - logger.log: 
-            format: "A SAMBA is born (%s) :-)"
+            format: "A SAMBA is born (%s)"
             args: ['id(sys_mac).state.c_str()']
             level: INFO
             tag: "samba"
