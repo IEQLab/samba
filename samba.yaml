@@ -32,7 +32,7 @@ packages:
   device_rtc: !include esphome/base/rtc.yaml
   device_ha: !include esphome/base/homeassistant.yaml
   measure_loop: !include esphome/measure/loop.yaml
-  #measure_influx: !include esphome/measure/influx.yaml
+  measure_influx: !include esphome/measure/influx.yaml
   sensor_iaq: !include esphome/sensors/iaq.yaml
   sensor_light: !include esphome/sensors/light.yaml
   sensor_sound: !include esphome/sensors/sound.yaml

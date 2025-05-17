@@ -62,6 +62,8 @@ script:
             - sensor.template.publish: 
                 id: samba_spl
                 state: !lambda 'return id(samba_spl).state;'
+            - lambda: |-
+                id(influx_writer).publish_now();
             - logger.log:
                 format: "Sample taken at %s"
                 args: ['id(samba_timestamp).state.c_str()']

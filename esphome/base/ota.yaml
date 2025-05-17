@@ -29,6 +29,7 @@ ota:
 # Enable HTTP Request component required for remote OTA
 # https://esphome.io/components/http_request.html
 http_request:
+    id: http_client
     verify_ssl: false
 
 # Use managed updates

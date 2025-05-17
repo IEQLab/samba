@@ -4,10 +4,73 @@
 
 
 # Define InfluxDB connection
-# https://github.com/jabastien/esphome-influxdb
-influxdb:
-  host: "us-east-1-1.aws.cloud2.influxdata.com"
-  database: "samba"
-  username: !secret influx_username
-  password: !secret influx_password
-  publish_all: true
+# https://github.com/parko636/esphome-influxdb/tree/use_http_request
+influxdb_writer:
+  id: influx_writer
+  use_ssl: true
+  host: !secret influxdb_host
+  port: "443"
+  token: !secret influxdb_token
+  bucket: !secret influxdb_bucket
+  org: !secret influxdb_org
+  timestamp_unit: "s"
+  http_request_id: http_client
+  time_id: sntp_time
+  send_mac: true
+  sensors_names:
+    samba_temperature: "Air Temperature"
+    samba_humidity: "Relative Humidity"
+    samba_globe: "Globe Temperature"
+    samba_airspeed: "Air Speed"
+    samba_co2: "Carbon Dioxide"
+    samba_pm25: "PM2.5"
+    samba_voc: "TVOC"
+    samba_nox: "NOx Index"
+    samba_lux: "Illuminance"
+    samba_spl: "Sound Pressure Level"
+  sensor_tags:
+    samba_temperature:
+      building: "wilkinson"
+      zone: "researchers"
+    samba_humidity:
+      building: "wilkinson"
+      zone: "researchers"
+    samba_globe:
+      building: "wilkinson"
+      zone: "researchers"
+    samba_airspeed:
+      building: "wilkinson"
+      zone: "researchers"
+    samba_co2:
+      building: "wilkinson"
+      zone: "researchers"
+    samba_pm25:
+      building: "wilkinson"
+      zone: "researchers"
+    samba_voc:
+      building: "wilkinson"
+      zone: "researchers"
+    samba_nox:
+      building: "wilkinson"
+      zone: "researchers"
+    samba_lux:
+      building: "wilkinson"
+      zone: "researchers"
+    samba_spl:
+      building: "wilkinson"
+      zone: "researchers"
+  field_names:
+    samba_temperature: "degrees"
+    samba_humidity: "percent"
+    samba_globe: "degrees"
+    samba_airspeed: "m/s"
+    samba_co2: "ppm"
+    samba_pm25: "ug/m3"
+    samba_voc: "ppb"
+    samba_nox: "index"
+    samba_lux: "lux"
+    samba_spl: "dba"
+
+
+# Inlcude placeholder binary_sensor
+binary_sensor:
