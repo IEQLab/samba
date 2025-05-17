@@ -1,0 +1,37 @@
+------------------------------------------------------------------------------------------
+Gerber File Extension Report For: Remote Rev B3.GBR   13-Oct-24  9:57:48 PM
+------------------------------------------------------------------------------------------
+
+
+------------------------------------------------------------------------------------------
+Layer Extension     Layer Description                      
+------------------------------------------------------------------------------------------
+.GTO                Top Overlay                             
+.GTP                Top Paste                               
+.GTS                Top Solder                              
+.GTL                SIG/PWR1                                
+.G1                 GND1                                    
+.G2                 GND2                                    
+.GBL                SIG/PWR2                                
+.GBS                Bottom Solder                           
+.GBP                Bottom Paste                            
+.GBO                Bottom Overlay                          
+.GM1                Mechanical 1                            
+.GM2                Top Courtyard                           
+.GM3                Top Component Center                    
+.GM5                Top Assembly                            
+.GM10               Mechanical 10                           
+.GM12               Mechanical 12                           
+.GM13               Top 3D Body                             
+.GM15               Mechanical 15                           
+.GM16               Mechanical 16                           
+.GM20               Bottom Assembly                         
+.GM21               Bottom Courtyard                        
+.GM23               Bottom 3D Body                          
+.GM24               Bottom Component Center                 
+.GPT                Top Pad Master                          
+.GPB                Bottom Pad Master                       
+.GD1                Drill Drawing                           
+.GG1                Drill Guide                             
+.GM                 Profile                                 
+------------------------------------------------------------------------------------------

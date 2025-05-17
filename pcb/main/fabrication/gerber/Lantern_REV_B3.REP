@@ -1,0 +1,755 @@
+*************************************************************
+FileName = Lantern_REV_B3.GBR
+AutoAperture = True
+*************************************************************
+Generating : Mechanical 16
+      File : Lantern_REV_B3.GM16
+
+    Adding Layer      : Mechanical 16
+
+
+Used DCodes :
+    D100
+*************************************************************
+
+*************************************************************
+Generating : Bottom Component Center
+      File : Lantern_REV_B3.GM24
+
+    Adding Layer      : Bottom Component Center
+
+
+Used DCodes :
+    D12
+*************************************************************
+
+*************************************************************
+Generating : Bottom 3D Body
+      File : Lantern_REV_B3.GM23
+
+    Adding Layer      : Bottom 3D Body
+
+
+Used DCodes :
+    D11
+    D14
+*************************************************************
+
+*************************************************************
+Generating : Bottom Courtyard
+      File : Lantern_REV_B3.GM21
+
+    Adding Layer      : Bottom Courtyard
+
+
+Used DCodes :
+    D11
+    D137
+*************************************************************
+
+*************************************************************
+Generating : Bottom Assembly
+      File : Lantern_REV_B3.GM20
+
+    Adding Layer      : Bottom Assembly
+
+
+Used DCodes :
+    D11
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 15
+      File : Lantern_REV_B3.GM15
+
+    Adding Layer      : Mechanical 15
+
+
+Used DCodes :
+    D12
+    D15
+    D137
+    D138
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 13
+      File : Lantern_REV_B3.GM13
+
+    Adding Layer      : Mechanical 13
+
+
+Used DCodes :
+    D11
+    D12
+    D14
+    D15
+*************************************************************
+
+*************************************************************
+Generating : Top Assembly
+      File : Lantern_REV_B3.GM5
+
+    Adding Layer      : Top Assembly
+
+
+Used DCodes :
+    D11
+    D12
+    D16
+*************************************************************
+
+*************************************************************
+Generating : Top Component Center
+      File : Lantern_REV_B3.GM4
+
+    Adding Layer      : Top Component Center
+
+
+Used DCodes :
+    D12
+*************************************************************
+
+*************************************************************
+Generating : Top Courtyard
+      File : Lantern_REV_B3.GM3
+
+    Adding Layer      : Top Courtyard
+
+
+Used DCodes :
+    D11
+    D137
+*************************************************************
+
+*************************************************************
+Generating : Top 3D Body
+      File : Lantern_REV_B3.GM2
+
+    Adding Layer      : Top 3D Body
+
+
+Used DCodes :
+    D11
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 1
+      File : Lantern_REV_B3.GM1
+
+    Adding Layer      : Mechanical 1
+
+
+Used DCodes :
+*************************************************************
+
+*************************************************************
+Generating : Keep-Out Layer
+      File : Lantern_REV_B3.GKO
+
+    Adding Layer      : Keep-Out Layer
+
+
+Used DCodes :
+    D139
+*************************************************************
+
+*************************************************************
+Generating : Bottom Paste
+      File : Lantern_REV_B3.GBP
+
+    Adding Layer      : Bottom Paste
+
+    Adding Layer      : SIG/PWR2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D22
+    D23
+    D24
+    D28
+    D31
+    D32
+    D34
+    D114
+    D117
+    D118
+    D119
+    D120
+    D121
+    D122
+    D123
+    D124
+    D135
+    D136
+*************************************************************
+
+*************************************************************
+Generating : Top Paste
+      File : Lantern_REV_B3.GTP
+
+    Adding Layer      : Top Paste
+
+    Adding Layer      : SIG/PWR1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D17
+    D18
+    D19
+    D20
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D39
+    D40
+    D41
+    D42
+    D43
+    D44
+    D45
+    D46
+    D47
+    D48
+    D49
+    D50
+    D51
+    D52
+    D53
+    D54
+    D55
+    D56
+    D57
+*************************************************************
+
+*************************************************************
+Generating : Bottom Solder
+      File : Lantern_REV_B3.GBS
+
+    Adding Layer      : Bottom Solder
+
+    Adding Layer      : SIG/PWR2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D22
+    D23
+    D24
+    D28
+    D31
+    D34
+    D60
+    D64
+    D80
+    D81
+    D82
+    D83
+    D84
+    D85
+    D86
+    D87
+    D88
+    D89
+    D90
+    D91
+    D92
+    D93
+    D94
+    D121
+    D122
+    D123
+    D124
+    D125
+    D129
+    D130
+    D131
+    D132
+    D133
+    D134
+*************************************************************
+
+*************************************************************
+Generating : Top Solder
+      File : Lantern_REV_B3.GTS
+
+    Adding Layer      : Top Solder
+
+    Adding Layer      : SIG/PWR1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D22
+    D23
+    D24
+    D26
+    D27
+    D28
+    D31
+    D33
+    D34
+    D35
+    D36
+    D41
+    D42
+    D47
+    D48
+    D49
+    D53
+    D55
+    D57
+    D58
+    D59
+    D60
+    D61
+    D62
+    D63
+    D64
+    D65
+    D66
+    D67
+    D68
+    D69
+    D70
+    D71
+    D72
+    D73
+    D74
+    D75
+    D76
+    D77
+    D78
+    D79
+    D80
+    D81
+    D82
+    D83
+    D84
+    D85
+    D86
+    D87
+    D88
+    D89
+    D90
+    D91
+    D92
+    D93
+    D94
+*************************************************************
+
+*************************************************************
+Generating : Bottom Overlay
+      File : Lantern_REV_B3.GBO
+
+    Adding Layer      : Bottom Overlay
+
+
+Used DCodes :
+    D10
+    D11
+    D12
+    D14
+    D15
+    D16
+    D97
+    D99
+    D102
+*************************************************************
+
+*************************************************************
+Generating : Top Overlay
+      File : Lantern_REV_B3.GTO
+
+    Adding Layer      : Top Overlay
+
+
+Used DCodes :
+    D10
+    D11
+    D12
+    D13
+    D14
+    D15
+    D16
+*************************************************************
+
+*************************************************************
+Generating : Top Pad Master
+      File : Lantern_REV_B3.GPT
+
+    Adding Layer      : SIG/PWR1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D39
+    D40
+    D41
+    D42
+    D43
+    D44
+    D45
+    D46
+    D47
+    D48
+    D49
+    D51
+    D52
+    D53
+    D54
+    D55
+    D56
+    D57
+    D65
+    D74
+    D80
+    D82
+    D83
+    D84
+    D87
+    D95
+    D96
+    D104
+    D105
+    D106
+    D107
+    D108
+    D109
+    D110
+    D111
+*************************************************************
+
+*************************************************************
+Generating : Bottom Pad Master
+      File : Lantern_REV_B3.GPB
+
+    Adding Layer      : SIG/PWR2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D22
+    D23
+    D24
+    D28
+    D31
+    D32
+    D34
+    D80
+    D82
+    D83
+    D84
+    D87
+    D95
+    D104
+    D105
+    D106
+    D107
+    D108
+    D109
+    D110
+    D111
+    D114
+    D115
+    D116
+    D117
+    D118
+    D119
+    D120
+    D121
+    D122
+    D123
+    D124
+    D125
+*************************************************************
+
+*************************************************************
+Generating : SIG/PWR2
+      File : Lantern_REV_B3.GBL
+
+    Adding Layer      : SIG/PWR2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D10
+    D11
+    D22
+    D23
+    D24
+    D28
+    D31
+    D32
+    D34
+    D80
+    D82
+    D83
+    D84
+    D87
+    D95
+    D97
+    D99
+    D101
+    D102
+    D104
+    D105
+    D106
+    D107
+    D108
+    D109
+    D110
+    D111
+    D112
+    D113
+    D114
+    D115
+    D116
+    D117
+    D118
+    D119
+    D120
+    D121
+    D122
+    D123
+    D124
+    D125
+    D126
+    D127
+    D128
+*************************************************************
+
+*************************************************************
+Generating : GND2
+      File : Lantern_REV_B3.G2
+
+    Adding Layer      : GND2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D80
+    D82
+    D83
+    D84
+    D87
+    D104
+    D105
+    D106
+    D107
+    D108
+    D109
+    D110
+    D111
+    D112
+    D113
+*************************************************************
+
+*************************************************************
+Generating : GND1
+      File : Lantern_REV_B3.G1
+
+    Adding Layer      : GND1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D80
+    D82
+    D83
+    D84
+    D87
+    D104
+    D105
+    D106
+    D107
+    D108
+    D109
+    D110
+    D111
+    D112
+    D113
+*************************************************************
+
+*************************************************************
+Generating : SIG/PWR1
+      File : Lantern_REV_B3.GTL
+
+    Adding Layer      : SIG/PWR1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D10
+    D11
+    D15
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D39
+    D40
+    D41
+    D42
+    D43
+    D44
+    D45
+    D46
+    D47
+    D48
+    D49
+    D51
+    D52
+    D53
+    D54
+    D55
+    D56
+    D57
+    D65
+    D74
+    D80
+    D82
+    D83
+    D84
+    D87
+    D95
+    D96
+    D97
+    D98
+    D99
+    D100
+    D101
+    D102
+    D103
+    D104
+    D105
+    D106
+    D107
+    D108
+    D109
+    D110
+    D111
+    D112
+    D113
+*************************************************************
+
+*************************************************************
+Generating : Drill Drawing
+      File : Lantern_REV_B3.GD1
+
+    Adding Drill Pair : SIG/PWR1-SIG/PWR2
+
+    Adding Layer      : Drill Drawing
+
+
+Used DCodes :
+    D14
+    D140
+    D141
+*************************************************************
+
+*************************************************************
+Generating : Drill Guide
+      File : Lantern_REV_B3.GG1
+
+    Adding Drill Pair : SIG/PWR1-SIG/PWR2
+
+    Adding Layer      : Drill Guide
+
+
+Used DCodes :
+    D14
+*************************************************************
+
+*************************************************************
+Generating : Drill Guide
+      File : Lantern_REV_B3.GG2
+
+    Adding Drill Pair : SIG/PWR1-GND1
+
+    Adding Layer      : Drill Guide
+
+
+Used DCodes :
+*************************************************************
+
+*************************************************************
+Generating : Drill Guide
+      File : Lantern_REV_B3.GG3
+
+    Adding Drill Pair : GND2-SIG/PWR2
+
+    Adding Layer      : Drill Guide
+
+
+Used DCodes :
+*************************************************************
+
+*************************************************************
+Generating : Profile
+      File : Lantern_REV_B3.GM
+
+
+Used DCodes :
+    D142
+*************************************************************
+

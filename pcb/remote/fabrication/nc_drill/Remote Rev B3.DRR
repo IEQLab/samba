@@ -1,0 +1,21 @@
+----------------------------------------------------------------------------------------------------------------------------------
+NCDrill File Report For: Remote Rev B3.PcbDoc   13-Oct-24  9:57:50 PM
+----------------------------------------------------------------------------------------------------------------------------------
+
+Layer Pair : SIG/PWR1 to SIG/PWR2
+ASCII RoundHoles File : Remote Rev B3-RoundHoles.TXT
+ASCII SlotHoles File : Remote Rev B3-SlotHoles.TXT
+
+Tool       Hole Size               Hole Tolerance               Hole Type       Hole Count   Plated         Tool Travel
+----------------------------------------------------------------------------------------------------------------------------------
+T1      0.2mm (8mil)                                              Round             35        PTH        222.99mm (8.78inch)
+T2      0.255mm (10mil)                                           Round             13        PTH        257.66mm (10.14inch)
+T3      0.55mm (22mil)                                            Round             2         PTH        2.50mm (0.10inch)
+T4      0.9mm (35mil)                                             Round             8         PTH        18.08mm (0.71inch)
+T5      1mm (39mil)                                               Slot              2         PTH        32.31mm (1.27inch)
+T6      1.02mm (40mil)                                            Round             10        PTH        151.72mm (5.97inch)
+T7      3.3mm (130mil)                                            Round             2         PTH        11.43mm (0.45inch)
+----------------------------------------------------------------------------------------------------------------------------------
+Totals                                                                              72
+
+Total Processing Time (hh:mm:ss) : 00:00:00

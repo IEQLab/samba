@@ -1,0 +1,596 @@
+*************************************************************
+FileName = Remote Rev B3.GBR
+AutoAperture = True
+*************************************************************
+Generating : Top Component Center
+      File : Remote Rev B3.GM3
+
+    Adding Layer      : Top Component Center
+
+
+Used DCodes :
+    D12
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 15
+      File : Remote Rev B3.GM15
+
+    Adding Layer      : Mechanical 15
+
+
+Used DCodes :
+    D12
+    D14
+    D92
+*************************************************************
+
+*************************************************************
+Generating : SIG/PWR2
+      File : Remote Rev B3.GBL
+
+    Adding Layer      : SIG/PWR2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D11
+    D14
+    D16
+    D17
+    D18
+    D19
+    D24
+    D36
+    D57
+    D62
+    D64
+    D65
+    D66
+    D67
+    D68
+    D69
+    D70
+    D71
+    D72
+    D73
+    D74
+    D75
+    D76
+    D77
+    D78
+    D79
+    D80
+    D81
+    D82
+    D83
+    D84
+    D85
+    D86
+    D87
+    D88
+*************************************************************
+
+*************************************************************
+Generating : Bottom Pad Master
+      File : Remote Rev B3.GPB
+
+    Adding Layer      : SIG/PWR2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D16
+    D17
+    D18
+    D19
+    D24
+    D36
+    D57
+    D62
+    D64
+    D71
+    D72
+    D73
+    D74
+    D76
+    D77
+    D78
+    D79
+    D80
+    D81
+    D82
+    D83
+    D84
+    D85
+    D86
+*************************************************************
+
+*************************************************************
+Generating : Top Assembly
+      File : Remote Rev B3.GM5
+
+    Adding Layer      : Top Assembly
+
+
+Used DCodes :
+    D14
+    D15
+*************************************************************
+
+*************************************************************
+Generating : SIG/PWR1
+      File : Remote Rev B3.GTL
+
+    Adding Layer      : SIG/PWR1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D10
+    D13
+    D14
+    D16
+    D17
+    D18
+    D19
+    D20
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D39
+    D57
+    D62
+    D64
+    D65
+    D66
+    D67
+    D68
+    D69
+    D70
+    D71
+    D72
+    D73
+    D74
+    D75
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 10
+      File : Remote Rev B3.GM10
+
+    Adding Layer      : Mechanical 10
+
+
+Used DCodes :
+    D14
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 16
+      File : Remote Rev B3.GM16
+
+    Adding Layer      : Mechanical 16
+
+
+Used DCodes :
+    D65
+*************************************************************
+
+*************************************************************
+Generating : Top 3D Body
+      File : Remote Rev B3.GM13
+
+    Adding Layer      : Top 3D Body
+
+
+Used DCodes :
+    D12
+    D14
+*************************************************************
+
+*************************************************************
+Generating : Top Pad Master
+      File : Remote Rev B3.GPT
+
+    Adding Layer      : SIG/PWR1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D16
+    D17
+    D18
+    D19
+    D20
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D39
+    D57
+    D62
+    D64
+    D71
+    D72
+    D73
+    D74
+*************************************************************
+
+*************************************************************
+Generating : Top Courtyard
+      File : Remote Rev B3.GM2
+
+    Adding Layer      : Top Courtyard
+
+
+Used DCodes :
+    D14
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 1
+      File : Remote Rev B3.GM1
+
+    Adding Layer      : Mechanical 1
+
+
+Used DCodes :
+    D15
+    D70
+    D91
+*************************************************************
+
+*************************************************************
+Generating : Bottom Component Center
+      File : Remote Rev B3.GM24
+
+    Adding Layer      : Bottom Component Center
+
+
+Used DCodes :
+    D12
+*************************************************************
+
+*************************************************************
+Generating : Top Solder
+      File : Remote Rev B3.GTS
+
+    Adding Layer      : Top Solder
+
+    Adding Layer      : SIG/PWR1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D16
+    D17
+    D18
+    D19
+    D20
+    D21
+    D23
+    D25
+    D28
+    D29
+    D34
+    D36
+    D40
+    D41
+    D42
+    D43
+    D44
+    D45
+    D46
+    D47
+    D48
+    D49
+    D50
+    D51
+    D52
+    D53
+    D54
+    D55
+    D56
+    D57
+    D58
+    D59
+    D60
+    D61
+    D62
+    D63
+*************************************************************
+
+*************************************************************
+Generating : Top Overlay
+      File : Remote Rev B3.GTO
+
+    Adding Layer      : Top Overlay
+
+
+Used DCodes :
+    D10
+    D11
+    D12
+    D13
+    D14
+    D15
+*************************************************************
+
+*************************************************************
+Generating : Top Paste
+      File : Remote Rev B3.GTP
+
+    Adding Layer      : Top Paste
+
+    Adding Layer      : SIG/PWR1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D16
+    D17
+    D18
+    D19
+    D20
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D39
+*************************************************************
+
+*************************************************************
+Generating : Bottom 3D Body
+      File : Remote Rev B3.GM23
+
+    Adding Layer      : Bottom 3D Body
+
+
+Used DCodes :
+    D12
+    D14
+*************************************************************
+
+*************************************************************
+Generating : Bottom Assembly
+      File : Remote Rev B3.GM20
+
+    Adding Layer      : Bottom Assembly
+
+
+Used DCodes :
+    D14
+*************************************************************
+
+*************************************************************
+Generating : Bottom Paste
+      File : Remote Rev B3.GBP
+
+    Adding Layer      : Bottom Paste
+
+    Adding Layer      : SIG/PWR2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D16
+    D17
+    D18
+    D19
+    D24
+    D36
+    D76
+    D77
+    D78
+    D79
+    D80
+    D81
+    D82
+    D83
+    D84
+    D85
+    D86
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 12
+      File : Remote Rev B3.GM12
+
+    Adding Layer      : Mechanical 12
+
+
+Used DCodes :
+    D14
+*************************************************************
+
+*************************************************************
+Generating : GND1
+      File : Remote Rev B3.G1
+
+    Adding Layer      : GND1
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D57
+    D62
+    D71
+    D72
+    D73
+    D74
+    D75
+*************************************************************
+
+*************************************************************
+Generating : Bottom Overlay
+      File : Remote Rev B3.GBO
+
+    Adding Layer      : Bottom Overlay
+
+
+Used DCodes :
+    D10
+    D11
+    D12
+    D14
+    D15
+    D70
+*************************************************************
+
+*************************************************************
+Generating : GND2
+      File : Remote Rev B3.G2
+
+    Adding Layer      : GND2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D57
+    D62
+    D71
+    D72
+    D73
+    D74
+    D75
+*************************************************************
+
+*************************************************************
+Generating : Bottom Courtyard
+      File : Remote Rev B3.GM21
+
+    Adding Layer      : Bottom Courtyard
+
+
+Used DCodes :
+    D14
+*************************************************************
+
+*************************************************************
+Generating : Bottom Solder
+      File : Remote Rev B3.GBS
+
+    Adding Layer      : Bottom Solder
+
+    Adding Layer      : SIG/PWR2
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D16
+    D17
+    D18
+    D19
+    D36
+    D44
+    D46
+    D57
+    D58
+    D59
+    D60
+    D61
+    D62
+    D63
+    D77
+    D78
+    D79
+    D80
+    D81
+    D82
+    D83
+    D84
+    D85
+    D89
+    D90
+*************************************************************
+
+*************************************************************
+Generating : Drill Drawing
+      File : Remote Rev B3.GD1
+
+    Adding Drill Pair : SIG/PWR1-SIG/PWR2
+
+    Adding Layer      : Drill Drawing
+
+
+Used DCodes :
+    D93
+    D94
+*************************************************************
+
+*************************************************************
+Generating : Drill Guide
+      File : Remote Rev B3.GG1
+
+    Adding Drill Pair : SIG/PWR1-SIG/PWR2
+
+    Adding Layer      : Drill Guide
+
+
+Used DCodes :
+    D93
+*************************************************************
+
+*************************************************************
+Generating : Profile
+      File : Remote Rev B3.GM
+
+
+Used DCodes :
+    D95
+*************************************************************
+
