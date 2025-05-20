@@ -54,17 +54,19 @@ esp32:
 logger:
   level: INFO
   logs:
-    main: INFO
+    main: WARN
     component: NONE
-    sensor: INFO
-    ads1115.sensor: INFO
-    ntc: INFO
-    opt3001.sensor: INFO
-    pmsx003: INFO
+    sensor: NONE
+    ads1115.sensor: NONE
+    ntc: NONE
+    opt3001.sensor: WARN
+    pmsx003: NONE
     k30: INFO
     sgp4x: NONE
-    sound_level_meter: INFO
+    sound_level_meter: NONE
     wire.cpp: NONE
+    http_request: INFO
+    influxdb_writer: INFO
 
 # Define i2c pins
 # https://esphome.io/components/i2c
