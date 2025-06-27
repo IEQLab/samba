@@ -18,7 +18,7 @@ CONF_TIMESTAMP_UNIT = "timestamp_unit"
 CONF_TAGS = "sensor_tags"
 CONF_FIELD_NAME = "field_names"
 CONF_USE_SSL = "use_ssl"
-CONF_SENSORS_NAMES_ID = "sensors_names"
+CONF_SENSORS_NAMES_ID = "sensor_names"
 CONF_SEND_MAC = "send_mac"
 
 influxdb_writer_ns = cg.esphome_ns.namespace("influxdb_writer")
