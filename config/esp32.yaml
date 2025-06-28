@@ -15,14 +15,6 @@ esphome:
     name: "IEQLab.SAMBA"
     version: "1.99.40"
   on_boot:
-    - priority: 250
-      then:
-        - ds1307.read_time:
-        - logger.log: 
-            format: "Time read from RTC (%s)"
-            args: ['ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str()']
-            level: INFO
-            tag: "samba"
     - priority: -100
       then: 
         - light.turn_on:
@@ -31,6 +23,60 @@ esphome:
         - component.update: sys_uptime
         - component.update: sys_ip
         - delay: 1000ms
+    - priority: 250
+      then:
+        - ds1307.read_time:
+        - logger.log: 
+            format: "Time read from RTC (%s)"
+            args: ['ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str()']
+            level: INFO
+            tag: "samba"
+        - logger.log:
+            format: "Timezone is set as %s"
+            args: [ 'id(local_timezone).c_str()' ]
+            level: INFO
+            tag: "samba"
+        - logger.log:
+            format: "SAMBA is in building %s and zone %s"
+            args: [ 'id(tag_building).c_str()', 'id(tag_zone).c_str()' ]
+            level: INFO
+            tag: "samba"
+        - logger.log:
+            format: "CO2 calibration: y = %.12fx + %.12fb"
+            args: [ 'id(calibration_co2)[0]', 'id(calibration_co2)[1]' ]
+            level: INFO
+            tag: "samba"
+        - logger.log:
+            format: "Lux calibration: y = %.12fx + %.12fb"
+            args: [ 'id(calibration_lux)[0]', 'id(calibration_lux)[1]' ]
+            level: INFO
+            tag: "samba"
+        - logger.log:
+            format: "Ta calibration: y = %.12fx + %.12fb"
+            args: [ 'id(calibration_ta)[0]', 'id(calibration_ta)[1]' ]
+            level: INFO
+            tag: "samba"
+        - logger.log:
+            format: "RH calibration: y = %.12fx + %.12fb"
+            args: [ 'id(calibration_rh)[0]', 'id(calibration_rh)[1]' ]
+            level: INFO
+            tag: "samba"
+        - logger.log:
+            format: "Tg calibration: y = %.12fx + %.12fb"
+            args: [ 'id(calibration_tg)[0]', 'id(calibration_tg)[1]' ]
+            level: INFO
+            tag: "samba"
+        - logger.log:
+            format: "Air speed 1 calibration: y = %.12f * x^%.12fb"
+            args: [ 'id(calibration_as1)[0]', 'id(calibration_as1)[1]' ]
+            level: INFO
+            tag: "samba"
+        - logger.log:
+            format: "Air speed 2 calibration: y = %.12f * x^%.12fb"
+            args: [ 'id(calibration_as2)[0]', 'id(calibration_as2)[1]' ]
+            level: INFO
+            tag: "samba"
+
 
 # Define ESP32 board
 # https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
