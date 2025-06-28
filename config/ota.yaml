@@ -30,13 +30,6 @@ http_request:
     id: http_client
     verify_ssl: false
 
-# Use managed updates
-# https://esphome.io/components/update/http_request.html#
-#update:
-#  - platform: http_request
-#    name: "Firmware Update"
-#    source: http://github.com/IEQLab/samba/manifest.json
-
 # Explicitly enable safe mode
 # https://esphome.io/components/safe_mode
 safe_mode:
