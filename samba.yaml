@@ -7,6 +7,8 @@
 substitutions:
   project_version: "1.99.33"
   local_timezone: "Australia/Sydney"
+  tag_building: "create"
+  tag_zone: "bears"
   calibration_co2_m: '1'
   calibration_co2_b: '0'
   calibration_lux_m: '1'
@@ -24,21 +26,27 @@ substitutions:
 
 # Use packages to modularise codebase
 packages:
-  device_base: !include esphome/base/esp32.yaml
-  device_wifi: !include esphome/base/wifi.yaml
-  device_ota: !include esphome/base/ota.yaml
-  device_adc: !include esphome/base/adc.yaml
-  device_led: !include esphome/base/led.yaml
-  device_rtc: !include esphome/base/rtc.yaml
-  device_ha: !include esphome/base/homeassistant.yaml
-  measure_loop: !include esphome/measure/loop.yaml
-  measure_influx: !include esphome/measure/influx.yaml
-  sensor_iaq: !include esphome/sensors/iaq.yaml
-  sensor_light: !include esphome/sensors/light.yaml
-  sensor_sound: !include esphome/sensors/sound.yaml
-  sensor_thermal: !include esphome/sensors/thermal.yaml
-  sensor_diagnostics: !include esphome/sensors/diagnostic.yaml
+  - !include config/esp32.yaml
+  - !include config/wifi.yaml
+  - !include config/ota.yaml
+  - !include config/adc.yaml
+  - !include config/led.yaml
+  - !include config/rtc.yaml
+  - !include config/homeassistant.yaml
+  - !include config/sample.yaml
+  - !include config/influx.yaml
+  - !include config/co2.yaml
+  - !include config/pm25.yaml
+  - !include config/tvoc.yaml
+  - !include config/illuminance.yaml
+  - !include config/spl.yaml
+  - !include config/tair.yaml
+  - !include config/tglobe.yaml
+  - !include config/airspeed.yaml
+  - !include config/diagnostics.yaml
 
-# load external components
+# Load custom components
 external_components:
-  - source: esphome/components
+  - source: 
+      type: local
+      path: components
