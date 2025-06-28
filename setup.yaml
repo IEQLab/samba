@@ -6,21 +6,6 @@
 # Define global variables that persist after reset
 # https://esphome.io/components/globals.html
 globals:
-  - id: local_timezone
-    type: std::string
-    restore_value: yes
-    max_restore_data_length: 24
-    initial_value: '"Australia/Sydney"'
-  - id: tag_building
-    type: std::string
-    restore_value: yes
-    max_restore_data_length: 18
-    initial_value: '"building_name"'
-  - id: tag_zone
-    type: std::string
-    restore_value: yes
-    max_restore_data_length: 18
-    initial_value: '"zone_name"'
   - id: calibration_co2
     type: double[2]
     restore_value: yes
@@ -100,16 +85,6 @@ wifi:
         level: INFO
         tag: "samba"
     - logger.log:
-        format: "Timezone is set as %s"
-        args: [ 'id(local_timezone).c_str()' ]
-        level: INFO
-        tag: "samba"
-    - logger.log:
-        format: "SAMBA is in building %s and zone %s"
-        args: [ 'id(tag_building).c_str()', 'id(tag_zone).c_str()' ]
-        level: INFO
-        tag: "samba"
-    - logger.log:
         format: "CO2 calibration: y = %.12fx + %.12fb"
         args: [ 'id(calibration_co2)[0]', 'id(calibration_co2)[1]' ]
         level: INFO
@@ -168,8 +143,10 @@ ota:
     on_progress:
       then:
         - logger.log:
-            format: "OTA progress %0.1f%%"
+            format: "OTA progress: %0.1f%%"
             args: ["x"]
+            level: INFO
+            tag: "samba"
 
 # Define status LED component
 # https://esphome.io/components/light/esp32_rmt_led_strip.html
@@ -184,6 +161,6 @@ light:
     effects:
       - pulse:
           name: "slow_pulse"
-          transition_length: 500ms
-          update_interval: 2s
+          transition_length: 1s
+          update_interval: 500ms
           max_brightness: 0.20
