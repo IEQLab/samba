@@ -1,0 +1,189 @@
+# SAMBA v2 FIRMWARE
+# initial firmware flashed to new SAMBAs to facilitate setup
+# written by Thomas Parkinson, July 2025
+
+
+# Define global variables that persist after reset
+# https://esphome.io/components/globals.html
+globals:
+  - id: local_timezone
+    type: std::string
+    restore_value: yes
+    max_restore_data_length: 24
+    initial_value: '"Australia/Sydney"'
+  - id: tag_building
+    type: std::string
+    restore_value: yes
+    max_restore_data_length: 18
+    initial_value: '"building_name"'
+  - id: tag_zone
+    type: std::string
+    restore_value: yes
+    max_restore_data_length: 18
+    initial_value: '"zone_name"'
+  - id: calibration_co2
+    type: double[2]
+    restore_value: yes
+    initial_value: '{1.0, 0.0}'
+  - id: calibration_lux
+    type: double[2]
+    restore_value: yes
+    initial_value: '{1.0, 0.0}'
+  - id: calibration_ta
+    type: double[2]
+    restore_value: yes
+    initial_value: '{1.0, 0.0}'
+  - id: calibration_rh
+    type: double[2]
+    restore_value: yes
+    initial_value: '{1.0, 0.0}'
+  - id: calibration_tg
+    type: double[2]
+    restore_value: yes
+    initial_value: '{1.0, 0.0}'
+  - id: calibration_as1
+    type: double[2]
+    restore_value: yes
+    initial_value: '{0.00000000000162713705587024, 17.7238215290214}'
+  - id: calibration_as2
+    type: double[2]
+    restore_value: yes
+    initial_value: '{0.110619801169189, 3.93850903242043}'
+
+# Define ESPHome settings
+# https://esphome.io/components/esphome
+esphome:
+  name: "samba"
+  name_add_mac_suffix: true
+  min_version: "2025.6.1"
+  on_boot:
+    - priority: 100
+      then: 
+        - light.turn_on:
+            id: samba_led
+            effect: slow_pulse
+
+# Define ESP32 board
+# https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
+esp32:
+  board: esp32dev
+  flash_size: 16MB
+  framework:
+    type: arduino
+
+# Define logger
+# https://esphome.io/components/logger
+logger:
+  level: INFO
+
+# Use captive portal for wifi configuration
+# https://esphome.io/components/captive_portal.html
+captive_portal:
+
+# Configure access point
+# https://esphome.io/components/wifi
+wifi:
+  ap:
+    ssid: "SAMBA"
+    ap_timeout: 30s
+
+# Print out globals once connected to WiFi
+  on_connect:
+    - logger.log: 
+        format: "SAMBA %s is born"
+        args: ['WiFi.macAddress().c_str()']
+        level: INFO
+        tag: "samba"
+    - logger.log: 
+        format: "IP address is %s"
+        args: ['WiFi.localIP().toString().c_str()']
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "Timezone is set as %s"
+        args: [ 'id(local_timezone).c_str()' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "SAMBA is in building %s and zone %s"
+        args: [ 'id(tag_building).c_str()', 'id(tag_zone).c_str()' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "CO2 calibration: y = %.12fx + %.12fb"
+        args: [ 'id(calibration_co2)[0]', 'id(calibration_co2)[1]' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "Lux calibration: y = %.12fx + %.12fb"
+        args: [ 'id(calibration_lux)[0]', 'id(calibration_lux)[1]' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "Ta calibration: y = %.12fx + %.12fb"
+        args: [ 'id(calibration_ta)[0]', 'id(calibration_ta)[1]' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "RH calibration: y = %.12fx + %.12fb"
+        args: [ 'id(calibration_rh)[0]', 'id(calibration_rh)[1]' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "Tg calibration: y = %.12fx + %.12fb"
+        args: [ 'id(calibration_tg)[0]', 'id(calibration_tg)[1]' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "Air speed 1 calibration: y = %.12f * x^%.12fb"
+        args: [ 'id(calibration_as1)[0]', 'id(calibration_as1)[1]' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "Air speed 2 calibration: y = %.12f * x^%.12fb"
+        args: [ 'id(calibration_as2)[0]', 'id(calibration_as2)[1]' ]
+        level: INFO
+        tag: "samba"
+    - delay: 5s
+
+# Check for SAMBA firmware online
+    - logger.log:
+        format: "Checking for SAMBA firmware"
+        level: INFO
+        tag: "samba"
+    - ota.http_request.flash:
+        md5_url: http://example.com/firmware.md5
+        url: https://example.com/firmware.ota.bin
+
+# Enable HTTP Request component required for remote OTA
+# https://esphome.io/components/http_request.html
+http_request:
+    id: http_client
+    verify_ssl: false
+
+# Configure over-the-air updates
+# https://esphome.io/components/ota/http_request
+ota:
+  - platform: http_request
+    on_progress:
+      then:
+        - logger.log:
+            format: "OTA progress %0.1f%%"
+            args: ["x"]
+
+# Define status LED component
+# https://esphome.io/components/light/esp32_rmt_led_strip.html
+light:
+  - platform: esp32_rmt_led_strip
+    id: samba_led
+    rgb_order: GRB
+    pin: GPIO27
+    num_leds: 1
+    rmt_channel: 0
+    chipset: ws2812
+    effects:
+      - pulse:
+          name: "slow_pulse"
+          transition_length: 500ms
+          update_interval: 2s
+          max_brightness: 0.20
