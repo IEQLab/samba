@@ -8,22 +8,22 @@
 globals:
   - id: calibration_co2
     type: double[2]
-    restore_value: yes
+    restore_value: no
   - id: calibration_lux
     type: double[2]
-    restore_value: yes
+    restore_value: no
   - id: calibration_ta
     type: double[2]
-    restore_value: yes
+    restore_value: no
   - id: calibration_rh
     type: double[2]
-    restore_value: yes
+    restore_value: no
   - id: calibration_tg
     type: double[2]
-    restore_value: yes
+    restore_value: no
   - id: calibration_as1
     type: double[2]
-    restore_value: yes
+    restore_value: no
   - id: calibration_as2
     type: double[2]
-    restore_value: yes
+    restore_value: no
