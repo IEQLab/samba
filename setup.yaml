@@ -139,6 +139,7 @@ http_request:
 # Configure over-the-air updates
 # https://esphome.io/components/ota/http_request
 ota:
+  - platform: esphome
   - platform: http_request
     on_progress:
       then:
@@ -162,5 +163,5 @@ light:
       - pulse:
           name: "slow_pulse"
           transition_length: 1s
-          update_interval: 500ms
+          update_interval: 1s
           max_brightness: 0.20
