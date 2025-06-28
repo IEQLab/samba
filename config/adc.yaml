@@ -1,10 +1,10 @@
 # SAMBA v2 FIRMWARE
-# configure ADC component of SAMBA
+# configure analog-to-digital converter on remote board
+# https://esphome.io/components/sensor/ads1115.html
 # written by Thomas Parkinson, May 2024
 
 
-# Define ADC component
-# https://esphome.io/components/sensor/ads1115.html
+# Define component
 ads1115:
   - address: 0x4B
     continuous_mode: off

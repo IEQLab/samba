@@ -1,10 +1,10 @@
 # SAMBA v2 FIRMWARE
-# configure remote InfluxDB server for SAMBA data
+# configure upload of data to remote InfluxDB server
+# custom component
 # written by Thomas Parkinson, May 2024
 
 
 # Define InfluxDB connection
-# https://github.com/parko636/esphome-influxdb/tree/use_http_request
 influxdb_writer:
   id: influx_writer
   use_ssl: true
@@ -17,6 +17,8 @@ influxdb_writer:
   http_request_id: http_client
   time_id: sntp_time
   send_mac: true
+
+  # Define Influx measurements for sensors
   sensor_names:
     samba_temperature: "Air Temperature"
     samba_humidity: "Relative Humidity"
@@ -28,6 +30,8 @@ influxdb_writer:
     samba_nox: "NOx Index"
     samba_lux: "Illuminance"
     samba_spl: "Sound Pressure Level"
+
+  # Define Influx tags for fields
   sensor_tags:
     samba_temperature:
       building: "${tag_building}"
@@ -59,6 +63,8 @@ influxdb_writer:
     samba_spl:
       building: "${tag_building}"
       zone: "${tag_zone}"
+
+  # Define Influx field keys
   field_names:
     samba_temperature: "degrees"
     samba_humidity: "percent"
@@ -72,5 +78,5 @@ influxdb_writer:
     samba_spl: "dba"
 
 
-# Inlcude placeholder binary_sensor
+# Include placeholder binary_sensor
 binary_sensor:

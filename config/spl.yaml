@@ -1,10 +1,10 @@
 # SAMBA v2 FIRMWARE
-# configure MEMS microphone and SPL meter on SAMBA
+# configure MEMS microphone and SPL meter
+# https://github.com/stas-sl/esphome-sound-level-meter/tree/main
 # written by Thomas Parkinson, May 2024
 
 
-# define SPL sensor
-# https://github.com/stas-sl/esphome-sound-level-meter/tree/main
+# Define sensor
 sound_level_meter:
   id: sound_spl
   update_interval: 30s
@@ -80,7 +80,7 @@ sound_level_meter:
               internal: true
 
 
-# SPL sensor
+# Define SPL measurement
 sensor:
   - platform: template
     id: samba_spl

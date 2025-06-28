@@ -1,5 +1,5 @@
 # SAMBA v2 FIRMWARE
-# configure ESP device for SAMBA
+# configure ESP microcontroller
 # written by Thomas Parkinson, May 2024
 
 
@@ -10,6 +10,7 @@ esphome:
   friendly_name: "SAMBA"
   comment: "Monitor IEQ using low-cost sensors - developed by the IEQ Lab"
   name_add_mac_suffix: true
+  min_version: "2025.6.1"
   project:
     name: "IEQLab.SAMBA"
     version: "${project_version}"

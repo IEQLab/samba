@@ -1,10 +1,10 @@
 # SAMBA v2 FIRMWARE
-# configure SAMBA WiFi
+# configure wireless connections
+# https://esphome.io/components/wifi.html
 # written by Thomas Parkinson, May 2024
 
 
-# Configre wifi
-# https://esphome.io/components/wifi.html
+# Configure wifi networks
 wifi:
   networks:
   - ssid: !secret wifi_ssid
@@ -19,12 +19,3 @@ wifi:
 #    static_ip: 192.168.1.253
 #    gateway: 192.168.1.1
 #    subnet: 255.255.255.0
-
-# Set up a wifi access point
-#  ap:
-#    ssid: '${friendly_name}'
-#    password: !secret fallback_ssid_password
-
-# Use captive portal to allow WiFi crediential input
-# https://esphome.io/components/captive_portal.html
-captive_portal:

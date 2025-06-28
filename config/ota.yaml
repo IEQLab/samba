@@ -1,5 +1,5 @@
 # SAMBA v2 FIRMWARE
-# configure OTA support for SAMBA using ESPHome
+# configure over-the-air update support
 # written by Thomas Parkinson, May 2024
 
 
