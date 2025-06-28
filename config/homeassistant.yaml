@@ -29,3 +29,11 @@ button:
     name: "Restart SAMBA (Safe Mode)"
     icon: mdi:backup-restore
     entity_category: "config"
+
+# Add factory reset switch to Home Assistant
+# https://esphome.io/components/switch/factory_reset.html
+switch:
+  - platform: factory_reset
+    name: "Factory Restore SAMBA"
+    icon: mdi:alert
+    entity_category: "config"
