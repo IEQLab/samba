@@ -1,0 +1,11 @@
+# SAMBA v2 FIRMWARE
+# Set subtitutions for individual configurations
+# written by Thomas Parkinson, June 2025
+
+
+# Define substitutions for configuration
+# https://esphome.io/components/substitutions.html#command-line-substitutions
+substitutions:
+  local_timezone: !secret local_timezone
+  tag_building: !secret tag_building
+  tag_zone: !secret tag_zone
