@@ -13,7 +13,7 @@ esphome:
   min_version: "2025.6.1"
   project:
     name: "IEQLab.SAMBA"
-    version: "${project_version}"
+    version: "1.99.40"
   on_boot:
     - priority: 250
       then:
@@ -28,18 +28,8 @@ esphome:
         - light.turn_on:
             id: samba_led
             effect: slow_pulse
-        - logger.log: 
-            format: "A SAMBA is born (%s)"
-            args: ['id(sys_mac).state.c_str()']
-            level: INFO
-            tag: "samba"
         - component.update: sys_uptime
         - component.update: sys_ip
-        - logger.log: 
-            format: "IP address is %s"
-            args: ['id(sys_ip).state.c_str()']
-            level: INFO
-            tag: "samba"
         - delay: 1000ms
 
 # Define ESP32 board
@@ -62,12 +52,12 @@ logger:
     ntc: NONE
     opt3001.sensor: WARN
     pmsx003: NONE
-    k30: INFO
+    k30: WARN
     sgp4x: NONE
     sound_level_meter: NONE
     wire.cpp: NONE
-    http_request: INFO
-    influxdb_writer: INFO
+    http_request: NONE
+    influxdb_writer: NONE
 
 # Define i2c pins
 # https://esphome.io/components/i2c
@@ -96,6 +86,6 @@ i2s:
   bits_per_sample: 32
   dma_buf_count: 8
   dma_buf_len: 256
-  use_apll: true  # default: false
+  use_apll: true
   channel: left
-  bits_shift: 8   # default: 0
+  bits_shift: 8
