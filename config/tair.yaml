@@ -46,7 +46,7 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
-      return ((${calibration_ta_m} * id(sht_temperature).state) + ${calibration_ta_b});
+      return ((id(calibration_ta)[0] * id(sht_temperature).state) + id(calibration_ta)[1]);
 
 # Define humidity measurements
   - platform: template
@@ -58,4 +58,4 @@ sensor:
     unit_of_measurement: "%"
     icon: mdi:water-percent
     lambda: |-
-      return ((${calibration_rh_m} * id(sht_humidity).state) + ${calibration_rh_b});
+      return ((id(calibration_rh)[0] * id(sht_humidity).state) + id(calibration_rh)[1]);

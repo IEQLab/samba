@@ -44,4 +44,4 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
-      return ((${calibration_tg_m} * id(ntc_temperature).state) + ${calibration_tg_b});
+      return ((id(calibration_tg)[0] * id(ntc_temperature).state) + id(calibration_tg)[1]);

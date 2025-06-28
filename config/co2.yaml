@@ -34,4 +34,4 @@ sensor:
     unit_of_measurement: "ppm"
     icon: mdi:molecule-co2
     lambda: |-
-      return ((${calibration_co2_m} * id(k30_co2).state) + ${calibration_co2_b});
+      return ((id(calibration_co2)[0] * id(k30_co2).state) + id(calibration_co2)[1]);

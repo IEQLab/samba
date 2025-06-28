@@ -19,7 +19,7 @@ sensor:
           send_every: 120
           send_first_at: 120
       - lambda: |-
-          return (${calibration_as1_x} * pow(x, ${calibration_as1_n}));
+          return (id(calibration_as1)[0] * pow(x, id(calibration_as1)[1]));
       - clamp:
           min_value: 0.05
           max_value: 1.5
@@ -38,7 +38,7 @@ sensor:
           send_every: 120
           send_first_at: 120
       - lambda: |-
-          return (${calibration_as2_x} * pow(x, ${calibration_as2_n}));
+          return (id(calibration_as2)[0] * pow(x, id(calibration_as2)[1]));
       - clamp:
           min_value: 0.05
           max_value: 1.5
