@@ -1,20 +1,11 @@
 # SAMBA v2 FIRMWARE
-# configure over-the-air update support
-# written by Thomas Parkinson, May 2024
+# Create global parameters and restore from flash
+# written by Thomas Parkinson, June 2025
 
 
 # Define global variables that persist after reset
 # https://esphome.io/components/globals.html
 globals:
-  - id: local_timezone
-    type: std::string
-    restore_value: yes
-  - id: tag_building
-    type: std::string
-    restore_value: yes
-  - id: tag_zone
-    type: std::string
-    restore_value: yes
   - id: calibration_co2
     type: double[2]
     restore_value: yes
