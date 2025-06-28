@@ -1,9 +1,9 @@
 # SAMBA v2 FIRMWARE
-# configure light sensor on SAMBA
+# configure OPT3001 light sensor
 # written by Thomas Parkinson, May 2024
 
 
-# Define OPT3001 device
+# Define sensor
 # https://github.com/esphome/esphome/pull/6625
 sensor:
   - platform: opt3001
@@ -22,7 +22,7 @@ sensor:
           send_first_at: 6
 
 
-# illuminance sensor
+# Define illuminance measurements
   - platform: template
     id: samba_lux
     name: "Illuminance"

@@ -1,10 +1,10 @@
 # SAMBA v2 FIRMWARE
-# configure sampling loop SAMBA
+# configure sampling and upload loop
+# https://esphome.io/guides/automations.html#script-component
 # written by Thomas Parkinson, May 2024
 
 
 # Define script to update measurement values
-# https://esphome.io/guides/automations.html#script-component
 script:
   - id: sensor_sample
     then:

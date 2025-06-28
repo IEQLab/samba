@@ -1,0 +1,61 @@
+# SAMBA v2 FIRMWARE
+# configure temperature and humidity sensor
+# https://esphome.io/components/sensor/sht4x.html
+# written by Thomas Parkinson, May 2024
+
+
+# Define sensor
+sensor:
+  - platform: sht4x
+    address: 0x44
+    update_interval: 30s
+    heater_max_duty: 0
+    temperature:
+      id: sht_temperature
+      internal: true
+      filters:
+        - clamp:
+            min_value: -10
+            max_value: 60
+            ignore_out_of_range: true
+        - median:
+            window_size: 10
+            send_every: 1
+            send_first_at: 1
+
+    humidity:
+      id: sht_humidity
+      internal: true
+      filters:
+        - clamp:
+            min_value: 0
+            max_value: 100
+            ignore_out_of_range: true
+        - median:
+            window_size: 10
+            send_every: 1
+            send_first_at: 1
+
+# Define temperature measurements
+  - platform: template
+    id: samba_temperature
+    name: "Air Temperature"
+    update_interval: never
+    accuracy_decimals: 1
+    device_class: temperature
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+    lambda: |-
+      return ((${calibration_ta_m} * id(sht_temperature).state) + ${calibration_ta_b});
+
+# Define humidity measurements
+  - platform: template
+    id: samba_humidity
+    name: "Relative Humidity"
+    update_interval: never
+    accuracy_decimals: 0
+    device_class: humidity
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    lambda: |-
+      return ((${calibration_rh_m} * id(sht_humidity).state) + ${calibration_rh_b});

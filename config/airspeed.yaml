@@ -1,0 +1,56 @@
+# SAMBA v2 FIRMWARE
+# configure anemometers for air speed measurements
+# written by Thomas Parkinson, May 2024
+
+
+# Define voltage measurements
+sensor:
+  - platform: copy
+    id: as_1
+    source_id: ads_as1
+    internal: true
+    filters:
+      - clamp:
+          min_value: 0
+          max_value: 5
+          ignore_out_of_range: true
+      - median:
+          window_size: 300
+          send_every: 120
+          send_first_at: 120
+      - lambda: |-
+          return (${calibration_as1_x} * pow(x, ${calibration_as1_n}));
+      - clamp:
+          min_value: 0.05
+          max_value: 1.5
+
+  - platform: copy
+    id: as_2
+    source_id: ads_as2
+    internal: true
+    filters:
+      - clamp:
+          min_value: 0
+          max_value: 5
+          ignore_out_of_range: true
+      - median:
+          window_size: 300
+          send_every: 120
+          send_first_at: 120
+      - lambda: |-
+          return (${calibration_as2_x} * pow(x, ${calibration_as2_n}));
+      - clamp:
+          min_value: 0.05
+          max_value: 1.5
+
+# Define air speed measurements
+  - platform: template
+    id: samba_airspeed
+    name: "Air Speed"
+    update_interval: never
+    accuracy_decimals: 2
+    device_class: speed
+    unit_of_measurement: "m/s"
+    icon: mdi:weather-windy
+    lambda: |-
+      return max(id(as_1).state, id(as_2).state);

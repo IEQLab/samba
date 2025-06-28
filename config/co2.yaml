@@ -1,0 +1,37 @@
+# SAMBA v2 FIRMWARE
+# configure K30 carbon dioxide sensor on SAMBA
+# custom component for K30 sensor
+# written by Thomas Parkinson, May 2024
+
+
+# Define sensor
+sensor:
+  - platform: k30
+    i2c_id: bus_a
+    address: 0x69
+    update_interval: 10s
+    use_abc: true
+    co2:
+      id: k30_co2
+      filters:
+        - filter_out: NAN
+        - clamp:
+            min_value: 350
+            max_value: 10000
+            ignore_out_of_range: true
+        - median:
+            window_size: 30
+            send_every: 3
+            send_first_at: 1
+
+# Define CO2 measurements
+  - platform: template
+    id: samba_co2
+    name: "Carbon Dioxide"
+    update_interval: never
+    accuracy_decimals: 0
+    device_class: carbon_dioxide
+    unit_of_measurement: "ppm"
+    icon: mdi:molecule-co2
+    lambda: |-
+      return ((${calibration_co2_m} * id(k30_co2).state) + ${calibration_co2_b});

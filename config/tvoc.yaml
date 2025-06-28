@@ -1,0 +1,54 @@
+# SAMBA v2 FIRMWARE
+# configure TVOC / NOx sensor on SAMBA
+# https://esphome.io/components/sensor/sgp4x.html
+# written by Thomas Parkinson, May 2024
+
+
+# Define sensor
+sensor:
+  - platform: sgp4x
+    update_interval: 60s
+    compensation:
+      temperature_source: sht_temperature
+      humidity_source: sht_humidity
+    voc:
+      id: sgp_voc
+      internal: true
+      algorithm_tuning:
+        learning_time_offset_hours: 720
+      filters:
+        - median:
+            window_size: 5
+            send_every: 1
+            send_first_at: 1
+    nox:
+      id: sgp_nox
+      internal: true
+      filters:
+        - median:
+            window_size: 5
+            send_every: 1
+            send_first_at: 1
+
+# Define TVOC measurements
+  - platform: template
+    id: samba_voc
+    name: "TVOC"
+    update_interval: never
+    accuracy_decimals: 0
+    device_class: volatile_organic_compounds
+    unit_of_measurement: "ppb"
+    icon: mdi:radiator
+    lambda: |-
+      return (log(501.0 - id(sgp_voc).state) - 6.24) * (-996.94);
+    
+# Define NOx measurements
+  - platform: template
+    id: samba_nox
+    name: "NOx Index"
+    update_interval: never
+    accuracy_decimals: 0
+    device_class: aqi
+    icon: mdi:radiator
+    lambda: |-
+      return id(sgp_nox).state;

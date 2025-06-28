@@ -1,0 +1,47 @@
+# SAMBA v2 FIRMWARE
+# configure globe temperature sensor
+# https://www.murata.com/en-us/products/productdetail?partno=NXRT15XH103FA1B040
+# written by Thomas Parkinson, May 2024
+
+
+# Define resistance sensor
+# https://esphome.io/components/sensor/ntc.html
+sensor:
+  - platform: resistance
+    id: ntc_resistance
+    sensor: ads_ntc
+    internal: true
+    configuration: UPSTREAM
+    resistor: 10kOhm
+    reference_voltage: 4.096
+
+# Define NTC thermistor
+  - platform: ntc
+    id: ntc_temperature
+    sensor: ntc_resistance
+    internal: true
+    calibration:
+      b_constant: 3977
+      reference_temperature: 25°C
+      reference_resistance: 10kOhm
+    filters:
+      - clamp:
+          min_value: -10
+          max_value: 60
+          ignore_out_of_range: true
+      - median:
+          window_size: 10
+          send_every: 1
+          send_first_at: 1
+
+# Define globe temperature measurements
+  - platform: template
+    id: samba_globe
+    name: "Globe Temperature"
+    update_interval: never
+    accuracy_decimals: 1
+    device_class: temperature
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+    lambda: |-
+      return ((${calibration_tg_m} * id(ntc_temperature).state) + ${calibration_tg_b});

@@ -1,5 +1,5 @@
 # SAMBA v2 FIRMWARE
-# configure RTC device on SAMBA
+# configure real time clock, SNTP sync, and sample loop
 # written by Thomas Parkinson, May 2024
 
 
