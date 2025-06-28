@@ -17,12 +17,10 @@ ota:
     on_begin:
       then:
         - logger.log: "Updating SAMBA remotely"
+    on_progress:
+      then:
         - logger.log:
             format: "Remote update progress %0.1f%%"
-            args: ["x"]
-            tag: "samba"
-        - logger.log:
-            format: "Remote update error %d"
             args: ["x"]
             tag: "samba"
 
@@ -34,10 +32,10 @@ http_request:
 
 # Use managed updates
 # https://esphome.io/components/update/http_request.html#
-update:
-  - platform: http_request
-    name: Firmware Update
-    source: http://github.com/IEQLab/samba/manifest.json
+#update:
+#  - platform: http_request
+#    name: "Firmware Update"
+#    source: http://github.com/IEQLab/samba/manifest.json
 
 # Explicitly enable safe mode
 # https://esphome.io/components/safe_mode
