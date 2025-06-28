@@ -33,12 +33,12 @@ esphome:
             tag: "samba"
         - logger.log:
             format: "Timezone is set as %s"
-            args: [ 'id(local_timezone).c_str()' ]
+            args: [ '"${local_timezone}"' ]
             level: INFO
             tag: "samba"
         - logger.log:
-            format: "SAMBA is in building %s and zone %s"
-            args: [ 'id(tag_building).c_str()', 'id(tag_zone).c_str()' ]
+            format: "SAMBA is in %s building and %s zone"
+            args: [ '"${tag_building}"', '"${tag_zone}"' ]
             level: INFO
             tag: "samba"
         - logger.log:
@@ -67,12 +67,12 @@ esphome:
             level: INFO
             tag: "samba"
         - logger.log:
-            format: "Air speed 1 calibration: y = %.12f * x^%.12fb"
+            format: "Air speed 1 calibration: y = %.12f * x^%.12f"
             args: [ 'id(calibration_as1)[0]', 'id(calibration_as1)[1]' ]
             level: INFO
             tag: "samba"
         - logger.log:
-            format: "Air speed 2 calibration: y = %.12f * x^%.12fb"
+            format: "Air speed 2 calibration: y = %.12f * x^%.12f"
             args: [ 'id(calibration_as2)[0]', 'id(calibration_as2)[1]' ]
             level: INFO
             tag: "samba"
