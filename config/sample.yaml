@@ -16,7 +16,7 @@ script:
           then:
             - light.turn_on:
                 id: samba_led
-                brightness: 0.25
+                brightness: 0.20
             - component.update: samba_timestamp
             - component.update: samba_temperature
             - component.update: samba_humidity
@@ -64,14 +64,13 @@ script:
                 state: !lambda 'return id(samba_spl).state;'
             - lambda: |-
                 id(influx_writer).publish_now();
+            - light.turn_off:
+                id: samba_led
             - logger.log:
                 format: "Sample taken at %s"
                 args: ['id(samba_timestamp).state.c_str()']
                 level: INFO
                 tag: "samba"
-            - delay: 750ms
-            - light.turn_off:
-                id: samba_led
           else:
             - component.update: sys_uptime
             - logger.log: 
