@@ -16,9 +16,9 @@ substitutions:
   rh_b: "0.0"
   tg_m: "1.0"
   tg_b: "0.0"  
-  as1_x: "1.00000000000162713705587024"
+  as1_a: "1.00000000000162713705587024"
   as1_b: "17.7238215290214"
-  as2_x: "0.110619801169189"
+  as2_a: "0.110619801169189"
   as2_b: "3.93850903242043"
 
 # Define global variable placeholders
@@ -69,7 +69,24 @@ esphome:
       then: 
         - light.turn_on:
             id: samba_led
-            effect: slow_pulse
+            effect: fast_pulse
+
+# Write globals to flash
+        - lambda: |-
+            id(calibration_co2)[0] = double(${co2_m});
+            id(calibration_co2)[1] = double(${co2_b});
+            id(calibration_lux)[0] = double(${lux_m});
+            id(calibration_lux)[1] = double(${lux_b});
+            id(calibration_ta)[0] = double(${ta_m});
+            id(calibration_ta)[1] = double(${ta_b});
+            id(calibration_rh)[0] = double(${rh_m});
+            id(calibration_rh)[1] = double(${rh_b});
+            id(calibration_tg)[0] = double(${tg_m});
+            id(calibration_tg)[1] = double(${tg_b});
+            id(calibration_as1)[0] = double(${as1_a});
+            id(calibration_as1)[1] = double(${as1_b});
+            id(calibration_as2)[0] = double(${as2_a});
+            id(calibration_as2)[1] = double(${as2_b});
 
 # Define ESP32 board
 # https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
@@ -95,25 +112,8 @@ wifi:
     ssid: "SAMBA"
     ap_timeout: 30s
 
-# Write globals to flash once connected to WiFi
+# Print out globals once connected to WiFi
   on_connect:
-    - lambda: |-
-        id(calibration_co2)[0] = double(${co2_m});
-        id(calibration_co2)[1] = double(${co2_b});
-        id(calibration_lux)[0] = double(${lux_m});
-        id(calibration_lux)[1] = double(${lux_b});
-        id(calibration_ta)[0] = double(${ta_m});
-        id(calibration_ta)[1] = double(${ta_b});
-        id(calibration_rh)[0] = double(${rh_m});
-        id(calibration_rh)[1] = double(${rh_b});
-        id(calibration_tg)[0] = double(${tg_m});
-        id(calibration_tg)[1] = double(${tg_b});
-        id(calibration_as1)[0] = double(${as1_x});
-        id(calibration_as1)[1] = double(${as1_b});
-        id(calibration_as2)[0] = double(${as2_x});
-        id(calibration_as2)[1] = double(${as2_b});
-
-# Print out globals for confirmation 
     - logger.log: 
         format: "SAMBA %s is born"
         args: ['WiFi.macAddress().c_str()']
@@ -201,7 +201,7 @@ light:
     chipset: ws2812
     effects:
       - pulse:
-          name: "slow_pulse"
-          transition_length: 1s
-          update_interval: 1s
+          name: "fast_pulse"
+          transition_length: 0.5s
+          update_interval: 0.5s
           max_brightness: 0.20
