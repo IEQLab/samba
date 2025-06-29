@@ -6,16 +6,16 @@
 # Define calibration coefficients for SAMBA
 # https://esphome.io/components/substitutions.html
 substitutions:
-  co2_m: "1.0"
-  co2_b: "0.0"
-  lux_m: "1.0"
-  lux_b: "0.0"
-  ta_m: "1.0"
-  ta_b: "0.0"
-  rh_m: "1.0"
-  rh_b: "0.0"
-  tg_m: "1.0"
-  tg_b: "0.0"  
+  co2_m: "1.00"
+  co2_b: "0.00"
+  lux_m: "1.00"
+  lux_b: "0.00"
+  ta_m: "1.00"
+  ta_b: "0.00"
+  rh_m: "1.00"
+  rh_b: "0.00"
+  tg_m: "1.00"
+  tg_b: "0.00"  
   as1_a: "1.00000000000162713705587024"
   as1_b: "17.7238215290214"
   as2_a: "0.110619801169189"
@@ -27,23 +27,23 @@ globals:
   - id: calibration_co2
     type: double[2]
     restore_value: yes
-    initial_value: '{1.0, 0.0}'
+    initial_value: '{1.0, 1.0}'
   - id: calibration_lux
     type: double[2]
     restore_value: yes
-    initial_value: '{1.0, 0.0}'
+    initial_value: '{1.0, 1.0}'
   - id: calibration_ta
     type: double[2]
     restore_value: yes
-    initial_value: '{1.0, 0.0}'
+    initial_value: '{1.0, 1.0}'
   - id: calibration_rh
     type: double[2]
     restore_value: yes
-    initial_value: '{1.0, 0.0}'
+    initial_value: '{1.0, 1.0}'
   - id: calibration_tg
     type: double[2]
     restore_value: yes
-    initial_value: '{1.0, 0.0}'
+    initial_value: '{1.0, 1.0}'
   - id: calibration_as1
     type: double[2]
     restore_value: yes
@@ -71,23 +71,6 @@ esphome:
             id: samba_led
             effect: fast_pulse
 
-# Write globals to flash
-        - lambda: |-
-            id(calibration_co2)[0] = double(${co2_m});
-            id(calibration_co2)[1] = double(${co2_b});
-            id(calibration_lux)[0] = double(${lux_m});
-            id(calibration_lux)[1] = double(${lux_b});
-            id(calibration_ta)[0] = double(${ta_m});
-            id(calibration_ta)[1] = double(${ta_b});
-            id(calibration_rh)[0] = double(${rh_m});
-            id(calibration_rh)[1] = double(${rh_b});
-            id(calibration_tg)[0] = double(${tg_m});
-            id(calibration_tg)[1] = double(${tg_b});
-            id(calibration_as1)[0] = double(${as1_a});
-            id(calibration_as1)[1] = double(${as1_b});
-            id(calibration_as2)[0] = double(${as2_a});
-            id(calibration_as2)[1] = double(${as2_b});
-
 # Define ESP32 board
 # https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
 esp32:
@@ -112,8 +95,25 @@ wifi:
     ssid: "SAMBA"
     ap_timeout: 30s
 
-# Print out globals once connected to WiFi
+# Write globals to flashonce connected to WiFi
   on_connect:
+    - lambda: |-
+        id(calibration_co2)[0] = double(${co2_m});
+        id(calibration_co2)[1] = double(${co2_b});
+        id(calibration_lux)[0] = double(${lux_m});
+        id(calibration_lux)[1] = double(${lux_b});
+        id(calibration_ta)[0] = double(${ta_m});
+        id(calibration_ta)[1] = double(${ta_b});
+        id(calibration_rh)[0] = double(${rh_m});
+        id(calibration_rh)[1] = double(${rh_b});
+        id(calibration_tg)[0] = double(${tg_m});
+        id(calibration_tg)[1] = double(${tg_b});
+        id(calibration_as1)[0] = double(${as1_a});
+        id(calibration_as1)[1] = double(${as1_b});
+        id(calibration_as2)[0] = double(${as2_a});
+        id(calibration_as2)[1] = double(${as2_b});
+            
+# Print out globals
     - logger.log: 
         format: "SAMBA %s is born"
         args: ['WiFi.macAddress().c_str()']
@@ -159,9 +159,9 @@ wifi:
         args: [ 'id(calibration_as2)[0]', 'id(calibration_as2)[1]' ]
         level: INFO
         tag: "samba"
-    - delay: 10s
 
 # Check for SAMBA firmware online
+    - delay: 10s
     - logger.log:
         format: "Checking for SAMBA firmware"
         level: INFO
