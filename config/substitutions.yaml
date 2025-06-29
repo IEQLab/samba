@@ -6,6 +6,37 @@
 # Define substitutions for configuration
 # https://esphome.io/components/substitutions.html#command-line-substitutions
 substitutions:
+  samba_name: !secret samba_name
   local_timezone: !secret local_timezone
+  
+  co2_m: !secret co2_m
+  co2_b: !secret co2_b
+  lux_m: !secret lux_m
+  lux_b: !secret lux_b
+  ta_m: !secret ta_m
+  ta_b: !secret ta_b
+  rh_m: !secret rh_m
+  rh_b: !secret rh_b
+  tg_m: !secret tg_m
+  tg_b: !secret tg_b
+  as1_a: !secret as1_a
+  as1_b: !secret as1_b
+  as2_a: !secret as2_a
+  as2_b: !secret as2_b
+  
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_password
+  enterprise_ssid: !secret enterprise_ssid
+  enterprise_user: !secret enterprise_user
+  enterprise_password: !secret enterprise_password
+  enterprise_ttls: !secret enterprise_ttls
+  
+  ota_password: !secret ota_password
+  
   tag_building: !secret tag_building
   tag_zone: !secret tag_zone
+  influx_host: !secret influx_host
+  influx_port: !secret influx_port
+  influx_token: !secret influx_token
+  influx_org: !secret influx_org
+  influx_bucket: !secret influx_bucket

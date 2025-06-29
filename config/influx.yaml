@@ -8,11 +8,11 @@
 influxdb_writer:
   id: influx_writer
   use_ssl: true
-  host: !secret influxdb_host
-  port: "443"
-  token: !secret influxdb_token
-  bucket: !secret influxdb_bucket
-  org: !secret influxdb_org
+  host: "${influx_host}"
+  port: "${influx_port}"
+  token: "${influx_token}"
+  org: "${influx_org}"
+  bucket: "${influx_bucket}"
   timestamp_unit: "s"
   http_request_id: http_client
   time_id: sntp_time

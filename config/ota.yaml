@@ -7,7 +7,7 @@
 # https://esphome.io/components/ota.html
 ota:
   - platform: esphome
-    password: !secret ota_password
+    password: "${ota_password}"
     on_begin:
       then:
         - logger.log: 
