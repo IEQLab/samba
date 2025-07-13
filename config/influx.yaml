@@ -34,35 +34,35 @@ influxdb_writer:
   # Define Influx tags for fields
   sensor_tags:
     samba_temperature:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
     samba_humidity:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
     samba_globe:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
     samba_airspeed:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
     samba_co2:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
     samba_pm25:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
     samba_voc:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
     samba_nox:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
     samba_lux:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
     samba_spl:
-      building: "${tag_building}"
-      zone: "${tag_zone}"
+      building: "building"
+      zone: "zone"
 
   # Define Influx field keys
   field_names:

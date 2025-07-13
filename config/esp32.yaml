@@ -6,7 +6,7 @@
 # Define ESPHome settings
 # https://esphome.io/components/esphome
 esphome:
-  name: "${samba_name}"
+  name: "samba"
   friendly_name: "SAMBA"
   comment: "Monitor IEQ using low-cost sensors - developed by the IEQ Lab"
   name_add_mac_suffix: true
@@ -32,13 +32,8 @@ esphome:
             level: INFO
             tag: "samba"
         - logger.log:
-            format: "Timezone is set as %s"
-            args: [ '"${local_timezone}"' ]
-            level: INFO
-            tag: "samba"
-        - logger.log:
-            format: "SAMBA is in %s building and %s zone"
-            args: [ '"${tag_building}"', '"${tag_zone}"' ]
+            format: "SAMBA assigned to zone: %s in building: %s"
+            args: [ 'id(zone_tag).c_str()', 'id(building_tag).c_str()' ]
             level: INFO
             tag: "samba"
         - logger.log:
@@ -91,6 +86,7 @@ esp32:
 logger:
   level: INFO
   logs:
+    samba: INFO
     main: WARN
     component: NONE
     sensor: NONE
@@ -103,9 +99,9 @@ logger:
     sound_level_meter: NONE
     wire.cpp: NONE
     http_request: NONE
-    influxdb_writer: NONE
+    influxdb_writer: WARN
 
-# Define i2c pins
+# Define i2c
 # https://esphome.io/components/i2c
 i2c:
   - id: bus_a
