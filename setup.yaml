@@ -6,6 +6,8 @@
 # Define calibration coefficients for SAMBA
 # https://esphome.io/components/substitutions.html
 substitutions:
+  zone_name: "zone"
+  building_name: "building"
   co2_m: "1.00"
   co2_b: "0.00"
   lux_m: "1.00"
@@ -24,6 +26,16 @@ substitutions:
 # Define global variable placeholders
 # https://esphome.io/components/globals.html
 globals:
+  - id: zone_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
+    initial_value: '"x"'
+  - id: building_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
+    initial_value: '"x"'
   - id: calibration_co2
     type: double[2]
     restore_value: yes
@@ -92,12 +104,14 @@ captive_portal:
 # https://esphome.io/components/wifi
 wifi:
   ap:
-    ssid: "SAMBA"
+    ssid: "samba_connect"
     ap_timeout: 30s
 
-# Write globals to flashonce connected to WiFi
+# Write globals to flash once connected to WiFi
   on_connect:
     - lambda: |-
+        id(zone_tag) = "${zone_name}";
+        id(building_tag) = "${building_name}";
         id(calibration_co2)[0] = double(${co2_m});
         id(calibration_co2)[1] = double(${co2_b});
         id(calibration_lux)[0] = double(${lux_m});
@@ -114,6 +128,7 @@ wifi:
         id(calibration_as2)[1] = double(${as2_b});
             
 # Print out globals
+    - delay: 1s
     - logger.log: 
         format: "SAMBA %s is born"
         args: ['WiFi.macAddress().c_str()']
@@ -122,6 +137,11 @@ wifi:
     - logger.log: 
         format: "IP address is %s"
         args: ['WiFi.localIP().toString().c_str()']
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "SAMBA assigned to zone: %s in building: %s"
+        args: [ 'id(zone_tag).c_str()', 'id(building_tag).c_str()' ]
         level: INFO
         tag: "samba"
     - logger.log:
@@ -177,9 +197,11 @@ http_request:
     verify_ssl: false
 
 # Configure over-the-air updates
+# https://esphome.io/components/ota/
 # https://esphome.io/components/ota/http_request
 ota:
   - platform: esphome
+    password: !secret ota_password
   - platform: http_request
     on_progress:
       then:
