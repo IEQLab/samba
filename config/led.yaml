@@ -17,7 +17,19 @@ light:
     # Define LED effects
     effects:
       - pulse:
-          name: "slow_pulse"
-          transition_length: 1s
-          update_interval: 5s
+          name: "pulse_slow"
+          transition_length: 2s
+          update_interval: 3s
+          max_brightness: 0.20
+      - pulse:
+          name: "pulse_fast"
+          transition_length: 500ms
+          update_interval: 1s
+          max_brightness: 0.20
+      - pulse:
+          name: "pulse_beat"
+          transition_length:
+            on_length: 200ms
+            off_length: 500ms
+          update_interval: 800ms
           max_brightness: 0.20
