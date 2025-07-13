@@ -95,7 +95,7 @@ void K30Component::update() {
     this->status_set_warning("Error sending command to K30");
   }
   // Wait for the sensor to process the command.
-  this->set_timeout(20, [this]() {
+  this->set_timeout(25, [this]() {
     // Read the data from the sensor.
     uint8_t data[4];
     i2c::ErrorCode error = this->read(data, 4);
