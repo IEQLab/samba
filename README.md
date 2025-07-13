@@ -135,7 +135,7 @@ The IEQ Lab will actively maintain the SAMBA firmware and publish updates to the
 2.  Make the agreed modifications to the relevant .yaml files in `config/...` and test EXTENSIVELY.
 3.  Bump the project version in [`esp32.yaml`](https://github.com/IEQLab/samba/blob/ebebc4b091f836f893ec4236af8086405198ec6a/config/esp32.yaml#L16)
 4.  Once the new firmware is confirmed stable, generate the compiled bin with `esphome compile samba.yaml`
-5.  Move the generated `firmware.ota.bin` from the hidden `.esphome/build/samba/.pioenvs/samba/` to the `firmware/` directory.
+5.  Move the compile ota firmware to the firmware directory with `cp .esphome/build/samba/.pioenvs/samba/firmware.ota.bin firmware/`
 6.  Generate a new md5 hash with `md5 -q firmware/firmware.ota.bin > firmware/firmware.md5`
 7.  Push the new .bin and hash to the SAMBA Github repository.
 
