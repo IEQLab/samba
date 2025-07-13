@@ -50,6 +50,7 @@ class InfluxDBWriter : public Component {
       bool use_ssl_, send_mac_;
 
       std::string build_tags(const std::string& id);
+      std::string escape_tags(const std::string &input);
       std::string get_field_name(const std::string& id);
       std::string build_line(const std::string &id, float &value);
       std::string build_line(const std::string &id, bool state);

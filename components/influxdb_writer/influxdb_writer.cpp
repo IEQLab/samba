@@ -171,19 +171,31 @@ void InfluxDBWriter::add_sensor_name_id(const std::string &sensor_id, const std:
   this->sensorNamesWithId_[name] = sensor_id;
 }
 
+// Correctly parse spaces in tags
+std::string InfluxDBWriter::escape_tags(const std::string &input) {
+  std::string output;
+  for (char c : input) {
+    if (c == ' ' || c == ',' || c == '=') {
+      output += '\\';
+    }
+    output += c;
+  }
+  return output;
+}
+
 // Returns all configured tags per sensor
 std::string InfluxDBWriter::build_tags(const std::string& id) {
   std::string tags;
-    auto tag_it = this->tags_.find(id);
-    if (tag_it != this->tags_.end()) {
-      for (const auto& pair : tag_it->second) {
-        tags += "," + pair.first + "=" + pair.second;
-      }
+  auto tag_it = this->tags_.find(id);
+  if (tag_it != this->tags_.end()) {
+    for (const auto& pair : tag_it->second) {
+      tags += "," + this->escape_tags(pair.first) + "=" + this->escape_tags(pair.second);
     }
-    if (this->send_mac_) {
-      tags += ",device=" + this->mac_addr_;
-    } 
-    return tags;
+  }
+  if (this->send_mac_) {
+    tags += ",device=" + this->escape_tags(this->mac_addr_);
+  } 
+  return tags;
 }
 
 // Return field name if it was configured, default is "value"
@@ -196,7 +208,7 @@ std::string InfluxDBWriter::get_field_name(const std::string& id) {
 std::string InfluxDBWriter::build_line(const std::string &id, float &value) {
     std::string line, sensor_tags, field;
     // Start the line protocol with the id of the sensor
-    line = id;
+    line = this->escape_tags(id);
 
     // Get tags configured 
     sensor_tags = this->build_tags(id);
@@ -222,7 +234,7 @@ std::string InfluxDBWriter::build_line(const std::string &id, float &value) {
 // Method to prepare lines for binary_sensors
 std::string InfluxDBWriter::build_line(const std::string &id, bool state) {
   std::string line, sensor_tags, field;
-  line = id;
+  line = this->escape_tags(id);
 
   // Get all the tags configured per sensor
   sensor_tags = this->build_tags(id);
@@ -243,8 +255,8 @@ std::string InfluxDBWriter::build_line(const std::string &id, bool state) {
 // Method to prepare lines for text_sensors
 std::string InfluxDBWriter::build_line(const std::string &id, const std::string &value) {
   std::string line, sensor_tags, field;
-  line = id;
-
+  line = this->escape_tags(id);
+  
   // Get all the tags configured per sensor
   sensor_tags = this->build_tags(id);
   line += sensor_tags;
