@@ -6,11 +6,11 @@
 # Define global variables that persist after reset
 # https://esphome.io/components/globals.html
 globals:
-  - id: zone_tag
+  - id: building_tag
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
-  - id: building_tag
+  - id: zone_tag
     type: std::string
     max_restore_data_length: 24
     restore_value: yes

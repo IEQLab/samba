@@ -6,8 +6,8 @@
 # Define calibration coefficients for SAMBA
 # https://esphome.io/components/substitutions.html
 substitutions:
-  zone_name: "zone"
   building_name: "building"
+  zone_name: "zone"
   co2_m: "1.00"
   co2_b: "0.00"
   lux_m: "1.00"
@@ -26,12 +26,12 @@ substitutions:
 # Define global variable placeholders
 # https://esphome.io/components/globals.html
 globals:
-  - id: zone_tag
+  - id: building_tag
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
     initial_value: '"x"'
-  - id: building_tag
+  - id: zone_tag
     type: std::string
     max_restore_data_length: 24
     restore_value: yes

@@ -31,39 +31,6 @@ influxdb_writer:
     samba_lux: "Illuminance"
     samba_spl: "Sound Pressure Level"
 
-  # Define Influx tags for fields
-  sensor_tags:
-    samba_temperature:
-      building: "building"
-      zone: "zone"
-    samba_humidity:
-      building: "building"
-      zone: "zone"
-    samba_globe:
-      building: "building"
-      zone: "zone"
-    samba_airspeed:
-      building: "building"
-      zone: "zone"
-    samba_co2:
-      building: "building"
-      zone: "zone"
-    samba_pm25:
-      building: "building"
-      zone: "zone"
-    samba_voc:
-      building: "building"
-      zone: "zone"
-    samba_nox:
-      building: "building"
-      zone: "zone"
-    samba_lux:
-      building: "building"
-      zone: "zone"
-    samba_spl:
-      building: "building"
-      zone: "zone"
-
   # Define Influx field keys
   field_names:
     samba_temperature: "degrees"
@@ -77,6 +44,46 @@ influxdb_writer:
     samba_lux: "lux"
     samba_spl: "dba"
 
+  # Define Influx tags for fields
+  # Note: these are overwritten at boot by below script
+#  sensor_tags:
+#    samba_temperature:
+#      building: "INSERT"
+#      zone: "INSERT"
 
-# Include placeholder binary_sensor
-binary_sensor:
+# Define script to set tags on boot using global variables
+# https://esphome.io/components/script.html
+script:
+  - id: set_influx_tags
+    mode: queued
+    then:
+      - lambda: |-
+          id(influx_writer).set_dynamic_tag("samba_temperature", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_temperature", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("samba_humidity", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_humidity", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("samba_globe", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_globe", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("samba_airspeed", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_airspeed", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("samba_co2", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_co2", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("samba_pm25", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_pm25", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("samba_voc", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_voc", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("samba_nox", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_nox", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("samba_lux", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_lux", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("samba_spl", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("samba_spl", "zone", id(zone_tag));

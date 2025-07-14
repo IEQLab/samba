@@ -3,6 +3,14 @@
 # written by Thomas Parkinson, May 2024
 
 
+# Define ESP32 board
+# https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
+esp32:
+  board: esp32dev
+  flash_size: 16MB
+  framework:
+    type: arduino
+
 # Define ESPHome settings
 # https://esphome.io/components/esphome
 esphome:
@@ -13,7 +21,7 @@ esphome:
   min_version: "2025.6.1"
   project:
     name: "IEQLab.SAMBA"
-    version: "1.99.41"
+    version: "1.99.50"
   on_boot:
     - priority: -100
       then: 
@@ -25,15 +33,12 @@ esphome:
         - delay: 1000ms
     - priority: 250
       then:
+      
+      # Print useful diagnostics
         - ds1307.read_time:
         - logger.log: 
             format: "Time read from RTC (%s)"
             args: ['ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str()']
-            level: INFO
-            tag: "samba"
-        - logger.log:
-            format: "SAMBA assigned to zone: %s in building: %s"
-            args: [ 'id(zone_tag).c_str()', 'id(building_tag).c_str()' ]
             level: INFO
             tag: "samba"
         - logger.log:
@@ -71,15 +76,14 @@ esphome:
             args: [ 'id(calibration_as2)[0]', 'id(calibration_as2)[1]' ]
             level: INFO
             tag: "samba"
-
-
-# Define ESP32 board
-# https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
-esp32:
-  board: esp32dev
-  flash_size: 16MB
-  framework:
-    type: arduino
+            
+      # Set InfluxDB tags using global variables    
+        - script.execute: set_influx_tags
+        - logger.log:
+            format: "SAMBA assigned to zone: %s in building: %s"
+            args: [ 'id(zone_tag).c_str()', 'id(building_tag).c_str()' ]
+            level: INFO
+            tag: "samba"
 
 # Set logging to errors only
 # https://esphome.io/components/logger
@@ -98,7 +102,7 @@ logger:
     sgp4x: NONE
     sound_level_meter: NONE
     wire.cpp: NONE
-    http_request: NONE
+    http_request: WARN
     influxdb_writer: WARN
 
 # Define i2c
