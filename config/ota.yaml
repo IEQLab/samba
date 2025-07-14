@@ -22,11 +22,12 @@ ota:
             level: INFO
             tag: "samba"
 
-# Enable HTTP Request component required for remote OTA
+# Enable HTTP Request component for OTA and Influx
 # https://esphome.io/components/http_request.html
 http_request:
     id: http_client
     verify_ssl: false
+    timeout: 5s
     watchdog_timeout: 8s
 
 # Explicitly enable safe mode
