@@ -77,7 +77,7 @@ A key part of the SAMBA configuration is the sampling routine. SAMBA is configur
 1.  Each sensor is set to measure at a given frequency. This ranges from 500ms (for SPL) to 60s for VOC/NOx Index; see table below for summary.
 2.  Simple quality assurance is done on the measurements. Some sensors have a [filter](https://esphome.io/components/sensor/index.html#filter-out) to remove obvious outliers e.g. temperatures below -10°C and above 60°C. Some sensors have a [linear calibration](https://esphome.io/components/sensor/index.html#calibrate-linear) e.g. converting voltage to airspeed. All sensors use a [simple moving median](https://esphome.io/components/sensor/index.html#median) that updates the sensor value every 30s.
 3.  The sample loop is triggered every 5-minutes using a [cron task on the RTC](https://esphome.io/components/time/index.html). The loop is a [script component](https://esphome.io/guides/automations.html#script-component) that executes a set of steps; details are given in [sample.yaml](https://github.com/IEQLab/samba/blob/main/config/sample.yaml) in `config/`. 
-4. The script first updates the [template sensors](https://esphome.io/components/sensor/template.html) to retrieve the latest measurement from the sensor (after the filters and moving median), and then publishes those data to Home Assistant or InfluxDB.
+4. The script first updates the [template sensors](https://esphome.io/components/sensor/template.html) to retrieve the latest measurement from the sensor (after the filters and moving median), and then publishes those data to Home Assistant or InfluxDB. The LED will flash with each upload.
 
 The following table summarises the sampling and filters (ordered sequentially) used in the default SAMBA configuration. Again, users are free to modify this but no support will be offered by the IEQ Lab.
 
@@ -120,12 +120,12 @@ Access to the ESP32 is through the USB-C port on SAMBAs main PCB. There is a sin
 3.  Open a terminal window and `cd` to the working folder where the SAMBA Github repo was cloned.
 4.  Enter the following command to compile and upload the binary file to the SAMBA: `esphome run samba.yaml`. Note that you will need to select the serial device before uploading; alternatively, specify the serial connection e.g. `esphome run samba.yaml --device /dev/cu.usbserial-10`.
 
-It should take about 30 seconds to flash the firmware. If the SAMBA is being relocated, disconnect the USB-C cable once it is finished flashing, unplug the power, put the housing back on, and tighten the hex bolt. Place the SAMBA in its location, power it on, and follow the below steps to configure the WiFi:
+It should take about 30 seconds to flash the firmware. If the SAMBA is being relocated, disconnect the USB-C cable once it is finished flashing, unplug the power, put the housing back on, and tighten the hex bolt. Place the SAMBA in its new location, power it on, and follow the below steps to configure the WiFi:
 
-1.  Use another device (e.g. smartphone, laptp) to join the `SAMBA` ad-hoc WiFi and open the [captive portal](https://esphome.io/components/captive_portal.html) by entering [http://192.168.4.1/](http://192.168.4.1/) into your browser.
-2.  Select the 2.4GHz network to join form the list and enter in the password.
+1.  Use another device (e.g. smartphone, laptp) to join the `samba_connect` ad-hoc WiFi and open the [captive portal](https://esphome.io/components/captive_portal.html) by entering [http://192.168.4.1/](http://192.168.4.1/) into your browser.
+2.  Select the 2.4GHz network to join from the list and enter in the password.
 
-The SAMBA will connect to the network and (if connected via USB-C) print out details like the MAC, IP, and calibration coefficients to the terminal. It will then attempt to download and flash the firmware stored in [`firmware/`](https://github.com/IEQLab/samba/tree/main/firmware) on the IEQ Lab Github. Once that is done, the SAMBA will reboot and start automatically. The status LED should blink slower to indicate it is warming up; this will stop once it enters the sampling routine.
+The SAMBA will connect to the network and (if connected via USB-C) print out details like the MAC, IP, and calibration coefficients to the terminal. It will then attempt to download and flash the firmware stored in [`firmware/`](https://github.com/IEQLab/samba/tree/main/firmware) on the IEQ Lab Github. Once that is done, the SAMBA will reboot and start sampling automatically. The status LED should blink slower to indicate it is warming up; this will stop once it enters the sampling routine.
 
 #### 🎯 Compiling Base Firmware [IEQ Lab] ####
 
@@ -134,12 +134,12 @@ The IEQ Lab will actively maintain the SAMBA firmware and publish updates to the
 1.  [Required] Speak to Tom before doing anything 🤠
 2.  Make the agreed modifications to the relevant .yaml files in `config/...` and test EXTENSIVELY.
 3.  Bump the project version in [`esp32.yaml`](https://github.com/IEQLab/samba/blob/ebebc4b091f836f893ec4236af8086405198ec6a/config/esp32.yaml#L16)
-4.  Once the new firmware is confirmed stable, generate the compiled bin with `esphome compile samba.yaml`
-5.  Move the compile ota firmware to the firmware directory with `cp .esphome/build/samba/.pioenvs/samba/firmware.ota.bin firmware/`
-6.  Generate a new md5 hash with `md5 -q firmware/firmware.ota.bin > firmware/firmware.md5`
-7.  Push the new .bin and hash to the SAMBA Github repository.
+4.  Once the new firmware is confirmed stable, generate the compiled bin: `esphome compile samba.yaml`
+5.  Move the compiled ota firmware to the firmware directory: `cp .esphome/build/samba/.pioenvs/samba/firmware.ota.bin firmware/`
+6.  Generate a new md5 hash: `md5 -q firmware/firmware.ota.bin > firmware/firmware.md5`
+7.  Push the new .bin and .md5 to the SAMBA Github repository.
 
-Currently, SAMBAs only check for new firmware during their initial setup. Future firmware will implement routine updates e.g. check once per week. As such, it's extremely
+Currently, SAMBAs only check for new firmware during their initial setup. Future firmware will implement routine updates e.g. check once per week. As such, it's extremely important that firmware are extensively tested otherwise they could (worst case scenario) brick the entire SAMBA fleet.
 
 #### 🆕 Modifying Firmware ####
 
@@ -147,7 +147,9 @@ Users are free to modify the SAMBA firmware to suit their needs. However, we str
 
 1.  Define your project-specific parameters in the [secrets.yaml](https://esphome.io/guides/yaml.html#secrets-and-the-secrets-yaml-file).
 2.  Make whatever modifications to the relevant .yaml files in `config/...`.
-3.  [Optional] If you changed any calibration coefficients, you'll need to change the relevant lambda function in the template sensor to the new substitution value. For example, changing the CO2 regression slope would mean modifying [this line](https://github.com/IEQLab/samba/blob/ebebc4b091f836f893ec4236af8086405198ec6a/config/co2.yaml#L37) so that `id(calibration_co2)[0]` becomes `${co2_m}` (as defined in [substitutions.yaml](https://github.com/IEQLab/samba/blob/main/config/substitutions.yaml)).
+3.  [Optional] There are two ways to update any calibration coefficients:
+    - Change the relevant lambda function in the template sensor to the new value. For example, changing the CO2 regression slope would mean modifying [this line](https://github.com/IEQLab/samba/blob/ebebc4b091f836f893ec4236af8086405198ec6a/config/co2.yaml#L37) so that `id(calibration_co2)[0]` becomes the new coefficient value.
+    - Modify the global variable that stores the calibration coefficient. This is more robust but requires a bit more work to get right - speak to Tom if needed.
 4.  Compile and upload the firmware to SAMBA via USB-C with `esphome run samba.yaml` or wirelessly (if in the same WLAN) with the SAMBA IP address `esphome run samba.yaml --device 192.168.1.XXX`.
 
 The user is responsible for managing the device if the firmware is modified.
