@@ -96,9 +96,9 @@ logger:
     sensor: NONE
     ads1115.sensor: NONE
     ntc: NONE
-    opt3001.sensor: WARN
+    opt3001.sensor: NONE
     pmsx003: NONE
-    k30: WARN
+    k30: NONE
     sgp4x: NONE
     sound_level_meter: NONE
     wire.cpp: NONE
