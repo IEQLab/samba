@@ -7,7 +7,9 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
+#ifdef USE_BINARY_SENSOR
 #include "esphome/components/binary_sensor/binary_sensor.h"
+#endif
 #include "esphome/components/text_sensor/text_sensor.h"
 #include "esphome/components/http_request/http_request.h"
 #include "esphome/components/sntp/sntp_component.h"
@@ -29,7 +31,8 @@ class InfluxDBWriter : public Component {
       void set_port(const std::string &port) { port_ = port; }
       void set_influxdb_timestamp_unit(const std::string &unit) { timestampUnit_ = unit; }
       void set_http_request(http_request::HttpRequestComponent *request) { http_request_ = request; }
-      void add_sensor_tag(const std::string &sensor, const std::string &tag, const std::string &value);
+      void add_static_tag(const std::string &sensor, const std::string &tag, const std::string &value);
+      void set_dynamic_tag(const std::string &sensor, const std::string &tag, const std::string &value);
       void set_time(esphome::sntp::SNTPComponent *time) { this->time_ = time; }
       void set_field_name(const std::string &sensor, const std::string &fieldName);
       void set_use_ssl(bool use_ssl) { this->use_ssl_ = use_ssl; }
@@ -59,7 +62,8 @@ class InfluxDBWriter : public Component {
       std::list<esphome::http_request::Header> headers_;
       
       std::map<std::string, std::string> sensorNamesWithId_;
-      std::map<std::string, std::map<std::string, std::string>> tags_;
+      std::map<std::string, std::map<std::string, std::string>> static_tags_;
+      std::map<std::string, std::map<std::string, std::string>> dynamic_tags_;
       std::map<std::string, std::string> fieldNames_;
       
       esphome::sntp::SNTPComponent *time_{nullptr};

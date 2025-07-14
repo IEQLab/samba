@@ -5,7 +5,7 @@ from esphome.components import sntp
 from esphome.const import CONF_ID
 
 CODEOWNERS = ["@IgnacioCipo"]
-DEPENDENCIES = ["http_request", "time", "binary_sensor", "text_sensor"]
+DEPENDENCIES = ["http_request", "time", "text_sensor"]
 
 CONF_HOST = "host"
 CONF_TOKEN = "token"
@@ -66,18 +66,10 @@ async def to_code(config):
     if CONF_TAGS in config:
         for sensor_id, tags in config[CONF_TAGS].items():
             for tag_key, tag_value in tags.items():
-                cg.add(var.add_sensor_tag(sensor_id, tag_key, tag_value))
+                cg.add(var.add_static_tag(sensor_id, tag_key, tag_value))
     if CONF_FIELD_NAME in config:
         for sensor_id, field_name in config[CONF_FIELD_NAME].items():
             cg.add(var.set_field_name(sensor_id, field_name))
     if CONF_SENSORS_NAMES_ID in config:
         for sensor_id, name in config[CONF_SENSORS_NAMES_ID].items():
             cg.add(var.add_sensor_name_id(sensor_id, name))
-
-
-
-
-
-    
-    
-
