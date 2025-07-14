@@ -7,6 +7,7 @@
 # Define script to update measurement values
 script:
   - id: sensor_sample
+    mode: single
     then:
       - component.update: sys_uptime
       - if:
