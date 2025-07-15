@@ -58,7 +58,7 @@ rsconnect/
 secrets.yaml
 
 # External component build files
-/esphome/components/**/**/*.pyc
+components/*/__pycache__
 
-# Temporary local file used for development
-samba_remote.yaml
+# R scripts for determinig calibration coefficients
+calibration/
