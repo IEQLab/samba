@@ -6,23 +6,24 @@
 
 # Define sensor
 sensor:
-  - platform: k30
+  - platform: senseair_i2c
+    id: k30_co2
     i2c_id: bus_a
     address: 0x69
     update_interval: 10s
-    use_abc: true
-    co2:
-      id: k30_co2
-      filters:
-        - filter_out: NAN
-        - clamp:
-            min_value: 380
-            max_value: 10000
-            ignore_out_of_range: true
-        - median:
-            window_size: 30
-            send_every: 3
-            send_first_at: 1
+    abc_interval: 0s
+    retry_delay_ms: 100
+    max_retries: 5
+    filters:
+      - filter_out: NAN
+      - clamp:
+          min_value: 380
+          max_value: 10000
+          ignore_out_of_range: true
+      - median:
+          window_size: 30
+          send_every: 3
+          send_first_at: 1
 
 # Define CO2 measurements
   - platform: template

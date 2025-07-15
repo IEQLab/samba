@@ -21,7 +21,7 @@ esphome:
   min_version: "2025.6.1"
   project:
     name: "IEQLab.SAMBA"
-    version: "1.99.51"
+    version: "1.99.52"
   on_boot:
     - priority: -100
       then: 
@@ -98,7 +98,7 @@ logger:
     ntc: NONE
     opt3001.sensor: NONE
     pmsx003: NONE
-    k30: NONE
+    senseair_i2c: NONE
     sgp4x: NONE
     sound_level_meter: NONE
     wire.cpp: NONE
@@ -112,7 +112,7 @@ i2c:
     scl: GPIO25
     sda: GPIO26
     scan: true
-    frequency: 50kHz
+    frequency: 100kHz
 
 # Configure UART
 # https://esphome.io/components/uart

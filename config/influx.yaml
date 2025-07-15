@@ -44,12 +44,12 @@ influxdb_writer:
     samba_lux: "lux"
     samba_spl: "dba"
 
-  # Define Influx tags for fields
-  # Note: these are overwritten at boot by below script
-#  sensor_tags:
-#    samba_temperature:
-#      building: "INSERT"
-#      zone: "INSERT"
+#   Define Influx tags for fields
+#   Note: these are overwritten at boot by below script
+#   sensor_tags:
+#     samba_temperature:
+#       building: "INSERT"
+#       zone: "INSERT"
 
 # Define script to set tags on boot using global variables
 # https://esphome.io/components/script.html
