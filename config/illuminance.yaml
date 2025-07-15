@@ -31,6 +31,10 @@ sensor:
     device_class: illuminance
     unit_of_measurement: "lx"
     icon: mdi:sun-wireless-outline
-    lambda: |-
-      return ((id(calibration_lux)[0] * id(opt_lux).state) + id(calibration_lux)[1]);
-
+    filters:
+      - lambda: |-
+          return ((id(calibration_lux)[0] * id(opt_lux).state) + id(calibration_lux)[1]);
+      - clamp:
+          min_value: 0
+          max_value: 10000
+          ignore_out_of_range: false

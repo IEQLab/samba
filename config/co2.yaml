@@ -16,7 +16,7 @@ sensor:
       filters:
         - filter_out: NAN
         - clamp:
-            min_value: 350
+            min_value: 380
             max_value: 10000
             ignore_out_of_range: true
         - median:
@@ -33,5 +33,10 @@ sensor:
     device_class: carbon_dioxide
     unit_of_measurement: "ppm"
     icon: mdi:molecule-co2
-    lambda: |-
-      return ((id(calibration_co2)[0] * id(k30_co2).state) + id(calibration_co2)[1]);
+    filters:
+      - lambda: |-
+          return ((id(calibration_co2)[0] * id(k30_co2).state) + id(calibration_co2)[1]);
+      - clamp:
+          min_value: 400
+          max_value: 8000
+          ignore_out_of_range: false
