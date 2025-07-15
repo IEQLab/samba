@@ -50,7 +50,7 @@ The `components/` subdirectory is where ESPHome expects to find [external compon
 
 1.  `i2s` to sample audio with the microphone.
 2.  `sound_level_meter` for calculating SPL (eq, dBA, dBC).
-3.  `k30` to communicate with [K30 CO2 sensor](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module). 
+3.  `senseair_i2c` to communicate with [K30 CO2 sensor](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module). 
 4.  `influxdb_writer` for uploading samples to an InfluxDB bucket.
 
 The hope is to have these external components merged into esphome at some point so the broader community can use them.
@@ -64,7 +64,7 @@ SAMBA is equipped with sensors that are configured using .yaml files in `config/
 |  Temperature/RH  | [Sensirion SHT40](https://sensirion.com/products/catalog/SHT40/) | [tair.yaml](https://github.com/IEQLab/samba/blob/main/config/tair.yaml) | [sht4x](https://esphome.io/components/sensor/sht4x.html) |
 | Globe Temperature | [NTC Thermistor](https://www.murata.com/en-us/products/productdetail?partno=NXRT15XH103FA1B040) | [tglobe.yaml](https://github.com/IEQLab/samba/blob/main/config/tglobe.yaml) | [ntc](https://esphome.io/components/sensor/ntc.html) |
 | Air Speed | [Thermal Anemometer](https://moderndevice.com/products/wind-sensor) | [airspeed.yaml](https://github.com/IEQLab/samba/blob/main/config/airspeed.yaml) | [ads1115](https://esphome.io/components/sensor/ads1115.html) |
-| CO2 | [CO2Meter K30](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module) | [co2.yaml](https://github.com/IEQLab/samba/blob/main/config/co2.yaml) | [k30](https://github.com/esphome/esphome/pull/7949) |
+| CO2 | [CO2Meter K30](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module) | [co2.yaml](https://github.com/IEQLab/samba/blob/main/config/co2.yaml) | [senseair_i2c](https://github.com/IEQLab/samba/tree/main/components/senseair_i2c) |
 | PM2.5 | [Plantower PMS5003](https://www.plantower.com/en/products_33/74.html) | [pm25.yaml](https://github.com/IEQLab/samba/blob/main/config/pm25.yaml) | [pmsx003](https://esphome.io/components/sensor/pmsx003.html) |
 | VOC/NOx Index | [Sensirion SGP40](https://sensirion.com/products/catalog/SGP40/) | [tvoc.yaml](https://github.com/IEQLab/samba/blob/main/config/tvoc.yaml) | [sgp4x](https://esphome.io/components/sensor/sgp4x.html) |
 | Illuminance | [TI OPT3001](https://www.ti.com/product/OPT3001) | [illuminance.yaml](https://github.com/IEQLab/samba/blob/main/config/illuminance.yaml) | [opt3001](https://esphome.io/components/sensor/opt3001.html) |
@@ -75,7 +75,7 @@ SAMBA is equipped with sensors that are configured using .yaml files in `config/
 A key part of the SAMBA configuration is the sampling routine. SAMBA is configured to constantly measure environmental parameters, periodically summarise those measurements using the median with a moving window, and then upload them at a set interval. The sampling routine is as follows:
 
 1.  Each sensor is set to measure at a given frequency. This ranges from 500ms (for SPL) to 60s for VOC/NOx Index; see table below for summary.
-2.  Simple quality assurance is done on the measurements. Some sensors have a [filter](https://esphome.io/components/sensor/index.html#filter-out) to remove obvious outliers e.g. temperatures below -10°C and above 60°C. Some sensors have a [linear calibration](https://esphome.io/components/sensor/index.html#calibrate-linear) e.g. converting voltage to airspeed. All sensors use a [simple moving median](https://esphome.io/components/sensor/index.html#median) that updates the sensor value every 30s.
+2.  Simple quality assurance is done on the measurements. Sensors have a [filter](https://esphome.io/components/sensor/index.html#clamp) to remove obvious outliers e.g. temperatures below -10°C and above 60°C. Some have sensors have a linear calibration (implemented as a [lambda function](https://esphome.io/cookbook/lambda_magic.html)) e.g. converting voltage to airspeed. All sensors use a [simple moving median](https://esphome.io/components/sensor/index.html#median) that updates the sensor value every 30s.
 3.  The sample loop is triggered every 5-minutes using a [cron task on the RTC](https://esphome.io/components/time/index.html). The loop is a [script component](https://esphome.io/guides/automations.html#script-component) that executes a set of steps; details are given in [sample.yaml](https://github.com/IEQLab/samba/blob/main/config/sample.yaml) in `config/`. 
 4. The script first updates the [template sensors](https://esphome.io/components/sensor/template.html) to retrieve the latest measurement from the sensor (after the filters and moving median), and then publishes those data to Home Assistant or InfluxDB. The LED will flash with each upload.
 
@@ -83,15 +83,15 @@ The following table summarises the sampling and filters (ordered sequentially) u
 
 | Measure | Frequency | Filters |
 |:-------:|:---------:|:-------:|
-| Air Temperature | 30s | outliers; moving median |
-| Relative Humidity | 30s | outliers; moving median |
-| Globe Temperature | 30s | linear calibration; outliers; moving median |
-| Air Speed | 1s | linear calibration; outliers; moving median |
-| CO2 | 30s | outliers; moving median |
-| PM2.5 | 1s | outliers; moving median |
+| Air Temperature | 30s | clamp; moving median; linear calibration |
+| Relative Humidity | 30s | clamp; moving median; linear calibration |
+| Globe Temperature | 30s | clamp; moving median; linear calibration |
+| Air Speed | 1s | clamp; moving median; multivariate calibration; clamp |
+| CO2 | 30s | filter; clamp; moving median; linear calibration; clamp |
+| PM2.5 | 1s | clamp; moving median |
 | VOC Index | 30s | moving median |
 | NOx Index | 30s | moving median |
-| Illuminance | 10s | outliers; moving median |
+| Illuminance | 10s | clamp; moving median; linear calibration; clamp  |
 | Sound Pressure Level | 500ms | sos; moving median |
 
 ### 📈 Data
