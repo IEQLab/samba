@@ -15,14 +15,18 @@ sensor:
           max_value: 5
           ignore_out_of_range: true
       - median:
-          window_size: 300
-          send_every: 120
-          send_first_at: 120
+          window_size: 150
+          send_every: 60
+          send_first_at: 60
       - lambda: |-
-          return (id(calibration_as1)[0] * pow(x, id(calibration_as1)[1]));
+          return id(calibration_as1)[0]
+                  * pow(x, id(calibration_as1)[1])
+                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as1)[2]);
       - clamp:
-          min_value: 0.05
-          max_value: 1.5
+          min_value: 0.02
+          max_value: 1.0
+          ignore_out_of_range: false
+      - filter_out: NAN
 
   - platform: copy
     id: as_2
@@ -34,14 +38,18 @@ sensor:
           max_value: 5
           ignore_out_of_range: true
       - median:
-          window_size: 300
-          send_every: 120
-          send_first_at: 120
+          window_size: 150
+          send_every: 60
+          send_first_at: 60
       - lambda: |-
-          return (id(calibration_as2)[0] * pow(x, id(calibration_as2)[1]));
+          return id(calibration_as2)[0]
+                  * pow(x, id(calibration_as2)[1])
+                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as2)[2]);
       - clamp:
-          min_value: 0.05
-          max_value: 1.5
+          min_value: 0.02
+          max_value: 1.0
+          ignore_out_of_range: false
+      - filter_out: NAN
 
 # Define air speed measurements
   - platform: template
@@ -49,7 +57,7 @@ sensor:
     name: "Air Speed"
     update_interval: never
     accuracy_decimals: 2
-    device_class: speed
+    device_class: wind_speed
     unit_of_measurement: "m/s"
     icon: mdi:weather-windy
     lambda: |-

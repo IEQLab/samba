@@ -18,7 +18,7 @@ sensor:
     id: ads_as1
     multiplexer: 'A0_GND'
     gain: 6.144
-    update_interval: 1s
+    update_interval: 2s
     internal: true
 
 # Air speed sensor 2
@@ -27,7 +27,7 @@ sensor:
     id: ads_as2
     multiplexer: 'A1_GND'
     gain: 6.144
-    update_interval: 1s
+    update_interval: 2s
     internal: true
 
 # NTC thermistor

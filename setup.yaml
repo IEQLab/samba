@@ -10,18 +10,20 @@ substitutions:
   zone_name: "zone"
   co2_m: "1.015844"
   co2_b: "20.139092"
-  lux_m: "6.227522"
-  lux_b: "-31.631162"
+  lux_m: "5.988641"
+  lux_b: "0.0"
   ta_m: "0.9750601"
   ta_b: "-3.9853163"
   rh_m: "0.8839748"
   rh_b: "15.0758039"
   tg_m: "0.9093902"
   tg_b: "0.6127004"  
-  as1_a: "1.00000000000162713705587024"
-  as1_b: "17.7238215290214"
-  as2_a: "0.110619801169189"
-  as2_b: "3.93850903242043"
+  as1_a: "0.000828285872906"
+  as1_b: "1.494882176956666"
+  as1_c: "1.355838372139564"
+  as2_a: "0.000828285872906"
+  as2_b: "1.494882176956666"
+  as2_c: "1.355838372139564"
 
 # Define global variable placeholders
 # https://esphome.io/components/globals.html
@@ -57,13 +59,13 @@ globals:
     restore_value: yes
     initial_value: '{1.0, 1.0}'
   - id: calibration_as1
-    type: double[2]
+    type: double[3]
     restore_value: yes
-    initial_value: '{1.0, 1.0}'
+    initial_value: '{1.0, 1.0, 1.0}'
   - id: calibration_as2
-    type: double[2]
+    type: double[3]
     restore_value: yes
-    initial_value: '{1.0, 1.0}'
+    initial_value: '{1.0, 1.0, 1.0}'
 
 # Make sure they get written to flash
 # https://esphome.io/components/esphome.html#preferences-component
@@ -124,9 +126,11 @@ wifi:
         id(calibration_tg)[1] = double(${tg_b});
         id(calibration_as1)[0] = double(${as1_a});
         id(calibration_as1)[1] = double(${as1_b});
+        id(calibration_as1)[2] = double(${as1_c});
         id(calibration_as2)[0] = double(${as2_a});
         id(calibration_as2)[1] = double(${as2_b});
-            
+        id(calibration_as2)[2] = double(${as2_c});
+
 # Print out globals
     - delay: 1s
     - logger.log: 
@@ -170,13 +174,13 @@ wifi:
         level: INFO
         tag: "samba"
     - logger.log:
-        format: "Air speed 1 calibration: y = %.16f * x^%.12f"
-        args: [ 'id(calibration_as1)[0]', 'id(calibration_as1)[1]' ]
+        format: "Air speed 1 calibration: y = %.12f * mV^%.12f * ta^%.12f"
+        args: [ 'id(calibration_as1)[0]', 'id(calibration_as1)[1]', 'id(calibration_as1)[2]' ]
         level: INFO
         tag: "samba"
     - logger.log:
-        format: "Air speed 2 calibration: y = %.16f * x^%.12f"
-        args: [ 'id(calibration_as2)[0]', 'id(calibration_as2)[1]' ]
+        format: "Air speed 2 calibration: y = %.12f * mV^%.12f * ta^%.12f"
+        args: [ 'id(calibration_as2)[0]', 'id(calibration_as2)[1]', 'id(calibration_as2)[2]' ]
         level: INFO
         tag: "samba"
 

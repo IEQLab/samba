@@ -30,10 +30,10 @@ globals:
     type: double[2]
     restore_value: yes
   - id: calibration_as1
-    type: double[2]
+    type: double[3]
     restore_value: yes
   - id: calibration_as2
-    type: double[2]
+    type: double[3]
     restore_value: yes
 
 # Define flash write interval
