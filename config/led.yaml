@@ -11,7 +11,7 @@ light:
     rgb_order: GRB
     pin: GPIO27
     num_leds: 1
-    rmt_channel: 0
+    rmt_symbols: 64
     chipset: ws2812
 
     # Define LED effects
