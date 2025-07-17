@@ -45,3 +45,17 @@ sensor:
     icon: mdi:thermometer
     lambda: |-
       return ((id(calibration_tg)[0] * id(ntc_temperature).state) + id(calibration_tg)[1]);
+
+# Define mean radiant temperature measurements
+  - platform: template
+    id: samba_mrt
+    name: "Mean Radiant Temperature"
+    update_interval: never
+    accuracy_decimals: 1
+    device_class: temperature
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+    lambda: |-
+      return pow(pow(id(samba_globe).state + 273.15, 4) +
+        (1.10e8 * pow(id(samba_airspeed).state, 0.6) / (0.95 * pow(0.06, 0.4))) *
+        (id(samba_globe).state - id(samba_temperature).state), 0.25) - 273.15;

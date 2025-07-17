@@ -23,6 +23,7 @@ influxdb_writer:
     air_temp: "Air Temperature"
     rel_humidity: "Relative Humidity"
     globe_temp: "Globe Temperature"
+    rad_temp: "Mean Radiant Temperature"
     air_speed: "Air Speed"
     co2: "Carbon Dioxide"
     pm25: "PM2.5"
@@ -36,6 +37,7 @@ influxdb_writer:
     air_temp: "value"
     rel_humidity: "value"
     globe_temp: "value"
+    rad_temp: "value"
     air_speed: "value"
     co2: "value"
     pm25: "value"
@@ -71,6 +73,10 @@ script:
           id(influx_writer).set_dynamic_tag("globe_temp", "level", id(level_tag));
           id(influx_writer).set_dynamic_tag("globe_temp", "zone", id(zone_tag));
 
+          id(influx_writer).set_dynamic_tag("rad_temp", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("rad_temp", "level", id(level_tag));
+          id(influx_writer).set_dynamic_tag("rad_temp", "zone", id(zone_tag));
+          
           id(influx_writer).set_dynamic_tag("air_speed", "building", id(building_tag));
           id(influx_writer).set_dynamic_tag("air_speed", "level", id(level_tag));
           id(influx_writer).set_dynamic_tag("air_speed", "zone", id(zone_tag));
