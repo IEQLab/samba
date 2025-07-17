@@ -18,10 +18,10 @@ esphome:
   friendly_name: "SAMBA"
   comment: "Monitor IEQ using low-cost sensors - developed by the IEQ Lab"
   name_add_mac_suffix: true
-  min_version: "2025.6.1"
+  min_version: "2025.7.0"
   project:
     name: "IEQLab.SAMBA"
-    version: "1.99.53"
+    version: "1.99.60"
   on_boot:
     - priority: -100
       then: 
