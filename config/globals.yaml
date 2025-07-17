@@ -10,6 +10,10 @@ globals:
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
+  - id: level_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
   - id: zone_tag
     type: std::string
     max_restore_data_length: 24

@@ -7,6 +7,7 @@
 # https://esphome.io/components/substitutions.html
 substitutions:
   building_name: "building"
+  level_name: "level"
   zone_name: "zone"
   co2_m: "1.015844"
   co2_b: "20.139092"
@@ -29,6 +30,11 @@ substitutions:
 # https://esphome.io/components/globals.html
 globals:
   - id: building_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
+    initial_value: '"x"'
+  - id: level_tag
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
@@ -112,8 +118,9 @@ wifi:
 # Write globals to flash once connected to WiFi
   on_connect:
     - lambda: |-
-        id(zone_tag) = "${zone_name}";
         id(building_tag) = "${building_name}";
+        id(level_tag) = "${level_name}";
+        id(zone_tag) = "${zone_name}";
         id(calibration_co2)[0] = double(${co2_m});
         id(calibration_co2)[1] = double(${co2_b});
         id(calibration_lux)[0] = double(${lux_m});
@@ -144,8 +151,8 @@ wifi:
         level: INFO
         tag: "samba"
     - logger.log:
-        format: "SAMBA assigned to zone: %s in building: %s"
-        args: [ 'id(zone_tag).c_str()', 'id(building_tag).c_str()' ]
+        format: "Assigned to Building: %s, Level: %s, Zone: %s"
+        args: [ 'id(building_tag).c_str()', 'id(level_tag).c_str()', 'id(zone_tag).c_str()' ]
         level: INFO
         tag: "samba"
     - logger.log:

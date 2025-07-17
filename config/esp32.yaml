@@ -34,12 +34,14 @@ esphome:
     - priority: 250
       then:
         - ds1307.read_time:
+        
         # Set InfluxDB tags using global variables    
         - script.execute: set_influx_tags
+        
         # Print useful diagnostics
         - lambda: |-
-            ESP_LOGI("samba", "Startup OK: Zone: %s, Building: %s, Time: %s",
-                     id(zone_tag).c_str(), id(building_tag).c_str(),
+            ESP_LOGI("samba", "Startup OK :) Building: %s, Level: %s, Zone: %s, Time: %s",
+                     id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str(), 
                      ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str());
 
             ESP_LOGD("samba", "Calibrations:\n"
