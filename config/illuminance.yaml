@@ -4,7 +4,7 @@
 
 
 # Define sensor
-# https://github.com/esphome/esphome/pull/6625
+# https://esphome.io/components/sensor/opt3001
 sensor:
   - platform: opt3001
     id: opt_lux
@@ -14,7 +14,7 @@ sensor:
     filters:
       - clamp:
           min_value: 0
-          max_value: 10000
+          max_value: 20000
           ignore_out_of_range: true
       - median:
           window_size: 6
@@ -36,5 +36,5 @@ sensor:
           return ((id(calibration_lux)[0] * id(opt_lux).state) + id(calibration_lux)[1]);
       - clamp:
           min_value: 0
-          max_value: 10000
+          max_value: 20000
           ignore_out_of_range: false
