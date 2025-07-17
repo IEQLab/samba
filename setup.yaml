@@ -18,12 +18,12 @@ substitutions:
   rh_b: "15.0758039"
   tg_m: "0.9093902"
   tg_b: "0.6127004"  
-  as1_a: "0.000828285872906"
-  as1_b: "1.494882176956666"
-  as1_c: "1.355838372139564"
-  as2_a: "0.000828285872906"
-  as2_b: "1.494882176956666"
-  as2_c: "1.355838372139564"
+  as1_a: "0.000878414013334"
+  as1_b: "1.446429921572743"
+  as1_c: "1.344253500261520"
+  as2_a: "0.000700721710849"
+  as2_b: "1.592948717475052"
+  as2_c: "1.389994766781412"
 
 # Define global variable placeholders
 # https://esphome.io/components/globals.html
@@ -223,7 +223,8 @@ light:
     rgb_order: GRB
     pin: GPIO27
     num_leds: 1
-    rmt_channel: 0
+    rmt_symbols: 64
+    use_psram: false
     chipset: ws2812
     effects:
       - pulse:
