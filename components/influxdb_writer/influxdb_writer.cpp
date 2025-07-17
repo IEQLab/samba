@@ -1,7 +1,7 @@
 #include "influxdb_writer.h"
 #include "esphome/core/log.h"
 #include "esphome/core/application.h"
-#include "esp_wifi.h"
+#include "esphome/core/helpers.h"
 
 namespace esphome {
 namespace influxdb_writer {
@@ -37,20 +37,8 @@ void InfluxDBWriter::setup() {
     }
   }
 
-//  if (this->send_mac_) {
-//    this->mac_addr_ = WiFi.macAddress().c_str();
-//    ESP_LOGV(TAG, "MAC Addr: %s", this->mac_addr_.c_str());
-//  }
 if (this->send_mac_) {
-  uint8_t mac[6];
-  esp_wifi_get_mac(WIFI_IF_STA, mac);
-
-  char mac_str[18];
-  snprintf(mac_str, sizeof(mac_str),
-           "%02X:%02X:%02X:%02X:%02X:%02X",
-           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-
-  this->mac_addr_ = std::string(mac_str);
+  this->mac_addr_ = esphome::get_mac_address(); //get_mac_address_pretty()
   ESP_LOGV(TAG, "MAC Addr: %s", this->mac_addr_.c_str());
 }
 
