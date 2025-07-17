@@ -1,83 +1,68 @@
 # SAMBA v2 FIRMWARE
 # configure MEMS microphone and SPL meter
-# https://github.com/stas-sl/esphome-sound-level-meter/tree/main
-# written by Thomas Parkinson, May 2024
+# https://github.com/stas-sl/esphome-sound-level-meter/tree/dev
+# written by Thomas Parkinson, July 2025
 
 
-# Define sensor
+# Define SPL sensor
 sound_level_meter:
   id: sound_spl
   update_interval: 30s
   is_on: true
   buffer_size: 1024  # buffer_size in samples
   warmup_interval: 1000ms # ignore audio data at startup
+
   # audio processing task
   task_stack_size: 4096
   task_priority: 2
   task_core: 1
+  
   # mic configuration
   mic_sensitivity: -26dB
   mic_sensitivity_ref: 94dB
   offset: 0dB
 
-  # for flexibility sensors are organized hierarchically into groups
-  groups:
-    # group 1 (mic eq)
-    - filters:
-        - type: sos
-          coeffs:
-            # ICS-43434
-            #      b0               b1            b2             a1              a2
-            - [ 0.47732642,    0.46294358,    0.11224797,    0.06681948,    0.0011152199]
-            - [ 1.        ,    -1.9890593,    0.98908925,   -1.9975533,     0.9975549   ]
-            # INMP441:
-            #      b0            b1           b2          a1            a2
-            #- [ 1.0019784 , -1.9908513  , 0.9889158 , -1.9951786  , 0.99518436]
+  # Define dsp filters to use
+  dsp_filters:
 
-      groups:
-        # group 1.1 (no weighting)
-        - sensors:
-            - type: eq
-              id: spl_lzeq
-              unit_of_measurement: dBZ
-              internal: true
+    # mic eq @ 48kHz
+    - id: f_ics43434
+      type: sos
+      coeffs:
+        #      b0               b1            b2             a1              a2
+        - [ 0.47732642,    0.46294358,    0.11224797,    0.06681948,    0.0011152199 ]
+        - [ 1.        ,    -1.9890593,    0.98908925,   -1.9975533,     0.9975549    ]
 
-        # group 1.2 (A-weighting)
-        - filters:
-            - type: sos
-              coeffs:
-                # A-weighting:
-                #       b0           b1            b2             a1            a2
-                - [ 0.16999495 ,  0.741029   ,  0.52548885 , -0.11321865 , -0.056549273]
-                - [ 1.         , -2.00027    ,  1.0002706  , -0.03433284 , -0.79215795 ]
-                - [ 1.         , -0.709303   , -0.29071867 , -1.9822421  ,  0.9822986  ]
-          
-          sensors:
-            - type: eq
-              id: spl_laeq
-              update_interval: 500ms
-              internal: true
-              filters:
-                - median:
-                    window_size: 600
-                    send_every: 60
-                    send_first_at: 60
+    # A-weighting
+    - id: f_a
+      type: sos
+      coeffs:
+        #       b0           b1            b2             a1            a2
+        - [ 0.16999495 ,  0.741029   ,  0.52548885 , -0.11321865 , -0.056549273 ]
+        - [ 1.         , -2.00027    ,  1.0002706  , -0.03433284 , -0.79215795  ]
+        - [ 1.         , -0.709303   , -0.29071867 , -1.9822421  ,  0.9822986   ]
 
-        # group 1.3 (C-weighting)
-        - filters:
-            - type: sos
-              coeffs:
-                # C-weighting:
-                #       b0             b1             b2             a1             a2
-                - [-0.49651518  , -0.12296628  , -0.0076134163, -0.37165618   , 0.03453208  ]
-                - [ 1.          ,  1.3294908   ,  0.44188643  ,  1.2312505    , 0.37899444  ]
-                - [ 1.          , -2.          ,  1.          , -1.9946145    , 0.9946217   ]
-          
-          sensors:
-            - type: eq
-              id: spl_lceq
-              unit_of_measurement: dBC
-              internal: true
+    # C-weighting
+    - id: f_c
+      type: sos
+      coeffs:
+        #       b0             b1             b2             a1             a2
+        - [ -0.49651518  , -0.12296628  , -0.0076134163, -0.37165618   , 0.03453208 ]
+        - [  1.          ,  1.3294908   ,  0.44188643  ,  1.2312505    , 0.37899444 ]
+        - [  1.          , -2.          ,  1.          , -1.9946145    , 0.9946217  ]
+
+  # calculate LAeq (average) sound level over specified period
+  sensors:
+    - type: eq
+      id: spl_laeq
+      update_interval: 500ms
+      internal: true
+      dsp_filters: [f_ics43434, f_a]
+      filters:
+        - median:
+            window_size: 600
+            send_every: 60
+            send_first_at: 60
 
 
 # Define SPL measurement

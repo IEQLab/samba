@@ -106,5 +106,5 @@ i2s:
   dma_buf_count: 8
   dma_buf_len: 256
   use_apll: true
-  channel: left
+  channel: right
   bits_shift: 8
