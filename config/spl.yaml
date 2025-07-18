@@ -4,6 +4,20 @@
 # written by Thomas Parkinson, July 2025
 
 
+# Configure i2s
+# https://github.com/stas-sl/esphome-sound-level-meter
+i2s:
+  bck_pin: GPIO13
+  ws_pin: GPIO33
+  din_pin: GPIO32
+  sample_rate: 48000
+  bits_per_sample: 32
+  dma_buf_count: 8
+  dma_buf_len: 256
+  use_apll: true
+  channel: right
+  bits_shift: 8
+
 # Define SPL sensor
 sound_level_meter:
   id: sound_spl
@@ -62,7 +76,7 @@ sound_level_meter:
         - median:
             window_size: 600
             send_every: 60
-            send_first_at: 60
+            send_first_at: 30
 
 
 # Define SPL measurement

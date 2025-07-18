@@ -36,7 +36,7 @@ esphome:
       
         # Synchronise system to RTC clock
         - ds1307.read_time:
-        
+
         # Set InfluxDB tags using global variables    
         - script.execute: set_influx_tags
         
@@ -99,17 +99,3 @@ uart:
     rx_pin: GPIO16
     tx_pin: GPIO17
     baud_rate: 9600
-
-# Configure i2s
-# https://github.com/stas-sl/esphome-sound-level-meter
-i2s:
-  bck_pin: GPIO13
-  ws_pin: GPIO33
-  din_pin: GPIO32
-  sample_rate: 48000
-  bits_per_sample: 32
-  dma_buf_count: 8
-  dma_buf_len: 256
-  use_apll: true
-  channel: right
-  bits_shift: 8
