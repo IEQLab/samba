@@ -37,3 +37,16 @@ switch:
     name: "Factory Restore SAMBA"
     icon: mdi:alert
     entity_category: "config"
+
+# Toggle Influx uploads
+  - platform: template
+    name: "InfluxDB Upload"
+    icon: mdi:cloud-upload-outline
+    entity_category: "config"
+    restore_mode: DISABLED
+    lambda: |-
+      return id(influx_enable);
+    turn_on_action:
+      - lambda: 'id(influx_enable) = true;'
+    turn_off_action:
+      - lambda: 'id(influx_enable) = false;'

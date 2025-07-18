@@ -9,6 +9,7 @@ substitutions:
   building_name: "building"
   level_name: "level"
   zone_name: "zone"
+  influx_publish: "true"
   co2_m: "1.015844"
   co2_b: "20.139092"
   lux_m: "5.988641"
@@ -44,6 +45,10 @@ globals:
     max_restore_data_length: 24
     restore_value: yes
     initial_value: '"x"'
+  - id: influx_enable
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
   - id: calibration_co2
     type: double[2]
     restore_value: yes
@@ -83,7 +88,7 @@ preferences:
 esphome:
   name: "samba"
   name_add_mac_suffix: true
-  min_version: "2025.6.1"
+  min_version: "2025.7.0"
   on_boot:
     - priority: 100
       then: 
@@ -121,6 +126,7 @@ wifi:
         id(building_tag) = "${building_name}";
         id(level_tag) = "${level_name}";
         id(zone_tag) = "${zone_name}";
+        id(influx_enable) = "${influx_publish}";
         id(calibration_co2)[0] = double(${co2_m});
         id(calibration_co2)[1] = double(${co2_b});
         id(calibration_lux)[0] = double(${lux_m});
@@ -153,6 +159,11 @@ wifi:
     - logger.log:
         format: "Assigned to Building: %s, Level: %s, Zone: %s"
         args: [ 'id(building_tag).c_str()', 'id(level_tag).c_str()', 'id(zone_tag).c_str()' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "Influx publishing: %s"
+        args: [ 'id(influx_enable) ? "true" : "false"' ]
         level: INFO
         tag: "samba"
     - logger.log:

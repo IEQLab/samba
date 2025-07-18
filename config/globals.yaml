@@ -18,6 +18,9 @@ globals:
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
+  - id: influx_enable
+    type: bool
+    restore_value: yes
   - id: calibration_co2
     type: double[2]
     restore_value: yes

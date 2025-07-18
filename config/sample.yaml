@@ -22,8 +22,8 @@ script:
             - component.update: samba_temperature
             - component.update: samba_humidity
             - component.update: samba_globe
-            - component.update: samba_mrt
             - component.update: samba_airspeed
+            - component.update: samba_mrt
             - component.update: samba_co2
             - component.update: samba_pm25
             - component.update: samba_voc
@@ -44,11 +44,11 @@ script:
                 id: samba_globe
                 state: !lambda 'return id(samba_globe).state;'
             - sensor.template.publish: 
-                id: samba_mrt
-                state: !lambda 'return id(samba_mrt).state;'
-            - sensor.template.publish: 
                 id: samba_airspeed
                 state: !lambda 'return id(samba_airspeed).state;'
+            - sensor.template.publish: 
+                id: samba_mrt
+                state: !lambda 'return id(samba_mrt).state;'
             - sensor.template.publish: 
                 id: samba_co2
                 state: !lambda 'return id(samba_co2).state;'
@@ -67,15 +67,24 @@ script:
             - sensor.template.publish: 
                 id: samba_spl
                 state: !lambda 'return id(samba_spl).state;'
-            - lambda: |-
-                id(influx_writer).publish_now();
+            - if:
+                condition: 
+                  lambda: 'return id(influx_enable);'
+                then:
+                  - lambda: |-
+                      id(influx_writer).publish_now();
+                  - logger.log:
+                      format: "Sample sent at %s"
+                      args: ['id(samba_timestamp).state.c_str()']
+                      level: INFO
+                      tag: "samba"
+                else:
+                  - logger.log:
+                      format: "Skip Influx upload"
+                      level: INFO
+                      tag: "samba"
             - light.turn_off:
                 id: samba_led
-            - logger.log:
-                format: "Sample taken at %s"
-                args: ['id(samba_timestamp).state.c_str()']
-                level: INFO
-                tag: "samba"
           else:
             - component.update: sys_uptime
             - logger.log: 
