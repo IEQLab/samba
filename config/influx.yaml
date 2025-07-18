@@ -58,7 +58,7 @@ influxdb_writer:
 # https://esphome.io/components/script.html
 script:
   - id: set_influx_tags
-    mode: queued
+    mode: single
     then:
       - lambda: |-
           id(influx_writer).set_dynamic_tag("air_temp", "building", id(building_tag));

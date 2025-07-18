@@ -30,36 +30,35 @@ script:
             - component.update: samba_nox
             - component.update: samba_lux
             - component.update: samba_spl
-            - delay: 200ms
+            - delay: 100ms
             - if:
                 condition: 
-                  lambda: 'return id(ha_enable);'
-                then:
-                  - script.execute: ha_publish_now
-                  - logger.log:
-                      format: "Home Assistant update at %s"
-                      args: ['id(samba_timestamp).state.c_str()']
-                      level: INFO
-                      tag: "samba"
-                else:
-                  - logger.log:
-                      format: "Skip Home Assistant upload"
-                      level: INFO
-                      tag: "samba"
-            - if:
-                condition: 
-                  lambda: 'return id(influx_enable);'
+                  - switch.is_on: switch_influx
                 then:
                   - lambda: |-
                       id(influx_writer).publish_now();
                   - logger.log:
-                      format: "Influx update at %s"
-                      args: ['id(samba_timestamp).state.c_str()']
+                      format: "Influx upload"
                       level: INFO
                       tag: "samba"
                 else:
                   - logger.log:
                       format: "Skip Influx upload"
+                      level: INFO
+                      tag: "samba"
+            - delay: 250ms
+            - if:
+                condition: 
+                  - switch.is_on: switch_ha
+                then:
+                  - script.execute: ha_publish_now
+                  - logger.log:
+                      format: "Home Assistant upload"
+                      level: INFO
+                      tag: "samba"
+                else:
+                  - logger.log:
+                      format: "Skip Home Assistant upload"
                       level: INFO
                       tag: "samba"
             - light.turn_off:
