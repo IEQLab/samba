@@ -9,8 +9,8 @@ substitutions:
   building_name: "building"
   level_name: "level"
   zone_name: "zone"
-  influx_publish: "true"
-  ha_publish: "false"
+  influx_publish: true
+  ha_publish: true
   co2_m: "1.015844"
   co2_b: "20.139092"
   lux_m: "5.988641"
@@ -131,8 +131,8 @@ wifi:
         id(building_tag) = "${building_name}";
         id(level_tag) = "${level_name}";
         id(zone_tag) = "${zone_name}";
-        id(influx_enable) = std::string("${influx_publish}") == "true";
-        id(ha_enable) = std::string("${ha_publish}") == "true";
+        id(influx_enable) = "${influx_publish}";
+        id(ha_enable) = "${ha_publish}";
         id(calibration_co2)[0] = double(${co2_m});
         id(calibration_co2)[1] = double(${co2_b});
         id(calibration_lux)[0] = double(${lux_m});
@@ -214,7 +214,7 @@ wifi:
         tag: "samba"
 
 # Check for SAMBA firmware online
-    - delay: 10s
+    - delay: 15s
     - logger.log:
         format: "Checking for SAMBA firmware"
         level: INFO
