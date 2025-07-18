@@ -20,15 +20,15 @@ time:
           - script.execute: sensor_sample
       - seconds: 0
         minutes: 0
-        hours: 3
+        hours: 4
         days_of_week: SUN
         then:
           - lambda: |-
               if (id(sntp_time).now().is_valid()) {
-                id(ds1307_time).write_time();
-                ESP_LOGI("time_sync", "RTC updated from SNTP");
+               id(ds1307_time).write_time();
+               ESP_LOGI("time_sync", "RTC updated from SNTP");
               } else {
-                ESP_LOGW("time_sync", "SNTP invalid – skipping RTC update");
+               ESP_LOGW("time_sync", "SNTP invalid – skipping RTC update");
               }
 
 # use SNTP server to set RTC time
@@ -41,6 +41,8 @@ time:
      - 2.pool.ntp.org
     on_time_sync:
       then:
+        - ds1307.write_time:
+            id: ds1307_time
         - logger.log:
             level: INFO
             format: "SNTP time synchronised"
