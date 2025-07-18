@@ -10,6 +10,7 @@ substitutions:
   level_name: "level"
   zone_name: "zone"
   influx_publish: "true"
+  ha_publish: "false"
   co2_m: "1.015844"
   co2_b: "20.139092"
   lux_m: "5.988641"
@@ -49,6 +50,10 @@ globals:
     type: bool
     restore_value: yes
     initial_value: 'true'
+  - id: ha_enable
+    type: bool
+    restore_value: yes
+    initial_value: 'false'
   - id: calibration_co2
     type: double[2]
     restore_value: yes
@@ -127,6 +132,7 @@ wifi:
         id(level_tag) = "${level_name}";
         id(zone_tag) = "${zone_name}";
         id(influx_enable) = "${influx_publish}";
+        id(ha_enable) = "${ha_publish}";
         id(calibration_co2)[0] = double(${co2_m});
         id(calibration_co2)[1] = double(${co2_b});
         id(calibration_lux)[0] = double(${lux_m});
@@ -164,6 +170,11 @@ wifi:
     - logger.log:
         format: "Influx publishing: %s"
         args: [ 'id(influx_enable) ? "true" : "false"' ]
+        level: INFO
+        tag: "samba"
+    - logger.log:
+        format: "Home Assistant publishing: %s"
+        args: [ 'id(ha_enable) ? "true" : "false"' ]
         level: INFO
         tag: "samba"
     - logger.log:

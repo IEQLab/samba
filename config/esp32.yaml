@@ -33,6 +33,8 @@ esphome:
         - delay: 1000ms
     - priority: 250
       then:
+      
+        # Synchronise system to RTC clock
         - ds1307.read_time:
         
         # Set InfluxDB tags using global variables    
@@ -40,9 +42,9 @@ esphome:
         
         # Print useful diagnostics
         - lambda: |-
-            ESP_LOGI("samba", "Startup OK :) Building: %s, Level: %s, Zone: %s, Influx: %s, Time: %s",
+            ESP_LOGI("samba", "Startup OK :) Building: %s, Level: %s, Zone: %s, Influx: %s, HA: %s, Time: %s",
                      id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str(),
-                     id(influx_enable) ? "true" : "false",
+                     id(influx_enable) ? "true" : "false", id(ha_enable) ? "true" : "false",
                      ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str());
 
             ESP_LOGD("samba", "Calibrations:\n"
