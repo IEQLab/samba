@@ -17,9 +17,9 @@ sensor:
           max_value: 20000
           ignore_out_of_range: true
       - median:
-          window_size: 6
-          send_every: 6
-          send_first_at: 6
+          window_size: 15
+          send_every: 3
+          send_first_at: 2
 
 
 # Define illuminance measurements

@@ -20,7 +20,7 @@ sensor:
         - median:
             window_size: 300
             send_every: 30
-            send_first_at: 30
+            send_first_at: 10
     temperature:
       id: pms_temp
       internal: true
