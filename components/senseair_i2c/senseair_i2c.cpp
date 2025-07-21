@@ -107,17 +107,36 @@ void SenseairI2CSensor::setup_configure_abc_() {
   }
 }
 
+void SenseairI2CSensor::reset_read_flag() {
+  //ESP_LOGI("senseair_i2c", "Manually resetting read_started_ flag");
+  this->read_started_ = false;
+}
+
 void SenseairI2CSensor::update() {
-  if (!this->read_started_) {
+  //ESP_LOGI("senseair_i2c", "update() called, read_started_=%d", this->read_started_);
+  
+  if (!this->read_started_ && !this->measuring_) {
+    ESP_LOGD("senseair_i2c", "Triggering a new measurement cycle");
     this->start_time_ = millis();
     this->read_started_ = true;
     return;
   }
+  
+  if (this->measuring_) {
+    ESP_LOGD("senseair_i2c", "Measurement already in progress. Skipping update.");
+    return;
+  }
+  
   uint32_t elapsed = (millis() - this->start_time_) / 1000;
+  ESP_LOGD("senseair_i2c", "Elapsed = %u s / %u s", elapsed, this->update_interval_);
+  
   if (elapsed < this->update_interval_) {
     return;
   }
+  
+  ESP_LOGD("senseair_i2c", "Measurement trigger conditions met.");
   this->read_started_ = false;
+  this->measuring_ = true;  // 🚨 new flag
   this->measure_step_ = MEASURE_WRITE;
   this->measure_retry_count_ = 0;
   this->attempt_measurement_();
@@ -149,19 +168,21 @@ void SenseairI2CSensor::attempt_measurement_() {
     if (error == i2c::ERROR_OK) {
       if ((this->measure_data_[0] & 0x01) != 0x01) {
         ESP_LOGW(TAG, "Measurement process not finished (0x%02X)", this->measure_data_[0]);
+        this->measuring_ = false;
         this->measure_step_ = MEASURE_IDLE;
         return;
       }
       uint8_t checksum = (this->measure_data_[0] + this->measure_data_[1] + this->measure_data_[2]) & 0xFF;
       if (checksum != this->measure_data_[3]) {
         ESP_LOGE(TAG, "Measurement checksum mismatch (%02X != %02X)", checksum, this->measure_data_[3]);
+        this->measuring_ = false;
         this->measure_step_ = MEASURE_IDLE;
         return;
       }
       uint16_t co2 = ((uint16_t)this->measure_data_[1] << 8) | this->measure_data_[2];
-      // Consider logging this only at DEBUG level, or not at all if it spams
-      // ESP_LOGD(TAG, "CO2: %u ppm", co2);
+      ESP_LOGD(TAG, "CO2: %u ppm", co2);
       this->publish_state(static_cast<float>(co2));
+      this->measuring_ = false;
       this->measure_step_ = MEASURE_IDLE;
       return;
     } else {
@@ -172,6 +193,7 @@ void SenseairI2CSensor::attempt_measurement_() {
         return;
       } else {
         ESP_LOGW(TAG, "Measurement read failed after %d retries, aborting", this->max_retries_);
+        this->measuring_ = false;
         this->measure_step_ = MEASURE_IDLE;
         return;
       }

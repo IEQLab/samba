@@ -25,16 +25,18 @@ class SenseairI2CSensor : public sensor::Sensor, public PollingComponent, public
   // --- Component interface ---
   void setup() override;
   void update() override;
+  void reset_read_flag();
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
 
  protected:
   // --- User options with sensible defaults ---
-  uint32_t abc_interval_{86400};   // 24h default ABC interval
+  uint32_t abc_interval_{648000};   // 180h default ABC interval
   uint16_t update_interval_{60};   // 60s sensor polling
   int retry_delay_ms_ = 200;       // Retry wait (ms)
   int max_retries_ = 5;            // Max I²C retries per state
   bool read_started_{false};
+  bool measuring_ = false;
   uint32_t start_time_{0};
 
   // --- Setup state machine for ABC configuration ---
