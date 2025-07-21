@@ -13,18 +13,18 @@ sensor:
     internal: true
     update_interval: 15s
     abc_interval: 0s
-    retry_delay_ms: 150
+    retry_delay_ms: 100
     max_retries: 5
     filters:
-      - filter_out: NAN
+      - filter_out: nan
       - clamp:
           min_value: 380
-          max_value: 10000
+          max_value: 9000
           ignore_out_of_range: true
       - median:
           window_size: 20
-          send_every: 4
-          send_first_at: 2
+          send_every: 3
+          send_first_at: 1
 
 # Define CO2 measurements
   - platform: template
@@ -38,7 +38,3 @@ sensor:
     filters:
       - lambda: |-
           return ((id(calibration_co2)[0] * id(k30_co2).state) + id(calibration_co2)[1]);
-      - clamp:
-          min_value: 400
-          max_value: 8000
-          ignore_out_of_range: false
