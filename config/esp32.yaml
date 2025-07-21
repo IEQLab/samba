@@ -23,7 +23,7 @@ esphome:
     name: "IEQLab.SAMBA"
     version: "1.99.63"
   on_boot:
-    - priority: -100
+    - priority: 100
       then: 
         - light.turn_on:
             id: samba_led
@@ -31,7 +31,7 @@ esphome:
         - component.update: sys_uptime
         - component.update: sys_ip
         - delay: 1000ms
-    - priority: 250
+    - priority: -100
       then:
       
         # Synchronise system to RTC clock
