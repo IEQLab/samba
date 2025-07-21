@@ -21,9 +21,6 @@ globals:
   - id: influx_enable
     type: bool
     restore_value: yes
-  - id: ha_enable
-    type: bool
-    restore_value: yes
   - id: calibration_co2
     type: double[2]
     restore_value: yes

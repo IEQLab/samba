@@ -42,12 +42,12 @@ esphome:
         
         # Print useful diagnostics
         - lambda: |-
-            ESP_LOGI("samba", "Startup OK :) Building: %s, Level: %s, Zone: %s, Influx: %s, HA: %s, Time: %s",
+            ESP_LOGI("samba", "Startup OK :) Building: %s, Level: %s, Zone: %s, Influx: %s, Time: %s",
                      id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str(),
-                     id(influx_enable) ? "true" : "false", id(ha_enable) ? "true" : "false",
+                     id(influx_enable) ? "true" : "false",
                      ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str());
 
-            ESP_LOGD("samba", "Calibrations:\n"
+            ESP_LOGI("samba", "Calibrations:\n"
                               "CO2:  y = ppm*%.4fx + %.4f\n"
                               "Lux:  y = lux*%.4fx + %.4f\n"
                               "Ta:   y = ta*%.4fx + %.4f\n"

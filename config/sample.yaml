@@ -22,15 +22,18 @@ script:
             - component.update: samba_temperature
             - component.update: samba_humidity
             - component.update: samba_airspeed
-            - component.update: samba_globe
             - component.update: samba_mrt
-            - component.update: samba_co2
             - component.update: samba_pm25
             - component.update: samba_voc
             - component.update: samba_nox
-            - component.update: samba_lux
             - component.update: samba_spl
-            - delay: 100ms
+            - sensor.template.publish:
+                id: samba_co2
+                state: !lambda 'return id(samba_co2).state;'
+            - sensor.template.publish:
+                id: samba_lux
+                state: !lambda 'return id(samba_lux).state;'
+            - delay: 200ms
             - if:
                 condition: 
                   - switch.is_on: switch_influx
@@ -43,22 +46,7 @@ script:
                       tag: "samba"
                 else:
                   - logger.log:
-                      format: "Skip Influx upload"
-                      level: INFO
-                      tag: "samba"
-            - delay: 250ms
-            - if:
-                condition: 
-                  - switch.is_on: switch_ha
-                then:
-                  - script.execute: ha_publish_now
-                  - logger.log:
-                      format: "Home Assistant upload"
-                      level: INFO
-                      tag: "samba"
-                else:
-                  - logger.log:
-                      format: "Skip Home Assistant upload"
+                      format: "Influx upload skipped"
                       level: INFO
                       tag: "samba"
             - light.turn_off:
