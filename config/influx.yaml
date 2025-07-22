@@ -22,6 +22,7 @@ influxdb_writer:
   sensor_names:
     air_temp: "Air Temperature"
     rel_humidity: "Relative Humidity"
+    globe_temp: "Globe Temperature"
     rad_temp: "Mean Radiant Temperature"
     air_speed: "Air Speed"
     co2: "Carbon Dioxide"
@@ -37,6 +38,7 @@ influxdb_writer:
   field_names:
     air_temp: "value"
     rel_humidity: "value"
+    globe_temp: "value"
     rad_temp: "value"
     air_speed: "value"
     co2: "value"
@@ -85,6 +87,10 @@ script:
           id(influx_writer).set_dynamic_tag("rel_humidity", "building", id(building_tag));
           id(influx_writer).set_dynamic_tag("rel_humidity", "level", id(level_tag));
           id(influx_writer).set_dynamic_tag("rel_humidity", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("globe_temp", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("globe_temp", "level", id(level_tag));
+          id(influx_writer).set_dynamic_tag("globe_temp", "zone", id(zone_tag));
 
           id(influx_writer).set_dynamic_tag("rad_temp", "building", id(building_tag));
           id(influx_writer).set_dynamic_tag("rad_temp", "level", id(level_tag));
