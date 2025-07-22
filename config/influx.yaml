@@ -30,6 +30,8 @@ influxdb_writer:
     nox: "NOx Index"
     illuminance: "Illuminance"
     spl: "Sound Pressure Level"
+    wifi: "WiFi Signal"
+    uptime: "Device Uptime"
 
   # Define Influx field keys
   field_names:
@@ -43,6 +45,8 @@ influxdb_writer:
     nox: "value"
     illuminance: "value"
     spl: "value"
+    wifi: "value"
+    uptime: "value"
 
 #   Define Influx tags for fields
 #   Note: these are overwritten at boot by below script
@@ -113,3 +117,11 @@ script:
           id(influx_writer).set_dynamic_tag("spl", "building", id(building_tag));
           id(influx_writer).set_dynamic_tag("spl", "level", id(level_tag));
           id(influx_writer).set_dynamic_tag("spl", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("wifi", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("wifi", "level", id(level_tag));
+          id(influx_writer).set_dynamic_tag("wifi", "zone", id(zone_tag));
+
+          id(influx_writer).set_dynamic_tag("uptime", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("uptime", "level", id(level_tag));
+          id(influx_writer).set_dynamic_tag("uptime", "zone", id(zone_tag));
