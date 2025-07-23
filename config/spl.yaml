@@ -78,16 +78,64 @@ sound_level_meter:
             send_every: 60
             send_first_at: 30
 
+  # calculate Lmin over specified period
+    - type: min
+      id: spl_lamin
+      window_size: 1s
+      update_interval: 60s
+      internal: true
+      dsp_filters: [f_ics43434, f_a]
+      filters:
+        - min:
+            window_size: 5
+            send_every: 1
+            send_first_at: 1
+
+  # calculate Lmax over specified period
+    - type: max
+      id: spl_lamax
+      window_size: 1s
+      update_interval: 60s
+      internal: true
+      dsp_filters: [f_ics43434, f_a]
+      filters:
+        - max:
+            window_size: 5
+            send_every: 1
+            send_first_at: 1
+
 
 # Define SPL measurement
 sensor:
   - platform: template
-    id: samba_spl
+    id: samba_laeq
     name: "Sound Pressure Level"
+    update_interval: never
+    accuracy_decimals: 1
+    device_class: sound_pressure
+    unit_of_measurement: "dBA"
+    icon: mdi:volume-medium
+    lambda: |-
+      return id(spl_laeq).state;
+
+  - platform: template
+    id: samba_lamin
+    name: "SPL LAmin"
+    update_interval: never
+    accuracy_decimals: 1
+    device_class: sound_pressure
+    unit_of_measurement: "dBA"
+    icon: mdi:volume-low
+    lambda: |-
+      return id(spl_lamin).state;
+
+  - platform: template
+    id: samba_lamax
+    name: "SPL LAmax"
     update_interval: never
     accuracy_decimals: 1
     device_class: sound_pressure
     unit_of_measurement: "dBA"
     icon: mdi:volume-high
     lambda: |-
-      return id(spl_laeq).state;
+      return id(spl_lamax).state;

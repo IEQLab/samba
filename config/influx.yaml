@@ -30,7 +30,9 @@ influxdb_writer:
     tvoc: "TVOC"
     nox: "NOx Index"
     illuminance: "Illuminance"
-    spl: "Sound Pressure Level"
+    la_eq: "Sound Pressure Level"
+    la_min: "SPL LAmin"
+    la_max: "SPL LAmax"
     wifi: "WiFi Signal"
     uptime: "Device Uptime"
 
@@ -46,7 +48,9 @@ influxdb_writer:
     tvoc: "value"
     nox: "value"
     illuminance: "value"
-    spl: "value"
+    la_eq: "value"
+    la_min: "value"
+    la_max: "value"
     wifi: "value"
     uptime: "value"
 
@@ -120,10 +124,18 @@ script:
           id(influx_writer).set_dynamic_tag("illuminance", "level", id(level_tag));
           id(influx_writer).set_dynamic_tag("illuminance", "zone", id(zone_tag));
 
-          id(influx_writer).set_dynamic_tag("spl", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("spl", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("spl", "zone", id(zone_tag));
+          id(influx_writer).set_dynamic_tag("la_eq", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("la_eq", "level", id(level_tag));
+          id(influx_writer).set_dynamic_tag("la_eq", "zone", id(zone_tag));
 
+          id(influx_writer).set_dynamic_tag("la_min", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("la_min", "level", id(level_tag));
+          id(influx_writer).set_dynamic_tag("la_min", "zone", id(zone_tag));
+          
+          id(influx_writer).set_dynamic_tag("la_max", "building", id(building_tag));
+          id(influx_writer).set_dynamic_tag("la_max", "level", id(level_tag));
+          id(influx_writer).set_dynamic_tag("la_max", "zone", id(zone_tag));
+          
           id(influx_writer).set_dynamic_tag("wifi", "building", id(building_tag));
           id(influx_writer).set_dynamic_tag("wifi", "level", id(level_tag));
           id(influx_writer).set_dynamic_tag("wifi", "zone", id(zone_tag));

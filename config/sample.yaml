@@ -29,7 +29,9 @@ script:
             - component.update: samba_pm25
             - component.update: samba_voc
             - component.update: samba_nox
-            - component.update: samba_spl
+            - component.update: samba_laeq
+            - component.update: samba_lamin
+            - component.update: samba_lamax
             - delay: 100ms
             - sensor.template.publish:
                 id: samba_co2
