@@ -118,7 +118,7 @@ Access to the ESP32 is through the USB-C port on SAMBAs main PCB. There is a sin
 1. Clone the [SAMBA Github Repository](https://github.com/IEQLab/samba/tree/main) to your local device and open that directory.
 2. Enter in the calibration coefficients under `substitutions:` at the top of the `setup.yaml` script. CO2, illuminance, air temperature, relative humidity, and globe temperature are linear calibrations (e.g. y = mx + b); the two air speed sensors are power regressions (e.g. y = a * x^b). Note: these must be entered as strings e.g. "1.0".
 3.  Open a terminal window and `cd` to the working folder where the SAMBA Github repo was cloned.
-4.  Enter the following command to compile and upload the binary file to the SAMBA: `esphome run samba.yaml`. Note that you will need to select the serial device before uploading; alternatively, specify the serial connection e.g. `esphome run setup.yaml --device /dev/cu.usbserial-10`.
+4.  Enter the following command to compile and upload the binary file to the SAMBA: `esphome run setup.yaml`. Note that you will need to select the serial device before uploading; alternatively, specify the serial connection e.g. `esphome run setup.yaml --device /dev/cu.usbserial-10`.
 
 It should take about 30 seconds to flash the firmware. If the SAMBA is being relocated, disconnect the USB-C cable once it is finished flashing, unplug the power, put the housing back on, and tighten the hex bolt. Place the SAMBA in its new location, power it on, and follow the below steps to configure the WiFi:
 
