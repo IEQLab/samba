@@ -9,7 +9,7 @@ sensor:
   - platform: wifi_signal
     id: sys_wifi
     name: "WiFi"
-    update_interval: 12h
+    update_interval: 300s
     accuracy_decimals: 0
     device_class: signal_strength
     icon: mdi:wifi-strength-3
@@ -21,7 +21,6 @@ sensor:
     source_id: sys_wifi
     id: sys_wifiperc
     name: "WiFi Signal"
-    update_interval: 300s
     accuracy_decimals: 0
     unit_of_measurement: "%"
     device_class: signal_strength
