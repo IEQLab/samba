@@ -27,7 +27,7 @@ esphome:
       then: 
         - light.turn_on:
             id: samba_led
-            effect: pulse_beat
+            effect: strobe_g
         - component.update: sys_uptime
         - component.update: sys_ip
         - delay: 1000ms
