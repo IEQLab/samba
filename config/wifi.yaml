@@ -6,7 +6,7 @@
 
 # Configure wifi networks
 wifi:
-#  ap: {}
+  ap: {}
 #  networks:
 #  - ssid: "${wifi_ssid}"
 #    password: "${wifi_password}"
