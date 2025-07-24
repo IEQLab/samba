@@ -6,9 +6,10 @@
 
 # Configure wifi networks
 wifi:
-  networks:
-  - ssid: "${wifi_ssid}"
-    password: "${wifi_password}"
+#  ap: {}
+#  networks:
+#  - ssid: "${wifi_ssid}"
+#    password: "${wifi_password}"
 #  - ssid: "${enterprise_ssid}"
 #    eap:
 #      username: "${enterprise_user}"
