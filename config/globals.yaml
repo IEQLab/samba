@@ -1,0 +1,49 @@
+# SAMBA v2 FIRMWARE
+# Create global parameters and restore from flash
+# written by Thomas Parkinson, June 2025
+
+
+# Define global variables that persist after reset
+# https://esphome.io/components/globals.html
+globals:
+  - id: building_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
+  - id: level_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
+  - id: zone_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
+  - id: influx_enable
+    type: bool
+    restore_value: yes
+  - id: calibration_co2
+    type: double[2]
+    restore_value: yes
+  - id: calibration_lux
+    type: double[2]
+    restore_value: yes
+  - id: calibration_ta
+    type: double[2]
+    restore_value: yes
+  - id: calibration_rh
+    type: double[2]
+    restore_value: yes
+  - id: calibration_tg
+    type: double[2]
+    restore_value: yes
+  - id: calibration_as1
+    type: double[3]
+    restore_value: yes
+  - id: calibration_as2
+    type: double[3]
+    restore_value: yes
+
+# Define flash write interval
+# https://esphome.io/components/esphome.html#preferences-component
+preferences:
+  flash_write_interval: 1min

@@ -1,0 +1,46 @@
+# SAMBA v2 FIRMWARE
+# configure status LED and ligh effects
+# https://esphome.io/components/light/esp32_rmt_led_strip.html
+# written by Thomas Parkinson, May 2024
+
+
+# Define LED component
+light:
+  - platform: esp32_rmt_led_strip
+    id: samba_led
+    rgb_order: GRB
+    pin: GPIO27
+    num_leds: 1
+    rmt_symbols: 64
+    chipset: ws2812
+
+    # Define LED effects
+    effects:
+      - pulse:
+          name: "pulse_slow"
+          transition_length: 2s
+          update_interval: 3s
+          max_brightness: 0.20
+      - pulse:
+          name: "pulse_fast"
+          transition_length: 500ms
+          update_interval: 1s
+          max_brightness: 0.20
+      - pulse:
+          name: "pulse_beat"
+          transition_length:
+            on_length: 200ms
+            off_length: 500ms
+          update_interval: 800ms
+          max_brightness: 0.20
+      - strobe:
+          name: "strobe_g"
+          colors:
+            - state: true
+              brightness: 25%
+              red: 0%
+              green: 50%
+              blue: 0%
+              duration: 250ms
+            - state: false
+              duration: 750ms

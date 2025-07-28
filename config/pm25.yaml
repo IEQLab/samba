@@ -1,0 +1,58 @@
+# SAMBA v2 FIRMWARE
+# configure particulate matter sensor
+# https://esphome.io/components/sensor/pmsx003.html
+# written by Thomas Parkinson, May 2024
+
+
+# Define sensor
+sensor:
+  - platform: pmsx003
+    type: PMS5003T
+    uart_id: uart_pm
+    pm_2_5:
+      id: pms_pm25
+      internal: true
+      filters:
+        - clamp:
+            min_value: 0
+            max_value: 1000
+            ignore_out_of_range: true
+        - median:
+            window_size: 300
+            send_every: 30
+            send_first_at: 10
+    temperature:
+      id: pms_temp
+      internal: true
+    humidity:
+      id: pms_rh
+      internal: true
+      filters:
+        - clamp:
+            min_value: 0
+            max_value: 100
+            ignore_out_of_range: true
+        - median:
+            window_size: 300
+
+# Define PM2.5 measurements
+  - platform: template
+    id: samba_pm25
+    name: "PM2.5"
+    update_interval: never
+    accuracy_decimals: 0
+    device_class: pm25
+    unit_of_measurement: "µg/m3"
+    icon: mdi:molecule
+    lambda: |-
+      if (id(pms_pm25).state < 30) {
+        return ((0.524 * id(pms_pm25).state) - (0.0862 * id(pms_rh).state) + 5.75);
+      } else if(id(pms_pm25).state < 50) {
+        return ((0.786 * (id(pms_pm25).state)/20.0 -3/2) + 0.524 * (1 - (id(pms_pm25).state)/20 -3/2) * id(pms_pm25).state - (0.0862 * id(pms_rh).state) + 5.75);
+      } else if(id(pms_pm25).state < 210) {
+        return ((0.786 * (id(pms_pm25).state)) - (0.0862 * id(pms_rh).state) + 5.75);
+      } else if(id(pms_pm25).state < 260) {
+        return ((0.69 * (id(pms_pm25).state)/50 -21/5) + 0.786 * (1 - (id(pms_pm25).state)/50 -21/5) * id(pms_pm25).state);
+      } else {
+        return id(pms_pm25).state;
+      }

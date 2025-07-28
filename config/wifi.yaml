@@ -1,0 +1,23 @@
+# SAMBA v2 FIRMWARE
+# configure wireless connections
+# https://esphome.io/components/wifi.html
+# written by Thomas Parkinson, May 2024
+
+
+# Configure wifi networks
+wifi:
+  ap: {}
+#  networks:
+#  - ssid: "${wifi_ssid}"
+#    password: "${wifi_password}"
+#  - ssid: "${enterprise_ssid}"
+#    eap:
+#      username: "${enterprise_user}"
+#      password: "${enterprise_password}"
+#      ttls_phase_2: "${enterprise_ttls}"
+  power_save_mode: none
+  output_power: 10.0 dB
+#  manual_ip: 
+#    static_ip: 192.168.1.253
+#    gateway: 192.168.1.1
+#    subnet: 255.255.255.0

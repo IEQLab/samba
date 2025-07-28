@@ -1,0 +1,101 @@
+# SAMBA v2 FIRMWARE
+# configure ESP microcontroller
+# written by Thomas Parkinson, May 2024
+
+
+# Define ESP32 board
+# https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
+esp32:
+  board: esp32dev
+  flash_size: 16MB
+  framework:
+    type: arduino
+
+# Define ESPHome settings
+# https://esphome.io/components/esphome
+esphome:
+  name: "samba"
+  friendly_name: "SAMBA"
+  comment: "Monitor IEQ using low-cost sensors - developed by the IEQ Lab"
+  name_add_mac_suffix: true
+  min_version: "2025.7.0"
+  project:
+    name: "IEQLab.SAMBA"
+    version: "1.99.66"
+  on_boot:
+    - priority: 100
+      then: 
+        - light.turn_on:
+            id: samba_led
+            effect: strobe_g
+        - component.update: sys_uptime
+        - component.update: sys_ip
+        - delay: 1000ms
+    - priority: -100
+      then:
+      
+        # Synchronise system to RTC clock
+        - ds1307.read_time:
+
+        # Set InfluxDB tags using global variables    
+        - script.execute: set_influx_tags
+        
+        # Print useful diagnostics
+        - lambda: |-
+            ESP_LOGI("samba", "Startup OK :) Building: %s, Level: %s, Zone: %s, Influx: %s, Time: %s",
+                     id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str(),
+                     id(influx_enable) ? "true" : "false",
+                     ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str());
+
+            ESP_LOGI("samba", "Calibrations:\n"
+                              "CO2:  y = ppm*%.4fx + %.4f\n"
+                              "Lux:  y = lux*%.4fx + %.4f\n"
+                              "Ta:   y = ta*%.4fx + %.4f\n"
+                              "RH:   y = rh*%.4fx + %.4f\n"
+                              "Tg:   y = tg*%.4fx + %.4f\n"
+                              "AS1:  y = %.6f * mV^%.6f * ta^%.6f\n"
+                              "AS2:  y = %.6f * mV^%.6f * ta^%.6f",
+                      id(calibration_co2)[0], id(calibration_co2)[1],
+                      id(calibration_lux)[0], id(calibration_lux)[1],
+                      id(calibration_ta)[0], id(calibration_ta)[1],
+                      id(calibration_rh)[0], id(calibration_rh)[1],
+                      id(calibration_tg)[0], id(calibration_tg)[1],
+                      id(calibration_as1)[0], id(calibration_as1)[1], id(calibration_as1)[2],
+                      id(calibration_as2)[0], id(calibration_as2)[1], id(calibration_as2)[2]);
+
+# Set logging to errors only
+# https://esphome.io/components/logger
+logger:
+  level: INFO
+  logs:
+    samba: INFO
+    main: WARN
+    component: NONE
+    sensor: NONE
+    ads1115.sensor: NONE
+    ntc: NONE
+    opt3001.sensor: NONE
+    pmsx003: NONE
+    senseair_i2c: NONE
+    sgp4x: NONE
+    sound_level_meter: NONE
+    wire.cpp: NONE
+    http_request: NONE
+    influxdb_writer: WARN
+
+# Define i2c
+# https://esphome.io/components/i2c
+i2c:
+  - id: bus_a
+    scl: GPIO25
+    sda: GPIO26
+    scan: true
+    frequency: 100kHz
+
+# Configure UART
+# https://esphome.io/components/uart
+uart:
+  - id: uart_pm
+    rx_pin: GPIO16
+    tx_pin: GPIO17
+    baud_rate: 9600

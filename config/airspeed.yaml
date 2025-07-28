@@ -1,0 +1,64 @@
+# SAMBA v2 FIRMWARE
+# configure anemometers for air speed measurements
+# written by Thomas Parkinson, May 2024
+
+
+# Define voltage measurements
+sensor:
+  - platform: copy
+    id: as_1
+    source_id: ads_as1
+    internal: true
+    filters:
+      - clamp:
+          min_value: 0
+          max_value: 5
+          ignore_out_of_range: true
+      - median:
+          window_size: 150
+          send_every: 60
+          send_first_at: 60
+      - lambda: |-
+          return id(calibration_as1)[0]
+                  * pow(x, id(calibration_as1)[1])
+                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as1)[2]);
+      - clamp:
+          min_value: 0.02
+          max_value: 1.0
+          ignore_out_of_range: false
+      - filter_out: NAN
+
+  - platform: copy
+    id: as_2
+    source_id: ads_as2
+    internal: true
+    filters:
+      - clamp:
+          min_value: 0
+          max_value: 5
+          ignore_out_of_range: true
+      - median:
+          window_size: 150
+          send_every: 60
+          send_first_at: 60
+      - lambda: |-
+          return id(calibration_as2)[0]
+                  * pow(x, id(calibration_as2)[1])
+                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as2)[2]);
+      - clamp:
+          min_value: 0.02
+          max_value: 1.0
+          ignore_out_of_range: false
+      - filter_out: NAN
+
+# Define air speed measurements
+  - platform: template
+    id: samba_airspeed
+    name: "Air Speed"
+    update_interval: never
+    accuracy_decimals: 2
+    device_class: wind_speed
+    unit_of_measurement: "m/s"
+    icon: mdi:weather-windy
+    lambda: |-
+      return max(id(as_1).state, id(as_2).state);

@@ -1,0 +1,37 @@
+# SAMBA v2 FIRMWARE
+# configure OPT3001 light sensor
+# written by Thomas Parkinson, May 2024
+
+
+# Define sensor
+# https://esphome.io/components/sensor/opt3001
+sensor:
+  - platform: opt3001
+    id: opt_lux
+    update_interval: 20s
+    internal: true
+    address: 0x45
+    filters:
+      - filter_out: nan
+      - clamp:
+          min_value: 0
+          max_value: 20000
+          ignore_out_of_range: true
+      - median:
+          window_size: 15
+          send_every: 3
+          send_first_at: 1
+
+
+# Define illuminance measurements
+  - platform: template
+    id: samba_lux
+    name: "Illuminance"
+    update_interval: never
+    accuracy_decimals: 0
+    device_class: illuminance
+    unit_of_measurement: "lx"
+    icon: mdi:sun-wireless-outline
+    filters:
+      - lambda: |-
+          return ((id(calibration_lux)[0] * id(opt_lux).state) + id(calibration_lux)[1]);

@@ -1,0 +1,71 @@
+# SAMBA v2 FIRMWARE
+# configure sampling and upload loop
+# https://esphome.io/guides/automations.html#script-component
+# written by Thomas Parkinson, May 2024
+
+
+# Define script to update measurement values
+script:
+  - id: sensor_sample
+    mode: single
+    then:
+      - component.update: sys_uptime
+      - if:
+          condition: 
+            lambda: |-
+              return id(sys_uptime).state > 120;
+          then:
+            - light.turn_on:
+                id: samba_led
+                brightness: 0.20
+            - component.update: samba_timestamp
+            - component.update: samba_temperature
+            - component.update: samba_globe
+            - component.update: samba_humidity
+            - component.update: samba_airspeed
+            - component.update: samba_mrt
+            - component.update: samba_co2
+            - component.update: samba_lux
+            - component.update: samba_pm25
+            - component.update: samba_voc
+            - component.update: samba_nox
+            - component.update: samba_laeq
+            - component.update: samba_lamin
+            - component.update: samba_lamax
+            - delay: 100ms
+            - sensor.template.publish:
+                id: samba_co2
+                state: !lambda 'return id(samba_co2).state;'
+            - sensor.template.publish:
+                id: samba_lux
+                state: !lambda 'return id(samba_lux).state;'
+            - sensor.template.publish:
+                id: samba_globe
+                state: !lambda 'return id(samba_globe).state;'
+            - sensor.template.publish:
+                id: samba_mrt
+                state: !lambda 'return id(samba_mrt).state;'
+            - delay: 100ms
+            - if:
+                condition: 
+                  - switch.is_on: switch_influx
+                then:
+                  - lambda: |-
+                      id(influx_writer).publish_now();
+                  - logger.log:
+                      format: "Influx upload"
+                      level: INFO
+                      tag: "samba"
+                else:
+                  - logger.log:
+                      format: "Influx upload skipped"
+                      level: INFO
+                      tag: "samba"
+            - light.turn_off:
+                id: samba_led
+          else:
+            - component.update: sys_uptime
+            - logger.log: 
+                format: "Warming up SAMBA device"
+                level: INFO
+                tag: "samba"

@@ -1,0 +1,48 @@
+# SAMBA v2 FIRMWARE
+# configure real time clock, SNTP sync, and sample loop
+# written by Thomas Parkinson, May 2024
+
+
+# Define RTC device
+# https://esphome.io/components/time/ds1307.html
+time:
+  - platform: ds1307
+    id: ds1307_time
+    address: 0x68
+    update_interval: never
+
+# Define loop for sensor measurements
+# https://esphome.io/guides/automations.html#component-update-action
+    on_time:
+      - seconds: 0
+        minutes: /5
+        then:
+          - script.execute: sensor_sample
+      - seconds: 0
+        minutes: 0
+        hours: 4
+        days_of_week: SUN
+        then:
+          - lambda: |-
+              if (id(sntp_time).now().is_valid()) {
+               id(ds1307_time).write_time();
+               ESP_LOGI("time_sync", "RTC updated from SNTP");
+              } else {
+               ESP_LOGW("time_sync", "SNTP invalid – skipping RTC update");
+              }
+
+# use SNTP server to set RTC time
+  - platform: sntp
+    id: sntp_time
+    timezone: "Etc/GMT"
+    servers:
+     - 0.pool.ntp.org
+     - 1.pool.ntp.org
+     - 2.pool.ntp.org
+    on_time_sync:
+      then:
+        - ds1307.write_time:
+            id: ds1307_time
+        - logger.log:
+            level: INFO
+            format: "SNTP time synchronised"

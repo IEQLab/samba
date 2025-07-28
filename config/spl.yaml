@@ -1,0 +1,141 @@
+# SAMBA v2 FIRMWARE
+# configure MEMS microphone and SPL meter
+# https://github.com/stas-sl/esphome-sound-level-meter/tree/dev
+# written by Thomas Parkinson, July 2025
+
+
+# Configure i2s
+# https://github.com/stas-sl/esphome-sound-level-meter
+i2s:
+  bck_pin: GPIO13
+  ws_pin: GPIO33
+  din_pin: GPIO32
+  sample_rate: 48000
+  bits_per_sample: 32
+  dma_buf_count: 8
+  dma_buf_len: 256
+  use_apll: true
+  channel: right
+  bits_shift: 8
+
+# Define SPL sensor
+sound_level_meter:
+  id: sound_spl
+  update_interval: 30s
+  is_on: true
+  buffer_size: 1024  # buffer_size in samples
+  warmup_interval: 1000ms # ignore audio data at startup
+
+  # audio processing task
+  task_stack_size: 4096
+  task_priority: 2
+  task_core: 1
+  
+  # mic configuration
+  mic_sensitivity: -26dB
+  mic_sensitivity_ref: 94dB
+  offset: 0dB
+
+  # Define dsp filters to use
+  dsp_filters:
+
+    # mic eq @ 48kHz
+    - id: f_ics43434
+      type: sos
+      coeffs:
+        #      b0               b1            b2             a1              a2
+        - [ 0.47732642,    0.46294358,    0.11224797,    0.06681948,    0.0011152199 ]
+        - [ 1.        ,    -1.9890593,    0.98908925,   -1.9975533,     0.9975549    ]
+
+    # A-weighting
+    - id: f_a
+      type: sos
+      coeffs:
+        #       b0           b1            b2             a1            a2
+        - [ 0.16999495 ,  0.741029   ,  0.52548885 , -0.11321865 , -0.056549273 ]
+        - [ 1.         , -2.00027    ,  1.0002706  , -0.03433284 , -0.79215795  ]
+        - [ 1.         , -0.709303   , -0.29071867 , -1.9822421  ,  0.9822986   ]
+
+    # C-weighting
+    - id: f_c
+      type: sos
+      coeffs:
+        #       b0             b1             b2             a1             a2
+        - [ -0.49651518  , -0.12296628  , -0.0076134163, -0.37165618   , 0.03453208 ]
+        - [  1.          ,  1.3294908   ,  0.44188643  ,  1.2312505    , 0.37899444 ]
+        - [  1.          , -2.          ,  1.          , -1.9946145    , 0.9946217  ]
+
+  # calculate LAeq (average) sound level over specified period
+  sensors:
+    - type: eq
+      id: spl_laeq
+      update_interval: 500ms
+      internal: true
+      dsp_filters: [f_ics43434, f_a]
+      filters:
+        - median:
+            window_size: 600
+            send_every: 60
+            send_first_at: 30
+
+  # calculate Lmin over specified period
+    - type: min
+      id: spl_lamin
+      window_size: 1s
+      update_interval: 60s
+      internal: true
+      dsp_filters: [f_ics43434, f_a]
+      filters:
+        - min:
+            window_size: 5
+            send_every: 1
+            send_first_at: 1
+
+  # calculate Lmax over specified period
+    - type: max
+      id: spl_lamax
+      window_size: 1s
+      update_interval: 60s
+      internal: true
+      dsp_filters: [f_ics43434, f_a]
+      filters:
+        - max:
+            window_size: 5
+            send_every: 1
+            send_first_at: 1
+
+
+# Define SPL measurement
+sensor:
+  - platform: template
+    id: samba_laeq
+    name: "Sound Pressure Level"
+    update_interval: never
+    accuracy_decimals: 1
+    device_class: sound_pressure
+    unit_of_measurement: "dBA"
+    icon: mdi:volume-medium
+    lambda: |-
+      return id(spl_laeq).state;
+
+  - platform: template
+    id: samba_lamin
+    name: "SPL LAmin"
+    update_interval: never
+    accuracy_decimals: 1
+    device_class: sound_pressure
+    unit_of_measurement: "dBA"
+    icon: mdi:volume-low
+    lambda: |-
+      return id(spl_lamin).state;
+
+  - platform: template
+    id: samba_lamax
+    name: "SPL LAmax"
+    update_interval: never
+    accuracy_decimals: 1
+    device_class: sound_pressure
+    unit_of_measurement: "dBA"
+    icon: mdi:volume-high
+    lambda: |-
+      return id(spl_lamax).state;
