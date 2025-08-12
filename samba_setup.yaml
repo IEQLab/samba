@@ -1,0 +1,549 @@
+# SAMBA v2 FIRMWARE
+# initial firmware flashed to new SAMBAs to facilitate setup
+# written by Thomas Parkinson, July 2025
+
+
+# Define global variable placeholders
+# https://esphome.io/components/globals.html
+globals:
+  - id: building_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
+    initial_value: '"building"'
+  - id: level_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
+    initial_value: '"level"'
+  - id: zone_tag
+    type: std::string
+    max_restore_data_length: 24
+    restore_value: yes
+    initial_value: '"zone"'
+  - id: influx_enable
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
+  - id: calibration_co2
+    type: double[2]
+    restore_value: yes
+    initial_value: '{1.015844, 20.139092}'
+  - id: calibration_lux
+    type: double[2]
+    restore_value: yes
+    initial_value: '{5.988641, 0.0}'
+  - id: calibration_ta
+    type: double[2]
+    restore_value: yes
+    initial_value: '{0.9750601, -3.9853163}'
+  - id: calibration_rh
+    type: double[2]
+    restore_value: yes
+    initial_value: '{0.8839748, 15.0758039}'
+  - id: calibration_tg
+    type: double[2]
+    restore_value: yes
+    initial_value: '{0.9093902, 0.6127004}'
+  - id: calibration_as1
+    type: double[3]
+    restore_value: yes
+    initial_value: '{0.000878414013334, 1.446429921572743, 1.344253500261520}'
+  - id: calibration_as2
+    type: double[3]
+    restore_value: yes
+    initial_value: '{0.000700721710849, 1.592948717475052, 1.389994766781412}'
+
+# Make sure they get written to flash
+# https://esphome.io/components/esphome.html#preferences-component
+preferences:
+  flash_write_interval: 5s
+
+# Define ESPHome settings
+# https://esphome.io/components/esphome
+esphome:
+  name: "samba"
+  friendly_name: "SAMBA Config Tool"
+  name_add_mac_suffix: false
+  min_version: "2025.7.0"
+  on_boot:
+    - priority: 100
+      then: 
+        - light.turn_on:
+            id: samba_led
+            effect: strobe_bg
+
+# Define ESP32 board
+# https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf
+esp32:
+  board: esp32dev
+  flash_size: 16MB
+  framework:
+    type: arduino
+
+# Define status LED component
+light:
+  - platform: esp32_rmt_led_strip
+    id: samba_led
+    rgb_order: GRB
+    pin: GPIO27
+    num_leds: 1
+    rmt_symbols: 64
+    use_psram: false
+    chipset: ws2812
+    effects:
+      - pulse:
+          name: "pulse_fast"
+          transition_length: 0.5s
+          update_interval: 0.5s
+          max_brightness: 0.20
+      - strobe:
+          name: "strobe_bg"
+          colors:
+            - state: true
+              brightness: 25%
+              red: 0%
+              green: 0%
+              blue: 50%
+              duration: 250ms
+            - state: false
+              duration: 250ms
+            - state: true
+              brightness: 25%
+              red: 0%
+              green: 50%
+              blue: 0%
+              duration: 250ms
+            - state: false
+              duration: 250ms
+      - strobe:
+          name: "strobe_b"
+          colors:
+            - state: true
+              brightness: 25%
+              red: 0%
+              green: 0%
+              blue: 50%
+              duration: 250ms
+            - state: false
+              duration: 250ms
+      - strobe:
+          name: "strobe_g"
+          colors:
+            - state: true
+              brightness: 25%
+              red: 0%
+              green: 50%
+              blue: 0%
+              duration: 250ms
+            - state: false
+              duration: 250ms
+
+# Define logger
+# https://esphome.io/components/logger
+logger:
+  level: DEBUG
+
+# Use captive portal for wifi configuration
+# https://esphome.io/components/captive_portal.html
+captive_portal:
+
+# Configure access point
+# https://esphome.io/components/wifi
+wifi:
+  ap:
+    ssid: "samba_connect"
+    ap_timeout: 30s
+  on_connect:
+    - light.turn_on:
+        id: samba_led
+        effect: strobe_b
+
+# Use web server to configure device
+web_server:
+  port: 80
+  version: 3
+  log: true
+  ota: false
+  sorting_groups:
+    - id: sort_location_settings
+      name: "Location Tags"
+      sorting_weight: 10
+    - id: sort_upload_settings
+      name: "Data Uploads"
+      sorting_weight: 20
+    - id: sort_calibration_settings
+      name: "Calibration Coefficients"
+      sorting_weight: 30
+    - id: sort_firmware_settings
+      name: "Flash Firmware"
+      sorting_weight: 40
+
+# Configure over-the-air updates
+ota:
+  - platform: web_server
+  - platform: http_request
+    on_progress:
+      then:
+        - logger.log:
+            format: "OTA progress: %0.1f%%"
+            args: ["x"]
+            level: INFO
+            tag: "samba"
+
+# Enable HTTP Request component required for remote OTA
+http_request:
+    id: http_client
+    verify_ssl: false
+
+# Define firmware update button
+button:
+  - platform: template
+    name: "Deploy SAMBA"
+    id: button_firmware
+    web_server:
+      sorting_group_id: sort_firmware_settings
+    icon: mdi:emoticon-outline
+    on_press:
+      - logger.log:
+          format: "Checking for SAMBA firmware"
+          level: INFO
+          tag: "samba"
+      - ota.http_request.flash:
+          md5_url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.md5
+          url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.ota.bin
+
+
+#### LOCATION FIELDS ####
+
+# Define text fields
+text:
+  - platform: template
+    name: "Building Tag"
+    id: building_tag_input
+    web_server:
+      sorting_group_id: sort_location_settings
+    mode: text
+    update_interval: 10s
+    min_length: 1
+    max_length: 24
+    restore_value: true
+    optimistic: true
+    on_value:
+      then:
+        - lambda: |-
+            id(building_tag) = x;
+
+  - platform: template
+    name: "Level Tag"
+    id: level_tag_input
+    web_server:
+      sorting_group_id: sort_location_settings
+    mode: text
+    update_interval: 10s
+    min_length: 1
+    max_length: 24
+    restore_value: true
+    optimistic: true
+    on_value:
+      then:
+        - lambda: |-
+            id(level_tag) = x;
+
+  - platform: template
+    name: "Zone Tag"
+    id: zone_tag_input
+    web_server:
+      sorting_group_id: sort_location_settings
+    mode: text
+    update_interval: 10s
+    min_length: 1
+    max_length: 24
+    restore_value: true
+    optimistic: true
+    on_value:
+      then:
+        - lambda: |-
+            id(zone_tag) = x;
+
+
+#### CALIBRATION COEFFICIENTS ####
+
+# Define numbers
+number:
+  - platform: template
+    name: "CO₂ slope (m)"
+    id: co2_m_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0
+    max_value: 100
+    step: 0.001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_co2)[0];
+    set_action:
+      - lambda: |-
+          id(calibration_co2)[0] = x;
+
+  - platform: template
+    name: "CO₂ offset (b)"
+    id: co2_b_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0
+    max_value: 100
+    step: 0.001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_co2)[1];
+    set_action:
+      - lambda: |-
+          id(calibration_co2)[1] = x;
+
+  - platform: template
+    name: "Lux slope (m)"
+    id: lux_m_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0
+    max_value: 100
+    step: 0.001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_lux)[0];
+    set_action:
+      - lambda: |-
+          id(calibration_lux)[0] = x;
+
+  - platform: template
+    name: "Lux offset (b)"
+    id: lux_b_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: -100
+    max_value: 100
+    step: 0.001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_lux)[1];
+    set_action:
+      - lambda: |-
+          id(calibration_lux)[1] = x;
+
+  - platform: template
+    name: "Air Temp slope (m)"
+    id: ta_m_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0
+    max_value: 5
+    step: 0.0001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_ta)[0];
+    set_action:
+      - lambda: |-
+          id(calibration_ta)[0] = x;
+
+  - platform: template
+    name: "Air Temp offset (b)"
+    id: ta_b_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: -50
+    max_value: 50
+    step: 0.01
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_ta)[1];
+    set_action:
+      - lambda: |-
+          id(calibration_ta)[1] = x;
+
+  - platform: template
+    name: "Relative Humidity slope (m)"
+    id: rh_m_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0
+    max_value: 2
+    step: 0.001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_rh)[0];
+    set_action:
+      - lambda: |-
+          id(calibration_rh)[0] = x;
+
+  - platform: template
+    name: "Relative Humidity offset (b)"
+    id: rh_b_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: -50
+    max_value: 100
+    step: 0.01
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_rh)[1];
+    set_action:
+      - lambda: |-
+          id(calibration_rh)[1] = x;
+
+  - platform: template
+    name: "Globe Temp slope (m)"
+    id: tg_m_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0
+    max_value: 2
+    step: 0.001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_tg)[0];
+    set_action:
+      - lambda: |-
+          id(calibration_tg)[0] = x;
+
+  - platform: template
+    name: "Globe Temp offset (b)"
+    id: tg_b_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: -10
+    max_value: 10
+    step: 0.01
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_tg)[1];
+    set_action:
+      - lambda: |-
+          id(calibration_tg)[1] = x;
+
+  - platform: template
+    name: "Air Speed 1 - a"
+    id: as1_a_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0.0
+    max_value: 1.0
+    step: 0.000001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_as1)[0];
+    set_action:
+      - lambda: |-
+          id(calibration_as1)[0] = x;
+
+  - platform: template
+    name: "Air Speed 1 - b"
+    id: as1_b_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0.0
+    max_value: 5.0
+    step: 0.0001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_as1)[1];
+    set_action:
+      - lambda: |-
+          id(calibration_as1)[1] = x;
+
+  - platform: template
+    name: "Air Speed 1 - c"
+    id: as1_c_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0.0
+    max_value: 5.0
+    step: 0.0001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_as1)[2];
+    set_action:
+      - lambda: |-
+          id(calibration_as1)[2] = x;
+
+  - platform: template
+    name: "Air Speed 2 - a"
+    id: as2_a_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0.0
+    max_value: 1.0
+    step: 0.000001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_as2)[0];
+    set_action:
+      - lambda: |-
+          id(calibration_as2)[0] = x;
+
+  - platform: template
+    name: "Air Speed 2 - b"
+    id: as2_b_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0.0
+    max_value: 5.0
+    step: 0.0001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_as2)[1];
+    set_action:
+      - lambda: |-
+          id(calibration_as2)[1] = x;
+
+  - platform: template
+    name: "Air Speed 2 - c"
+    id: as2_c_input
+    web_server:
+      sorting_group_id: sort_calibration_settings
+    mode: box
+    min_value: 0.0
+    max_value: 5.0
+    step: 0.000001
+    update_interval: 10s
+    lambda: |-
+      return id(calibration_as2)[2];
+    set_action:
+      - lambda: |-
+          id(calibration_as2)[2] = x;
+
+
+#### UPLOAD TOGGLES ####
+
+# Define switches
+switch:
+  - platform: template
+    name: "Enable InfluxDB"
+    id: switch_influx
+    web_server:
+      sorting_group_id: sort_upload_settings
+    restore_mode: DISABLED
+    lambda: |-
+      return id(influx_enable);
+    turn_on_action:
+      - lambda: |-
+          id(influx_enable) = true;
+    turn_off_action:
+      - lambda: |-
+          id(influx_enable) = false;
+

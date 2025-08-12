@@ -115,17 +115,18 @@ SAMBAs are initially flashed with [`setup.yaml`](https://github.com/IEQLab/samba
 Access to the ESP32 is through the USB-C port on SAMBAs main PCB. There is a single bolt that holds the SAMBA housing together - use a 4mm hex key to undo the bolt on the bottom of the device. Slide the bolt out from the bottom to remove the housing and reveal the PCB. The USB-C port is located on the bottom right of the PCB. Note: this will not provide power to the SAMBA; power must be provided through the DC barrel jack. Once your device is connected and the SAMBA is powered on, follow these steps to flash the setup firmware:
 
 0. [Optional] Erase the ESP32 flash memory from earlier deployments: `esptool.py --chip esp32 erase_flash`.
-1. Clone the [SAMBA Github Repository](https://github.com/IEQLab/samba/tree/main) to your local device and open that directory.
-2. Enter in the calibration coefficients under `substitutions:` at the top of the `setup.yaml` script. CO2, illuminance, air temperature, relative humidity, and globe temperature are linear calibrations (e.g. y = mx + b); the two air speed sensors are power regressions (e.g. y = a * x^b). Note: these must be entered as strings e.g. "1.0".
-3.  Open a terminal window and `cd` to the working folder where the SAMBA Github repo was cloned.
-4.  Enter the following command to compile and upload the binary file to the SAMBA: `esphome run setup.yaml`. Note that you will need to select the serial device before uploading; alternatively, specify the serial connection e.g. `esphome run setup.yaml --device /dev/cu.usbserial-10`.
+1.  Clone the [SAMBA Github Repository](https://github.com/IEQLab/samba/tree/main) to your local device and open that directory.
+2.  Open a terminal window and `cd` to the working folder where the SAMBA Github repo was cloned.
+3.  The initial setup script is `samba_setup.yaml`. It contains placeholder calibration coefficients stored as arrays e.g. `{1.0, 0.0}` for two terms, `{1.0, 1.0, 0.0}` for three terms etc. These can be changed later.
+4.  Enter the following command to compile and upload the binary file to the SAMBA: `esphome run samba_setup.yaml`. Note that you will need to select the serial device before uploading; alternatively, specify the serial connection e.g. `esphome run setup.yaml --device /dev/cu.usbserial-10`.
 
-It should take about 30 seconds to flash the firmware. If the SAMBA is being relocated, disconnect the USB-C cable once it is finished flashing, unplug the power, put the housing back on, and tighten the hex bolt. Place the SAMBA in its new location, power it on, and follow the below steps to configure the WiFi:
+It should take about 30 seconds to flash the firmware. The Led should flash green and blue to indicate it is on but not connected to WiFi. If the SAMBA is being relocated, disconnect the USB-C cable once it is finished flashing, unplug the power, put the housing back on, and tighten the hex bolt. Place the SAMBA in its new location, power it on, and follow the below steps to configure the WiFi:
 
 1.  Use another device (e.g. smartphone, laptp) to join the `samba_connect` ad-hoc WiFi and open the [captive portal](https://esphome.io/components/captive_portal.html) by entering [http://192.168.4.1/](http://192.168.4.1/) into your browser.
 2.  Select the 2.4GHz network to join from the list and enter in the password.
-
-The SAMBA will connect to the network and (if connected via USB-C) print out details like the MAC, IP, and calibration coefficients to the terminal. It will then attempt to download and flash the firmware stored in [`firmware/`](https://github.com/IEQLab/samba/tree/main/firmware) on the IEQ Lab Github. Once that is done, the SAMBA will reboot and start sampling automatically. The status LED should blink slower to indicate it is warming up; this will stop once it enters the sampling routine.
+3.  The SAMBA will connect to the network and then launch a web server to display the configuration settings and terminal window. This can be accessed through a browser at the IP address of the SAMBA e.g. `192.168.1.50`. 
+4.  Enter the location (building name, level/room number, and zone name) and the calibration coefficients. CO2, illuminance, air temperature, relative humidity, and globe temperature are linear calibrations (e.g. y = mx + b); the two air speed sensors are power regressions (e.g. y = a * x^b). Note: these must be entered as strings e.g. '1.0'.
+3.  Once the configuration is complete, click the 'Deploy SAMBA' button to attempt to download and flash the firmware stored in [`firmware/`](https://github.com/IEQLab/samba/tree/main/firmware) on the IEQ Lab Github. Once that is done, the SAMBA will reboot and start sampling automatically. The status LED should blink slower to indicate it is warming up; this will stop once it enters the sampling routine.
 
 #### 🎯 Compiling Base Firmware [IEQ Lab] ####
 
