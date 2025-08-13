@@ -2,6 +2,7 @@
 #include "esphome/core/log.h"
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
+#include <cmath>
 
 namespace esphome {
 namespace influxdb_writer {
@@ -62,7 +63,7 @@ void InfluxDBWriter::publish_now() {
   // Floating sensors
   for (auto *sensor : this->sensors_) {
     float value = sensor->state;
-    if (isnan(value)) continue;
+    if (std::isnan(value)) continue;
     auto it = this->sensorNamesWithId_.find(sensor->get_name());
     if (it == this->sensorNamesWithId_.end()) continue;
     body += build_line(it->second, value);
