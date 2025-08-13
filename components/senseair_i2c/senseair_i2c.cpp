@@ -6,6 +6,7 @@
 
 #include "senseair_i2c.h"
 #include "esphome/core/log.h"
+#include "esp_timer.h"
 
 namespace esphome {
 namespace senseair_i2c {
@@ -117,7 +118,7 @@ void SenseairI2CSensor::update() {
   
   if (!this->read_started_ && !this->measuring_) {
     ESP_LOGD("senseair_i2c", "Triggering a new measurement cycle");
-    this->start_time_ = millis();
+    this->start_time_ = esp_timer_get_time() / 1000;
     this->read_started_ = true;
     return;
   }
@@ -127,7 +128,7 @@ void SenseairI2CSensor::update() {
     return;
   }
   
-  uint32_t elapsed = (millis() - this->start_time_) / 1000;
+  uint32_t elapsed = ((esp_timer_get_time() / 1000) - this->start_time_) / 1000;
   ESP_LOGD("senseair_i2c", "Elapsed = %u s / %u s", elapsed, this->update_interval_);
   
   if (elapsed < this->update_interval_) {
