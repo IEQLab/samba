@@ -9,7 +9,7 @@ esp32:
   board: esp32dev
   flash_size: 16MB
   framework:
-    type: arduino
+    type: esp-idf
 
 # Define ESPHome settings
 # https://esphome.io/components/esphome
