@@ -18,7 +18,7 @@ substitutions:
   # updates
   ota_password: !secret ota_password
   
-  # Inlfux config
+  # Influx config
   influx_host: !secret influx_host
   influx_port: !secret influx_port
   influx_token: !secret influx_token
