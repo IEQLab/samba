@@ -34,17 +34,44 @@ script:
             - component.update: samba_lamax
             - delay: 100ms
             - sensor.template.publish:
+                id: samba_temperature
+                state: !lambda 'return id(samba_temperature).state;'
+            - sensor.template.publish:
+                id: samba_globe
+                state: !lambda 'return id(samba_globe).state;'
+            - sensor.template.publish:
+                id: samba_humidity
+                state: !lambda 'return id(samba_humidity).state;'
+            - sensor.template.publish:
+                id: samba_airspeed
+                state: !lambda 'return id(samba_airspeed).state;'
+            - sensor.template.publish:
+                id: samba_mrt
+                state: !lambda 'return id(samba_mrt).state;'
+            - sensor.template.publish:
                 id: samba_co2
                 state: !lambda 'return id(samba_co2).state;'
             - sensor.template.publish:
                 id: samba_lux
                 state: !lambda 'return id(samba_lux).state;'
             - sensor.template.publish:
-                id: samba_globe
-                state: !lambda 'return id(samba_globe).state;'
+                id: samba_pm25
+                state: !lambda 'return id(samba_pm25).state;'
             - sensor.template.publish:
-                id: samba_mrt
-                state: !lambda 'return id(samba_mrt).state;'
+                id: samba_tvoc
+                state: !lambda 'return id(samba_tvoc).state;'
+            - sensor.template.publish:
+                id: samba_nox
+                state: !lambda 'return id(samba_nox).state;'
+            - sensor.template.publish:
+                id: samba_laeq
+                state: !lambda 'return id(samba_laeq).state;'
+            - sensor.template.publish:
+                id: samba_lamin
+                state: !lambda 'return id(samba_lamin).state;'
+            - sensor.template.publish:
+                id: samba_lamax
+                state: !lambda 'return id(samba_lamax).state;'
             - delay: 200ms
             - if:
                 condition: 
@@ -52,10 +79,6 @@ script:
                 then:
                   - lambda: |-
                       id(influx).publish_now();
-                  - logger.log:
-                      format: "Influx upload"
-                      level: INFO
-                      tag: "samba"
                 else:
                   - logger.log:
                       format: "Influx upload skipped"
