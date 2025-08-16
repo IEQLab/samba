@@ -17,7 +17,10 @@ script:
           then:
             - light.turn_on:
                 id: samba_led
-                brightness: 0.20
+                brightness: 25%
+                red: 100%
+                green: 100%
+                blue: 100%
             - component.update: samba_timestamp
             - component.update: samba_temperature
             - component.update: samba_globe
@@ -72,7 +75,7 @@ script:
             - sensor.template.publish:
                 id: samba_lamax
                 state: !lambda 'return id(samba_lamax).state;'
-            - delay: 200ms
+            - delay: 300ms
             - if:
                 condition: 
                   - switch.is_on: switch_influx
