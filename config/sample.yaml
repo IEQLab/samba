@@ -17,6 +17,7 @@ script:
           then:
             - light.turn_on:
                 id: samba_led
+                transition_length: 100ms
                 brightness: 25%
                 red: 100%
                 green: 100%
