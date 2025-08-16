@@ -19,9 +19,9 @@ sensor:
           send_every: 60
           send_first_at: 60
       - lambda: |-
-          return id(calibration_as1)[0]
-                  * pow(x, id(calibration_as1)[1])
-                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as1)[2]);
+          return id(calibration_as1_c)
+                  * pow(x, id(calibration_as1_m))
+                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as1_b));
       - clamp:
           min_value: 0.02
           max_value: 1.0
@@ -42,9 +42,9 @@ sensor:
           send_every: 60
           send_first_at: 60
       - lambda: |-
-          return id(calibration_as2)[0]
-                  * pow(x, id(calibration_as2)[1])
-                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as2)[2]);
+          return id(calibration_as2_c)
+                  * pow(x, id(calibration_as2_m))
+                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as2_b));
       - clamp:
           min_value: 0.02
           max_value: 1.0

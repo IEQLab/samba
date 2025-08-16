@@ -44,7 +44,7 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
-      return ((id(calibration_tg)[0] * id(ntc_temperature).state) + id(calibration_tg)[1]);
+      return ((id(calibration_tg_m) * id(ntc_temperature).state) + id(calibration_tg_b));
 
 # Define mean radiant temperature measurements
   - platform: template
