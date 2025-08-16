@@ -36,9 +36,6 @@ esphome:
       
         # Synchronise system to RTC clock
         - ds1307.read_time:
-
-#        # Set InfluxDB tags using global variables    
-#        - script.execute: set_influx_tags
         
         # Print useful diagnostics
         - lambda: |-
@@ -66,7 +63,7 @@ esphome:
 # Set logging to errors only
 # https://esphome.io/components/logger
 logger:
-  level: DEBUG
+  level: INFO
   logs:
     samba: INFO
     main: WARN
@@ -78,11 +75,11 @@ logger:
     opt3001.sensor: NONE
     pmsx003: NONE
     senseair_i2c: NONE
-    sensirion_i2c: NONE
+    sensirion_i2c: ERROR
     sgp4x: NONE
     sound_level_meter: NONE
     wire.cpp: NONE
-    http_request: NONE
+    http_request: ERROR
     influxdb: INFO
 
 # Define i2c
