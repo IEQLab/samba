@@ -269,11 +269,11 @@ http_request:
 # Define firmware update button
 button:
   - platform: template
-    name: "Deploy SAMBA"
+    name: "Deploy production firmware"
     id: button_firmware
     web_server:
       sorting_group_id: sort_firmware_settings
-    icon: mdi:emoticon-outline
+    icon: mdi:check-all
     on_press:
       - logger.log:
           format: "Checking for SAMBA firmware"
@@ -282,6 +282,20 @@ button:
       - ota.http_request.flash:
           md5_url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.md5
           url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.ota.bin
+  - platform: template
+    name: "Deploy test firmware"
+    id: button_testing
+    web_server:
+      sorting_group_id: sort_firmware_settings
+    icon: mdi:bug-check
+    on_press:
+      - logger.log:
+          format: "Checking for SAMBA firmware"
+          level: INFO
+          tag: "samba"
+      - ota.http_request.flash:
+          md5_url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.testing.md5
+          url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.testing.bin
 
 
 #### LOCATION FIELDS ####
