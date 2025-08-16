@@ -115,7 +115,7 @@ sound_level_meter:
 sensor:
   - platform: template
     id: samba_laeq
-    name: "Sound Pressure Level"
+    name: "LAeq"
     update_interval: never
     accuracy_decimals: 1
     device_class: sound_pressure
@@ -126,7 +126,7 @@ sensor:
 
   - platform: template
     id: samba_lamin
-    name: "SPL LAmin"
+    name: "LAmin"
     update_interval: never
     accuracy_decimals: 1
     device_class: sound_pressure
@@ -137,7 +137,7 @@ sensor:
 
   - platform: template
     id: samba_lamax
-    name: "SPL LAmax"
+    name: "LAmax"
     update_interval: never
     accuracy_decimals: 1
     device_class: sound_pressure
