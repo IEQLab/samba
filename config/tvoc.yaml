@@ -32,7 +32,7 @@ sensor:
 
 # Define TVOC measurements
   - platform: template
-    id: samba_voc
+    id: samba_tvoc
     name: "TVOC"
     update_interval: never
     accuracy_decimals: 0
