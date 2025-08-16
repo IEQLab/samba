@@ -13,7 +13,7 @@ script:
       - if:
           condition: 
             lambda: |-
-              return id(sys_uptime).state > 120;
+              return id(sys_uptime).state > 119;
           then:
             - light.turn_on:
                 id: samba_led
@@ -27,7 +27,7 @@ script:
             - component.update: samba_co2
             - component.update: samba_lux
             - component.update: samba_pm25
-            - component.update: samba_voc
+            - component.update: samba_tvoc
             - component.update: samba_nox
             - component.update: samba_laeq
             - component.update: samba_lamin
@@ -45,13 +45,13 @@ script:
             - sensor.template.publish:
                 id: samba_mrt
                 state: !lambda 'return id(samba_mrt).state;'
-            - delay: 100ms
+            - delay: 200ms
             - if:
                 condition: 
                   - switch.is_on: switch_influx
                 then:
                   - lambda: |-
-                      id(influx_writer).publish_now();
+                      id(influx).publish_now();
                   - logger.log:
                       format: "Influx upload"
                       level: INFO
