@@ -5,62 +5,52 @@
 
 
 # Define InfluxDB connection
-influxdb_writer:
-  id: influx_writer
-  use_ssl: true
+influxdb:
+  id: influx
+  http_request_id: http_client
+  time_id: sntp_time
   host: "${influx_host}"
   port: "${influx_port}"
   token: "${influx_token}"
-  org: "${influx_org}"
   bucket: "${influx_bucket}"
-  timestamp_unit: "s"
-  http_request_id: http_client
-  time_id: sntp_time
+  org: "${influx_org}"
+  use_ssl: true
   send_mac: true
+  timestamp_unit: "s"
+  update_interval: never
 
   # Define Influx measurements for sensors
   sensor_names:
-    air_temp: "Air Temperature"
-    rel_humidity: "Relative Humidity"
-    globe_temp: "Globe Temperature"
-    rad_temp: "Mean Radiant Temperature"
-    air_speed: "Air Speed"
-    co2: "Carbon Dioxide"
-    pm25: "PM2.5"
-    tvoc: "TVOC"
-    nox: "NOx Index"
-    illuminance: "Illuminance"
-    la_eq: "Sound Pressure Level"
-    la_min: "SPL LAmin"
-    la_max: "SPL LAmax"
-    wifi: "WiFi Signal"
-    uptime: "Device Uptime"
+    air_temperature: "air_temp"
+    relative_humidity: "rel_humidity"
+    globe_temperature: "globe_temp"
+    radiant_temperature: "rad_temp"
+    air_speed: "air_speed"
+    carbon_dioxide: "co2"
+    pm2_5: "pm25"
+    tvoc: "tvoc"
+    nox_index: "nox"
+    illuminance: "illuminance"
+    laeq: "la_eq"
+    lamin: "la_min"
+    lamax: "la_max"
+    wifi_signal: "wifi"
+    device_uptime: "uptime"
 
-  # Define Influx field keys
-  field_names:
-    air_temp: "value"
-    rel_humidity: "value"
-    globe_temp: "value"
-    rad_temp: "value"
-    air_speed: "value"
-    co2: "value"
-    pm25: "value"
-    tvoc: "value"
-    nox: "value"
-    illuminance: "value"
-    la_eq: "value"
-    la_min: "value"
-    la_max: "value"
-    wifi: "value"
-    uptime: "value"
+#  # Define Influx field keys (defaults to 'value')
+#  field_names:
+#    air_temp: "celsius"
 
-#   Define Influx tags for fields
-#   Note: these are overwritten at boot by below script
-#   sensor_tags:
-#     temp:
-#       building: "INSERT"
-#       level: "INSERT"
-#       zone: "INSERT"
+  # Define global tags applied to all measurements
+  global_tags:
+    building: "wilkinson"
+    level: "420"
+    zone: "testing"
+
+#  # Define measurement-specific tags
+#  sensor_tags:
+#    air_temperature:
+#      sensor_type: "sht4x"
 
 # Toggle Influx uploads
 switch:
@@ -76,70 +66,3 @@ switch:
       - lambda: 'id(influx_enable) = true;'
     turn_off_action:
       - lambda: 'id(influx_enable) = false;'
-
-# Define script to set tags on boot using global variables
-# https://esphome.io/components/script.html
-script:
-  - id: set_influx_tags
-    mode: single
-    then:
-      - lambda: |-
-          id(influx_writer).set_dynamic_tag("air_temp", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("air_temp", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("air_temp", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("rel_humidity", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("rel_humidity", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("rel_humidity", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("globe_temp", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("globe_temp", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("globe_temp", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("rad_temp", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("rad_temp", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("rad_temp", "zone", id(zone_tag));
-          
-          id(influx_writer).set_dynamic_tag("air_speed", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("air_speed", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("air_speed", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("co2", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("co2", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("co2", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("pm25", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("pm25", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("pm25", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("tvoc", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("tvoc", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("tvoc", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("nox", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("nox", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("nox", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("illuminance", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("illuminance", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("illuminance", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("la_eq", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("la_eq", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("la_eq", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("la_min", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("la_min", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("la_min", "zone", id(zone_tag));
-          
-          id(influx_writer).set_dynamic_tag("la_max", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("la_max", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("la_max", "zone", id(zone_tag));
-          
-          id(influx_writer).set_dynamic_tag("wifi", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("wifi", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("wifi", "zone", id(zone_tag));
-
-          id(influx_writer).set_dynamic_tag("uptime", "building", id(building_tag));
-          id(influx_writer).set_dynamic_tag("uptime", "level", id(level_tag));
-          id(influx_writer).set_dynamic_tag("uptime", "zone", id(zone_tag));
