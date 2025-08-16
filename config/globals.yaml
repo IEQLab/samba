@@ -10,38 +10,102 @@ globals:
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
+    initial_value: '"building"'
+
   - id: level_tag
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
+    initial_value: '"level"'
+
   - id: zone_tag
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
+    initial_value: '"zone"'
+
   - id: influx_enable
     type: bool
     restore_value: yes
-  - id: calibration_co2
-    type: double[2]
+    initial_value: 'true'
+
+  # CO2 calibration (y = mx + b)
+  - id: calibration_co2_m
+    type: double
     restore_value: yes
-  - id: calibration_lux
-    type: double[2]
+    initial_value: '1.015844'
+  - id: calibration_co2_b
+    type: double
     restore_value: yes
-  - id: calibration_ta
-    type: double[2]
+    initial_value: '20.139092'
+
+  # Illuminance calibration
+  - id: calibration_lux_m
+    type: double
     restore_value: yes
-  - id: calibration_rh
-    type: double[2]
+    initial_value: '5.988641'
+  - id: calibration_lux_b
+    type: double
     restore_value: yes
-  - id: calibration_tg
-    type: double[2]
+    initial_value: '0.0'
+
+  # Air temperature calibration
+  - id: calibration_ta_m
+    type: double
     restore_value: yes
-  - id: calibration_as1
-    type: double[3]
+    initial_value: '0.9750601'
+  - id: calibration_ta_b
+    type: double
     restore_value: yes
-  - id: calibration_as2
-    type: double[3]
+    initial_value: '-3.9853163'
+
+  # RH calibration
+  - id: calibration_rh_m
+    type: double
     restore_value: yes
+    initial_value: '0.8839748'
+  - id: calibration_rh_b
+    type: double
+    restore_value: yes
+    initial_value: '15.0758039'
+
+  # Globe temperature calibration
+  - id: calibration_tg_m
+    type: double
+    restore_value: yes
+    initial_value: '0.9093902'
+  - id: calibration_tg_b
+    type: double
+    restore_value: yes
+    initial_value: '0.6127004'
+
+  # Air speed 1 calibration (power function)
+  - id: calibration_as1_c
+    type: double
+    restore_value: yes
+    initial_value: '0.000878414013334'
+  - id: calibration_as1_m
+    type: double
+    restore_value: yes
+    initial_value: '1.446429921572743'
+  - id: calibration_as1_b
+    type: double
+    restore_value: yes
+    initial_value: '1.344253500261520'
+
+  # Air speed 2 calibration
+  - id: calibration_as2_c
+    type: double
+    restore_value: yes
+    initial_value: '0.000700721710849'
+  - id: calibration_as2_m
+    type: double
+    restore_value: yes
+    initial_value: '1.592948717475052'
+  - id: calibration_as2_b
+    type: double
+    restore_value: yes
+    initial_value: '1.389994766781412'
 
 # Define flash write interval
 # https://esphome.io/components/esphome.html#preferences-component

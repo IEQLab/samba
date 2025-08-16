@@ -5,26 +5,32 @@
 
 
 # Configure i2s
-# https://github.com/stas-sl/esphome-sound-level-meter
-i2s:
-  bck_pin: GPIO13
-  ws_pin: GPIO33
-  din_pin: GPIO32
-  sample_rate: 48000
-  bits_per_sample: 32
-  dma_buf_count: 8
-  dma_buf_len: 256
-  use_apll: true
-  channel: right
-  bits_shift: 8
+# https://esphome.io/components/microphone/i2s_audio
+i2s_audio: 
+  i2s_lrclk_pin: GPIO33
+  i2s_bclk_pin: GPIO13
+
+# Define microphone
+# https://esphome.io/components/microphone/i2s_audio
+microphone:
+  - platform: i2s_audio
+    id: samba_mic
+    adc_type: external
+    i2s_din_pin: GPIO32
+    channel: right
+    sample_rate: 48000
+    bits_per_sample: 32bit
+    i2s_mode: primary
 
 # Define SPL sensor
 sound_level_meter:
   id: sound_spl
-  update_interval: 30s
-  is_on: true
-  buffer_size: 1024  # buffer_size in samples
-  warmup_interval: 1000ms # ignore audio data at startup
+  microphone: 
+    microphone: samba_mic
+    bits_per_sample: 32
+  auto_start: true
+  ring_buffer_size: 100ms
+  warmup_interval: 500ms
 
   # audio processing task
   task_stack_size: 4096
@@ -109,7 +115,7 @@ sound_level_meter:
 sensor:
   - platform: template
     id: samba_laeq
-    name: "Sound Pressure Level"
+    name: "LAeq"
     update_interval: never
     accuracy_decimals: 1
     device_class: sound_pressure
@@ -120,7 +126,7 @@ sensor:
 
   - platform: template
     id: samba_lamin
-    name: "SPL LAmin"
+    name: "LAmin"
     update_interval: never
     accuracy_decimals: 1
     device_class: sound_pressure
@@ -131,7 +137,7 @@ sensor:
 
   - platform: template
     id: samba_lamax
-    name: "SPL LAmax"
+    name: "LAmax"
     update_interval: never
     accuracy_decimals: 1
     device_class: sound_pressure

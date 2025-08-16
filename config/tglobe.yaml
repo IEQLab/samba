@@ -44,12 +44,12 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
-      return ((id(calibration_tg)[0] * id(ntc_temperature).state) + id(calibration_tg)[1]);
+      return ((id(calibration_tg_m) * id(ntc_temperature).state) + id(calibration_tg_b));
 
 # Define mean radiant temperature measurements
   - platform: template
     id: samba_mrt
-    name: "Mean Radiant Temperature"
+    name: "Radiant Temperature"
     update_interval: never
     accuracy_decimals: 1
     device_class: temperature

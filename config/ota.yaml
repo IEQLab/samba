@@ -27,7 +27,7 @@ ota:
 http_request:
     id: http_client
     verify_ssl: false
-    timeout: 5s
+    timeout: 10s
     watchdog_timeout: 8s
 
 # Explicitly enable safe mode

@@ -12,7 +12,7 @@ sensor:
     address: 0x69
     internal: true
     update_interval: 15s
-    abc_interval: 0s
+    abc_interval: 180h
     retry_delay_ms: 100
     max_retries: 5
     filters:
@@ -30,11 +30,11 @@ sensor:
   - platform: template
     id: samba_co2
     name: "Carbon Dioxide"
-    update_interval: 180h
+    update_interval: never
     accuracy_decimals: 0
     device_class: carbon_dioxide
     unit_of_measurement: "ppm"
     icon: mdi:molecule-co2
     filters:
       - lambda: |-
-          return ((id(calibration_co2)[0] * id(k30_co2).state) + id(calibration_co2)[1]);
+          return ((id(calibration_co2_m) * id(k30_co2).state) + id(calibration_co2_b));

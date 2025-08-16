@@ -1,9 +1,8 @@
 #include "sound_level_meter.h"
 
-namespace esphome {
-namespace sound_level_meter {
+namespace esphome::sound_level_meter {
 
-static const char *const TAG = "sound_level_meter";
+static constexpr const char *TAG = "sound_level_meter";
 
 // By definition dBFS value of a full-scale sine wave equals to 0.
 // Since the RMS of the full-scale sine wave is 1/sqrt(2), multiplying rms(signal) by sqrt(2)
@@ -11,16 +10,24 @@ static const char *const TAG = "sound_level_meter";
 // This is equivalent to adding DBFS_OFFSET
 // see: https://dsp.stackexchange.com/a/50947/65262
 static constexpr float DBFS_OFFSET = 20 * log10(sqrt(2));
+static constexpr uint32_t AUDIO_BUFFER_DURATION_MS = 20;
 
 /* SoundLevelMeter */
 
-void SoundLevelMeter::set_update_interval(uint32_t update_interval) { this->update_interval_ = update_interval; }
-uint32_t SoundLevelMeter::get_update_interval() { return this->update_interval_; }
-void SoundLevelMeter::set_buffer_size(uint32_t buffer_size) { this->buffer_size_ = buffer_size; }
-uint32_t SoundLevelMeter::get_buffer_size() { return this->buffer_size_; }
-uint32_t SoundLevelMeter::get_sample_rate() { return this->i2s_->get_sample_rate(); }
-void SoundLevelMeter::set_i2s(i2s::I2SComponent *i2s) { this->i2s_ = i2s; }
-void SoundLevelMeter::set_warmup_interval(uint32_t warmup_interval) { this->warmup_interval_ = warmup_interval; }
+void SoundLevelMeter::set_update_interval(uint32_t update_interval_ms) {
+  this->update_interval_ms_ = update_interval_ms;
+}
+uint32_t SoundLevelMeter::get_update_interval() { return this->update_interval_ms_; }
+void SoundLevelMeter::set_ring_buffer_size(uint32_t ring_buffer_size_ms) {
+  this->ring_buffer_size_ms_ = ring_buffer_size_ms;
+}
+uint32_t SoundLevelMeter::get_ring_buffer_size() { return this->ring_buffer_size_ms_; }
+void SoundLevelMeter::set_microphone_source(microphone::MicrophoneSource *microphone_source) {
+  this->microphone_source_ = microphone_source;
+}
+void SoundLevelMeter::set_warmup_interval(uint32_t warmup_interval_ms) {
+  this->warmup_interval_ms_ = warmup_interval_ms;
+}
 void SoundLevelMeter::set_task_stack_size(uint32_t task_stack_size) { this->task_stack_size_ = task_stack_size; }
 void SoundLevelMeter::set_task_priority(uint8_t task_priority) { this->task_priority_ = task_priority; }
 void SoundLevelMeter::set_task_core(uint8_t task_core) { this->task_core_ = task_core; }
@@ -33,16 +40,27 @@ optional<float> SoundLevelMeter::get_mic_sensitivity_ref() { return this->mic_se
 void SoundLevelMeter::set_offset(optional<float> offset) { this->offset_ = offset; }
 optional<float> SoundLevelMeter::get_offset() { return this->offset_; }
 void SoundLevelMeter::set_is_high_freq(bool is_high_freq) { this->is_high_freq_ = is_high_freq; }
+void SoundLevelMeter::set_is_auto_start(bool is_auto_start) { this->is_auto_start_ = is_auto_start; }
 void SoundLevelMeter::add_sensor(SoundLevelMeterSensor *sensor) { this->sensors_.push_back(sensor); }
 void SoundLevelMeter::add_dsp_filter(Filter *dsp_filter) { this->dsp_filters_.push_back(dsp_filter); }
 
+audio::AudioStreamInfo SoundLevelMeter::get_audio_stream_info() const {
+  return this->microphone_source_->get_audio_stream_info();
+}
+
+uint32_t SoundLevelMeter::ms_to_frames(uint32_t ms) {
+  return this->get_audio_stream_info().get_sample_rate() * (ms / 1000.f);
+}
+
 void SoundLevelMeter::dump_config() {
   ESP_LOGCONFIG(TAG, "Sound Level Meter:");
-  ESP_LOGCONFIG(TAG, "  Buffer Size: %u (samples)", this->buffer_size_);
-  ESP_LOGCONFIG(TAG, "  Warmup Interval: %u ms", this->warmup_interval_);
-  ESP_LOGCONFIG(TAG, "  Task Stack Size: %u", this->task_stack_size_);
+  ESP_LOGCONFIG(TAG, "  Ring Buffer Size: %u ms)", this->ring_buffer_size_ms_);
+  ESP_LOGCONFIG(TAG, "  Warmup Interval: %lu ms", this->warmup_interval_ms_);
+  ESP_LOGCONFIG(TAG, "  Task Stack Size: %lu", this->task_stack_size_);
   ESP_LOGCONFIG(TAG, "  Task Priority: %u", this->task_priority_);
   ESP_LOGCONFIG(TAG, "  Task Core: %u", this->task_core_);
+  ESP_LOGCONFIG(TAG, "  High Freq: %s", YESNO(this->is_high_freq_));
+  ESP_LOGCONFIG(TAG, "  Auto Start: %s", YESNO(this->is_auto_start_));
   LOG_UPDATE_INTERVAL(this);
   ESP_LOGCONFIG(TAG, "Sensors:");
   for (auto *s : this->sensors_)
@@ -51,82 +69,147 @@ void SoundLevelMeter::dump_config() {
 
 void SoundLevelMeter::setup() {
   this->sort_sensors();
-  xTaskCreatePinnedToCore(SoundLevelMeter::task, "sound_level_meter", this->task_stack_size_, this,
-                          this->task_priority_, nullptr, this->task_core_);
+
+  this->microphone_source_->add_data_callback([this](const std::vector<uint8_t> &data) {
+    auto ring_buffer = this->ring_buffer_weak_.lock();
+    if (ring_buffer) {
+      size_t bytes_free = ring_buffer->free();
+      if (bytes_free < data.size()) {
+        defer([] { ESP_LOGW(TAG, "Not enough free bytes in ring buffer to store incoming audio data."); });
+      }
+      ring_buffer->write((void *) data.data(), data.size());
+      this->ring_buffer_stats_free_ = std::min(ring_buffer->free(), this->ring_buffer_stats_free_);
+    }
+  });
+
+  if (this->is_auto_start_) {
+    this->start();
+  }
 }
 
 void SoundLevelMeter::loop() {
-  std::lock_guard<std::mutex> lock(this->defer_mutex_);
-  if (!this->defer_queue_.empty()) {
-    auto &f = this->defer_queue_.front();
+  // Process no more than 5 items per loop iteration.
+  // When there are many sensors with short update intervals,
+  // a large number of state updates (publish_state) may be queued.
+  // Publishing state is a relatively expensive operation, so calling
+  // it more than 10–20 times per iteration could trigger a warning
+  // that the component is taking too long to operate. Therefore, we
+  // limit the number of updates per iteration. The loop runs approximately
+  // 100 times per second, so any remaining items will be processed
+  // in the next iteration. Processing only one item per iteration is too
+  // restrictive, as in extreme cases with many updates - say,
+  // 100 per second - we might hit performance limits. Thus, we set a maximum
+  // of 5 items per iteration, allowing up to 500 sensor updates per second
+  // in theory, which should be more than sufficient for most scenarios.
+  std::vector<std::function<void()>> tasks;
+  {
+    uint32_t max_items = 5;
+    std::lock_guard<std::mutex> lock(this->defer_mutex_);
+    for (int i = 0; i < max_items && !this->defer_queue_.empty(); i++) {
+      tasks.push_back(std::move(this->defer_queue_.front()));
+      this->defer_queue_.pop_front();
+    }
+  }
+  for (auto &f : tasks) {
     f();
-    this->defer_queue_.pop_front();
   }
 }
 
-void SoundLevelMeter::turn_on() {
-  std::lock_guard<std::mutex> lock(this->on_mutex_);
-  this->reset();
-  this->is_on_ = true;
-  this->on_cv_.notify_one();
-  if (this->is_high_freq_)
-    this->high_freq_.start();
-  ESP_LOGD(TAG, "Turned on");
+void SoundLevelMeter::start() {
+  if (!this->is_running_) {
+    xTaskCreatePinnedToCore(SoundLevelMeter::task, "sound_level_meter", this->task_stack_size_, this,
+                            this->task_priority_, &this->task_handle_, this->task_core_);
+    ESP_LOGD(TAG, "Sound Level Meter started");
+  }
 }
 
-void SoundLevelMeter::turn_off() {
-  std::lock_guard<std::mutex> lock(this->on_mutex_);
-  this->reset();
-  this->is_on_ = false;
-  this->on_cv_.notify_one();
-  if (this->is_high_freq_)
-    this->high_freq_.stop();
-  ESP_LOGD(TAG, "Turned off");
+void SoundLevelMeter::stop() {
+  if (this->is_running() && !this->is_pending_stop_) {
+    this->is_pending_stop_ = true;
+    ESP_LOGD(TAG, "Sound Level Meter stopped");
+  }
 }
 
-void SoundLevelMeter::toggle() {
-  if (this->is_on_)
-    this->turn_off();
-  else
-    this->turn_on();
-}
-
-bool SoundLevelMeter::is_on() { return this->is_on_; }
+bool SoundLevelMeter::is_running() { return this->is_running_; }
 
 void SoundLevelMeter::task(void *param) {
   SoundLevelMeter *this_ = reinterpret_cast<SoundLevelMeter *>(param);
-  BufferStack<float> buffers(this_->buffer_size_);
+  this_->is_running_ = true;
+  {
+    this_->ring_buffer_ = RingBuffer::create(this_->get_audio_stream_info().ms_to_bytes(this_->ring_buffer_size_ms_));
+    this_->ring_buffer_weak_ = this_->ring_buffer_;
+    BufferStack<float> buffers(this_->ms_to_frames(AUDIO_BUFFER_DURATION_MS));
 
-  auto warmup_start = millis();
-  while (millis() - warmup_start < this_->warmup_interval_)
-    this_->i2s_->read_samples(buffers);
-  uint32_t process_time = 0, process_count = 0;
-  uint64_t process_start;
-  if (this_->is_on_ && this_->is_high_freq_)
-    this_->high_freq_.start();
-  while (1) {
-    {
-      std::unique_lock<std::mutex> lock(this_->on_mutex_);
-      this_->on_cv_.wait(lock, [this_] { return this_->is_on_; });
+    this_->reset();
+
+    this_->microphone_source_->start();
+
+    for (auto &s : this_->sensors_) {
+      s->update_samples_ = this_->ms_to_frames(s->update_interval_ms_);
     }
-    buffers.reset();
-    if (this_->i2s_->read_samples(buffers)) {
-      process_start = esp_timer_get_time();
 
-      this_->process(buffers);
+    if (this_->is_high_freq_)
+      this_->high_freq_.start();
 
-      process_time += esp_timer_get_time() - process_start;
-      process_count += buffers.current().size();
+    auto warmup_start = millis();
+    while (millis() - warmup_start < this_->warmup_interval_ms_)
+      this_->read_samples(buffers, 2 * pdMS_TO_TICKS(AUDIO_BUFFER_DURATION_MS));
 
-      auto sr = this_->get_sample_rate();
-      if (process_count >= sr * (this_->update_interval_ / 1000.f)) {
-        auto t = uint32_t(float(process_time) / process_count * (sr / 1000.f));
-        auto cpu_util = float(process_time) / 1000 / this_->update_interval_;
-        ESP_LOGD(TAG, "CPU (Core %u) Utilization: %.1f %%", xPortGetCoreID(), cpu_util * 100);
-        process_time = process_count = 0;
+    uint32_t process_time = 0, process_count = 0;
+    uint64_t process_start;
+
+    while (!this_->is_pending_stop_) {
+      if (!this_->microphone_source_->is_running()) {
+        if (!this_->status_has_warning()) {
+          this_->status_set_warning("Microphone isn't running, can't compute statistics");
+          this_->reset();
+        }
+        delay(AUDIO_BUFFER_DURATION_MS);
+        continue;
+      }
+
+      if (this_->status_has_warning()) {
+        this_->status_clear_warning();
+      }
+
+      buffers.reset();
+
+      if (this_->read_samples(buffers, 2 * pdMS_TO_TICKS(AUDIO_BUFFER_DURATION_MS)) > 0) {
+        process_start = esp_timer_get_time();
+
+        this_->process(buffers);
+
+        process_time += esp_timer_get_time() - process_start;
+        process_count += buffers.current().size();
+
+        if (process_count >= this_->ms_to_frames(this_->update_interval_ms_)) {
+          auto cpu_util = float(process_time) / 1000 / this_->update_interval_ms_;
+          auto rb_size = this_->ring_buffer_->available() + this_->ring_buffer_->free();
+          auto rb_util = float(rb_size - this_->ring_buffer_stats_free_) / rb_size;
+          auto core = xPortGetCoreID();
+          this_->defer([cpu_util, rb_util, core]() {
+            ESP_LOGD(TAG, "CPU (Core %u) Utilization: %.1f%%, Ring Buffer Utilization: %.1f%%", core, cpu_util * 100,
+                     rb_util * 100);
+          });
+          process_time = process_count = 0;
+          this_->ring_buffer_stats_free_ = SIZE_MAX;
+        }
       }
     }
   }
+  this_->ring_buffer_.reset();
+  this_->microphone_source_->stop();
+
+  if (this_->is_high_freq_)
+    this_->high_freq_.stop();
+
+  this_->reset();
+
+  this_->is_running_ = false;
+  this_->is_pending_stop_ = false;
+  auto handle = this_->task_handle_;
+  this_->task_handle_ = nullptr;
+  vTaskDelete(handle);
 }
 
 // Arranging sensors in a sorted order so that those with the same
@@ -137,6 +220,21 @@ void SoundLevelMeter::sort_sensors() {
     return std::lexicographical_compare(a->dsp_filters_.begin(), a->dsp_filters_.end(), b->dsp_filters_.begin(),
                                         b->dsp_filters_.end());
   });
+}
+
+size_t SoundLevelMeter::read_samples(std::vector<float> &data, TickType_t ticks_to_wait) {
+  uint8_t bytes_per_sample = this->get_audio_stream_info().samples_to_bytes(1);
+
+  size_t bytes_read = this->ring_buffer_->read(data.data(), data.size() * bytes_per_sample, ticks_to_wait);
+  size_t samples_read = bytes_read / bytes_per_sample;
+  if (samples_read > 0) {
+    data.resize(samples_read);
+    auto data_as_uint8 = reinterpret_cast<const uint8_t *>(data.data());
+    for (int i = bytes_read - bytes_per_sample, j = samples_read - 1; i >= 0; i -= bytes_per_sample, j--) {
+      data[j] = audio::unpack_audio_sample_to_q31(&data_as_uint8[i], bytes_per_sample) / float(INT32_MAX);
+    }
+  }
+  return samples_read;
 }
 
 void SoundLevelMeter::process(BufferStack<float> &buffers) {
@@ -180,11 +278,12 @@ void SoundLevelMeter::reset() {
 
 void SoundLevelMeterSensor::set_parent(SoundLevelMeter *parent) {
   this->parent_ = parent;
-  this->update_samples_ = parent->get_sample_rate() * (parent->get_update_interval() / 1000.f);
+  this->set_update_interval(parent->get_update_interval());
 }
 
-void SoundLevelMeterSensor::set_update_interval(uint32_t update_interval) {
-  this->update_samples_ = this->parent_->get_sample_rate() * (update_interval / 1000.f);
+void SoundLevelMeterSensor::set_update_interval(uint32_t update_interval_ms) {
+  this->update_interval_ms_ = update_interval_ms;
+  this->update_samples_ = this->parent_->ms_to_frames(update_interval_ms);
 }
 
 void SoundLevelMeterSensor::add_dsp_filter(Filter *dsp_filter) { this->dsp_filters_.push_back(dsp_filter); }
@@ -242,8 +341,8 @@ void SoundLevelMeterSensorEq::reset() {
 
 /* SoundLevelMeterSensorMax */
 
-void SoundLevelMeterSensorMax::set_window_size(uint32_t window_size) {
-  this->window_samples_ = this->parent_->get_sample_rate() * (window_size / 1000.f);
+void SoundLevelMeterSensorMax::set_window_size(uint32_t window_size_ms) {
+  this->window_samples_ = this->parent_->ms_to_frames(window_size_ms);
 }
 
 void SoundLevelMeterSensorMax::process(std::vector<float> &buffer) {
@@ -276,8 +375,8 @@ void SoundLevelMeterSensorMax::reset() {
 
 /* SoundLevelMeterSensorMin */
 
-void SoundLevelMeterSensorMin::set_window_size(uint32_t window_size) {
-  this->window_samples_ = this->parent_->get_sample_rate() * (window_size / 1000.f);
+void SoundLevelMeterSensorMin::set_window_size(uint32_t window_size_ms) {
+  this->window_samples_ = this->parent_->ms_to_frames(window_size_ms);
 }
 
 void SoundLevelMeterSensorMin::process(std::vector<float> &buffer) {
@@ -340,11 +439,21 @@ SOS_Filter::SOS_Filter(std::initializer_list<std::initializer_list<float>> &&coe
     std::copy(row.begin(), row.end(), coeffs_[i++].begin());
 }
 
-// direct form 2 transposed
 void SOS_Filter::process(std::vector<float> &data) {
   int n = data.size();
   int m = this->coeffs_.size();
   for (int j = 0; j < m; j++) {
+#ifdef USE_ESP_DSP  // esp-dsp uses direct form 2
+#if defined(USE_ESP32_VARIANT_ESP32)
+    dsps_biquad_f32_ae32(&data[0], &data[0], data.size(), &this->coeffs_[j][0], &this->state_[j][0]);
+#elif defined(USE_ESP32_VARIANT_ESP32S3)
+    dsps_biquad_f32_aes3(&data[0], &data[0], data.size(), &this->coeffs_[j][0], &this->state_[j][0]);
+#elif defined(USE_ESP32_VARIANT_ESP32P4)
+    dsps_biquad_f32_arp4(&data[0], &data[0], data.size(), &this->coeffs_[j][0], &this->state_[j][0]);
+#else
+    dsps_biquad_f32_ansi(&data[0], &data[0], data.size(), &this->coeffs_[j][0], &this->state_[j][0]);
+#endif
+#else  // I'm using direct form 2 transposed, which should be a bit more numerically stable
     for (int i = 0; i < n; i++) {
       // y[i] = b0 * x[i] + s0
       float yi = this->coeffs_[j][0] * data[i] + this->state_[j][0];
@@ -355,6 +464,7 @@ void SOS_Filter::process(std::vector<float> &data) {
 
       data[i] = yi;
     }
+#endif
   }
 }
 
@@ -391,9 +501,11 @@ template<typename T> void BufferStack<T>::pop() {
   this->index_--;
 }
 
-template<typename T> void BufferStack<T>::reset() { this->index_ = 0; }
+template<typename T> void BufferStack<T>::reset() {
+  this->index_ = 0;
+  this->current().resize(this->buffer_size_);
+}
 
 template<typename T> BufferStack<T>::operator std::vector<T> &() { return this->current(); }
 
-}  // namespace sound_level_meter
-}  // namespace esphome
+}  // namespace esphome::sound_level_meter

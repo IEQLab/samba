@@ -7,7 +7,7 @@
 # Define sensor
 sensor:
   - platform: sgp4x
-    update_interval: 60s
+    update_interval: 30s
     compensation:
       temperature_source: sht_temperature
       humidity_source: sht_humidity
@@ -18,21 +18,21 @@ sensor:
         learning_time_offset_hours: 720
       filters:
         - median:
-            window_size: 5
-            send_every: 1
+            window_size: 10
+            send_every: 2
             send_first_at: 1
     nox:
       id: sgp_nox
       internal: true
       filters:
         - median:
-            window_size: 5
-            send_every: 1
+            window_size: 10
+            send_every: 2
             send_first_at: 1
 
 # Define TVOC measurements
   - platform: template
-    id: samba_voc
+    id: samba_tvoc
     name: "TVOC"
     update_interval: never
     accuracy_decimals: 0

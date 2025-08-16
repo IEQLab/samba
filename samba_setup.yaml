@@ -11,48 +11,101 @@ globals:
     max_restore_data_length: 24
     restore_value: yes
     initial_value: '"building"'
+
   - id: level_tag
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
     initial_value: '"level"'
+
   - id: zone_tag
     type: std::string
     max_restore_data_length: 24
     restore_value: yes
     initial_value: '"zone"'
+
   - id: influx_enable
     type: bool
     restore_value: yes
     initial_value: 'true'
-  - id: calibration_co2
-    type: double[2]
+
+  # CO2 Calibration (y = mx + b)
+  - id: calibration_co2_m
+    type: double
     restore_value: yes
-    initial_value: '{1.015844, 20.139092}'
-  - id: calibration_lux
-    type: double[2]
+    initial_value: '1.015844'
+  - id: calibration_co2_b
+    type: double
     restore_value: yes
-    initial_value: '{5.988641, 0.0}'
-  - id: calibration_ta
-    type: double[2]
+    initial_value: '20.139092'
+
+  # Lux Calibration
+  - id: calibration_lux_m
+    type: double
     restore_value: yes
-    initial_value: '{0.9750601, -3.9853163}'
-  - id: calibration_rh
-    type: double[2]
+    initial_value: '5.988641'
+  - id: calibration_lux_b
+    type: double
     restore_value: yes
-    initial_value: '{0.8839748, 15.0758039}'
-  - id: calibration_tg
-    type: double[2]
+    initial_value: '0.0'
+
+  # Ta Calibration
+  - id: calibration_ta_m
+    type: double
     restore_value: yes
-    initial_value: '{0.9093902, 0.6127004}'
-  - id: calibration_as1
-    type: double[3]
+    initial_value: '0.9750601'
+  - id: calibration_ta_b
+    type: double
     restore_value: yes
-    initial_value: '{0.000878414013334, 1.446429921572743, 1.344253500261520}'
-  - id: calibration_as2
-    type: double[3]
+    initial_value: '-3.9853163'
+
+  # RH Calibration
+  - id: calibration_rh_m
+    type: double
     restore_value: yes
-    initial_value: '{0.000700721710849, 1.592948717475052, 1.389994766781412}'
+    initial_value: '0.8839748'
+  - id: calibration_rh_b
+    type: double
+    restore_value: yes
+    initial_value: '15.0758039'
+
+  # Tg Calibration
+  - id: calibration_tg_m
+    type: double
+    restore_value: yes
+    initial_value: '0.9093902'
+  - id: calibration_tg_b
+    type: double
+    restore_value: yes
+    initial_value: '0.6127004'
+
+  # Air speed 1 Calibration
+  - id: calibration_as1_a
+    type: double
+    restore_value: yes
+    initial_value: '0.000878414013334'
+  - id: calibration_as1_b
+    type: double
+    restore_value: yes
+    initial_value: '1.446429921572743'
+  - id: calibration_as1_c
+    type: double
+    restore_value: yes
+    initial_value: '1.344253500261520'
+
+  # Air speed 2 Calibration
+  - id: calibration_as2_a
+    type: double
+    restore_value: yes
+    initial_value: '0.000700721710849'
+  - id: calibration_as2_b
+    type: double
+    restore_value: yes
+    initial_value: '1.592948717475052'
+  - id: calibration_as2_c
+    type: double
+    restore_value: yes
+    initial_value: '1.389994766781412'
 
 # Make sure they get written to flash
 # https://esphome.io/components/esphome.html#preferences-component
@@ -79,7 +132,24 @@ esp32:
   board: esp32dev
   flash_size: 16MB
   framework:
-    type: arduino
+    type: esp-idf
+
+# Define i2c
+# https://esphome.io/components/i2c
+i2c:
+  - id: bus_a
+    scl: GPIO25
+    sda: GPIO26
+    scan: true
+    frequency: 100kHz
+
+# Configure UART
+# https://esphome.io/components/uart
+uart:
+  - id: uart_pm
+    rx_pin: GPIO16
+    tx_pin: GPIO17
+    baud_rate: 9600
 
 # Define status LED component
 light:
@@ -164,7 +234,7 @@ web_server:
   port: 80
   version: 3
   log: true
-  ota: false
+#  ota: false
   sorting_groups:
     - id: sort_location_settings
       name: "Location Tags"
@@ -224,7 +294,7 @@ text:
     web_server:
       sorting_group_id: sort_location_settings
     mode: text
-    update_interval: 10s
+    update_interval: 60s
     min_length: 1
     max_length: 24
     restore_value: true
@@ -240,7 +310,7 @@ text:
     web_server:
       sorting_group_id: sort_location_settings
     mode: text
-    update_interval: 10s
+    update_interval: 60s
     min_length: 1
     max_length: 24
     restore_value: true
@@ -256,7 +326,7 @@ text:
     web_server:
       sorting_group_id: sort_location_settings
     mode: text
-    update_interval: 10s
+    update_interval: 60s
     min_length: 1
     max_length: 24
     restore_value: true
@@ -280,12 +350,12 @@ number:
     min_value: 0
     max_value: 100
     step: 0.001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_co2)[0];
+      return id(calibration_co2_m);
     set_action:
       - lambda: |-
-          id(calibration_co2)[0] = x;
+          id(calibration_co2_m) = x;
 
   - platform: template
     name: "CO₂ offset (b)"
@@ -296,12 +366,12 @@ number:
     min_value: 0
     max_value: 100
     step: 0.001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_co2)[1];
+      return id(calibration_co2_b);
     set_action:
       - lambda: |-
-          id(calibration_co2)[1] = x;
+          id(calibration_co2_b) = x;
 
   - platform: template
     name: "Lux slope (m)"
@@ -312,12 +382,12 @@ number:
     min_value: 0
     max_value: 100
     step: 0.001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_lux)[0];
+      return id(calibration_lux_m);
     set_action:
       - lambda: |-
-          id(calibration_lux)[0] = x;
+          id(calibration_lux_m) = x;
 
   - platform: template
     name: "Lux offset (b)"
@@ -328,12 +398,12 @@ number:
     min_value: -100
     max_value: 100
     step: 0.001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_lux)[1];
+      return id(calibration_lux_b);
     set_action:
       - lambda: |-
-          id(calibration_lux)[1] = x;
+          id(calibration_lux_b) = x;
 
   - platform: template
     name: "Air Temp slope (m)"
@@ -344,12 +414,12 @@ number:
     min_value: 0
     max_value: 5
     step: 0.0001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_ta)[0];
+      return id(calibration_ta_m);
     set_action:
       - lambda: |-
-          id(calibration_ta)[0] = x;
+          id(calibration_ta_m) = x;
 
   - platform: template
     name: "Air Temp offset (b)"
@@ -360,12 +430,12 @@ number:
     min_value: -50
     max_value: 50
     step: 0.01
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_ta)[1];
+      return id(calibration_ta_b);
     set_action:
       - lambda: |-
-          id(calibration_ta)[1] = x;
+          id(calibration_ta_b) = x;
 
   - platform: template
     name: "Relative Humidity slope (m)"
@@ -376,12 +446,12 @@ number:
     min_value: 0
     max_value: 2
     step: 0.001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_rh)[0];
+      return id(calibration_rh_m);
     set_action:
       - lambda: |-
-          id(calibration_rh)[0] = x;
+          id(calibration_rh_m) = x;
 
   - platform: template
     name: "Relative Humidity offset (b)"
@@ -392,12 +462,12 @@ number:
     min_value: -50
     max_value: 100
     step: 0.01
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_rh)[1];
+      return id(calibration_rh_b);
     set_action:
       - lambda: |-
-          id(calibration_rh)[1] = x;
+          id(calibration_rh_b) = x;
 
   - platform: template
     name: "Globe Temp slope (m)"
@@ -408,12 +478,12 @@ number:
     min_value: 0
     max_value: 2
     step: 0.001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_tg)[0];
+      return id(calibration_tg_m);
     set_action:
       - lambda: |-
-          id(calibration_tg)[0] = x;
+          id(calibration_tg_m) = x;
 
   - platform: template
     name: "Globe Temp offset (b)"
@@ -424,12 +494,12 @@ number:
     min_value: -10
     max_value: 10
     step: 0.01
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_tg)[1];
+      return id(calibration_tg_b);
     set_action:
       - lambda: |-
-          id(calibration_tg)[1] = x;
+          id(calibration_tg_b) = x;
 
   - platform: template
     name: "Air Speed 1 - a"
@@ -440,12 +510,12 @@ number:
     min_value: 0.0
     max_value: 1.0
     step: 0.000001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_as1)[0];
+      return id(calibration_as1_a);
     set_action:
       - lambda: |-
-          id(calibration_as1)[0] = x;
+          id(calibration_as1_a) = x;
 
   - platform: template
     name: "Air Speed 1 - b"
@@ -456,12 +526,12 @@ number:
     min_value: 0.0
     max_value: 5.0
     step: 0.0001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_as1)[1];
+      return id(calibration_as1_b);
     set_action:
       - lambda: |-
-          id(calibration_as1)[1] = x;
+          id(calibration_as1_b) = x;
 
   - platform: template
     name: "Air Speed 1 - c"
@@ -472,12 +542,12 @@ number:
     min_value: 0.0
     max_value: 5.0
     step: 0.0001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_as1)[2];
+      return id(calibration_as1_c);
     set_action:
       - lambda: |-
-          id(calibration_as1)[2] = x;
+          id(calibration_as1_c) = x;
 
   - platform: template
     name: "Air Speed 2 - a"
@@ -488,12 +558,12 @@ number:
     min_value: 0.0
     max_value: 1.0
     step: 0.000001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_as2)[0];
+      return id(calibration_as2_a);
     set_action:
       - lambda: |-
-          id(calibration_as2)[0] = x;
+          id(calibration_as2_a) = x;
 
   - platform: template
     name: "Air Speed 2 - b"
@@ -504,12 +574,12 @@ number:
     min_value: 0.0
     max_value: 5.0
     step: 0.0001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_as2)[1];
+      return id(calibration_as2_b);
     set_action:
       - lambda: |-
-          id(calibration_as2)[1] = x;
+          id(calibration_as2_b) = x;
 
   - platform: template
     name: "Air Speed 2 - c"
@@ -520,12 +590,12 @@ number:
     min_value: 0.0
     max_value: 5.0
     step: 0.000001
-    update_interval: 10s
+    update_interval: 60s
     lambda: |-
-      return id(calibration_as2)[2];
+      return id(calibration_as2_c);
     set_action:
       - lambda: |-
-          id(calibration_as2)[2] = x;
+          id(calibration_as2_c) = x;
 
 
 #### UPLOAD TOGGLES ####
