@@ -279,9 +279,8 @@ button:
           format: "Checking for SAMBA firmware"
           level: INFO
           tag: "samba"
-      - ota.http_request.flash:
-          md5_url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.md5
-          url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.ota.bin
+      - update.perform:
+          id: fw_update
   - platform: template
     name: "Deploy test firmware"
     id: button_testing
@@ -294,8 +293,8 @@ button:
           level: INFO
           tag: "samba"
       - ota.http_request.flash:
-          md5_url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.testing.md5
-          url: https://github.com/IEQLab/samba/raw/main/firmware/firmware.testing.bin
+          url: https://github.com/IEQLab/samba/raw/main/firmware/samba_testing.bin
+          md5_url: https://github.com/IEQLab/samba/raw/main/firmware/samba_testing.md5
 
 
 #### LOCATION FIELDS ####
