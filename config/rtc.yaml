@@ -18,10 +18,10 @@ time:
         minutes: /5
         then:
           - script.execute: sensor_sample
-      - seconds: 0
-        minutes: 0
+      - days_of_week: SUN
         hours: 4
-        days_of_week: SUN
+        minutes: 0
+        seconds: 0
         then:
           - lambda: |-
               if (id(sntp_time).now().is_valid()) {
@@ -30,6 +30,12 @@ time:
               } else {
                ESP_LOGW("time_sync", "SNTP invalid – skipping RTC update");
               }
+      - days_of_week: MON
+        hours: 4
+        minutes: 0
+        seconds: 0
+        then:
+          - script.execute: fw_check
 
 # use SNTP server to set RTC time
   - platform: sntp

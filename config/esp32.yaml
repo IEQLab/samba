@@ -59,6 +59,7 @@ esphome:
                       id(calibration_tg_m), id(calibration_tg_b),
                       id(calibration_as1_c), id(calibration_as1_m), id(calibration_as1_b),
                       id(calibration_as2_c), id(calibration_as2_m), id(calibration_as2_b));
+        - component.suspend: fw_update
 
 # Set logging to errors only
 # https://esphome.io/components/logger
@@ -74,10 +75,10 @@ logger:
     resistance: NONE
     opt3001.sensor: NONE
     pmsx003: NONE
-    senseair_i2c: NONE
+    senseair_i2c: ERROR
     sensirion_i2c: ERROR
-    sgp4x: NONE
-    sound_level_meter: NONE
+    sgp4x: ERROR
+    sound_level_meter: ERROR
     wire.cpp: NONE
     http_request: ERROR
     influxdb: INFO

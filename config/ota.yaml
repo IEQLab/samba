@@ -22,6 +22,18 @@ ota:
             level: INFO
             tag: "samba"
 
+# Enable managed updates
+# https://esphome.io/components/update/http_request.html#
+update:
+  - platform: http_request
+    id: fw_update
+    name: "Firmware Update"
+    source: http://github.com/IEQLab/samba/raw/main/manifest.json
+    update_interval: 12h
+    on_update_available:
+      - logger.log: "Firmware update available"
+
+
 # Enable HTTP Request component for OTA and Influx
 # https://esphome.io/components/http_request.html
 http_request:
@@ -42,4 +54,26 @@ safe_mode:
       - ota.http_request.flash:
           md5_url: http://github.com/IEQLab/samba/raw/main/restore/firmware.md5
           url: http://github.com/IEQLab/samba/raw/main/restore/firmware.ota.bin
+
+# Define script to scatter friwmare update checks
+script:
+  - id: fw_check
+    mode: restart
+    then:
+      # Add 0-15 minute jitter
+      - lambda: |-
+          uint32_t jitter_ms = esp_random() % (15 * 60 * 1000);
+          ESP_LOGI("update", "Weekly update check; jitter = %u ms", jitter_ms);
+          delay(jitter_ms);
+      - component.update: fw_update
+      - if:
+          condition:
+            update.is_available: fw_update
+          then:
+            - logger.log: "Update available; starting OTA"
+            - update.perform:
+                id: fw_update
+          else:
+            - logger.log: "No update available"
+      - component.suspend: fw_update
 
