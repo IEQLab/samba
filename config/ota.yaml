@@ -39,7 +39,7 @@ update:
 http_request:
     id: http_client
     verify_ssl: false
-    timeout: 10s
+    timeout: 5s
     watchdog_timeout: 8s
 
 # Explicitly enable safe mode
