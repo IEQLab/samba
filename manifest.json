@@ -6,7 +6,7 @@
     {
       "chipFamily": "ESP32",
       "ota": {
-        "md5": "96fd0d6ea2b283f6bd0799e019d69d58",
+        "md5": "ce1bd0b374d8e68244af4135812157ab",
         "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.70.bin",
       }
     }
