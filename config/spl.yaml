@@ -79,6 +79,7 @@ sound_level_meter:
       internal: true
       dsp_filters: [f_ics43434, f_a]
       filters:
+        - filter_out: nan
         - median:
             window_size: 600
             send_every: 60
@@ -92,6 +93,7 @@ sound_level_meter:
       internal: true
       dsp_filters: [f_ics43434, f_a]
       filters:
+        - filter_out: nan
         - min:
             window_size: 5
             send_every: 1
@@ -105,6 +107,7 @@ sound_level_meter:
       internal: true
       dsp_filters: [f_ics43434, f_a]
       filters:
+        - filter_out: nan
         - max:
             window_size: 5
             send_every: 1

@@ -17,6 +17,7 @@ sensor:
       algorithm_tuning:
         learning_time_offset_hours: 720
       filters:
+        - filter_out: nan
         - median:
             window_size: 10
             send_every: 2
@@ -25,6 +26,7 @@ sensor:
       id: sgp_nox
       internal: true
       filters:
+        - filter_out: nan
         - median:
             window_size: 10
             send_every: 2

@@ -25,6 +25,7 @@ sensor:
       reference_temperature: 25°C
       reference_resistance: 10kOhm
     filters:
+      - filter_out: nan
       - clamp:
           min_value: -10
           max_value: 60

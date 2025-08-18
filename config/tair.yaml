@@ -14,6 +14,7 @@ sensor:
       id: sht_temperature
       internal: true
       filters:
+        - filter_out: nan
         - clamp:
             min_value: -10
             max_value: 60
@@ -27,6 +28,7 @@ sensor:
       id: sht_humidity
       internal: true
       filters:
+        - filter_out: nan
         - clamp:
             min_value: 0
             max_value: 100

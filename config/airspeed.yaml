@@ -10,6 +10,7 @@ sensor:
     source_id: ads_as1
     internal: true
     filters:
+      - filter_out: nan
       - clamp:
           min_value: 0
           max_value: 5
@@ -26,13 +27,13 @@ sensor:
           min_value: 0.02
           max_value: 1.0
           ignore_out_of_range: false
-      - filter_out: NAN
 
   - platform: copy
     id: as_2
     source_id: ads_as2
     internal: true
     filters:
+      - filter_out: nan
       - clamp:
           min_value: 0
           max_value: 5
@@ -49,7 +50,6 @@ sensor:
           min_value: 0.02
           max_value: 1.0
           ignore_out_of_range: false
-      - filter_out: NAN
 
 # Define air speed measurements
   - platform: template

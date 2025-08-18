@@ -13,6 +13,7 @@ sensor:
       id: pms_pm25
       internal: true
       filters:
+        - filter_out: nan
         - clamp:
             min_value: 0
             max_value: 1000
