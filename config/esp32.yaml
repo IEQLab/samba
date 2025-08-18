@@ -35,6 +35,7 @@ esphome:
       then:
       
         # Synchronise system to RTC clock
+        - delay: 200ms
         - ds1307.read_time:
         
         # Print useful diagnostics
@@ -70,7 +71,7 @@ logger:
     main: WARN
     component: NONE
     sensor: NONE
-    ads1115.sensor: NONE
+    ads1115.sensor: ERROR
     ntc: NONE
     resistance: NONE
     opt3001.sensor: NONE
@@ -91,6 +92,7 @@ i2c:
     sda: GPIO26
     scan: true
     frequency: 100kHz
+    timeout: 5ms
 
 # Configure UART
 # https://esphome.io/components/uart
