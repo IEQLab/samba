@@ -5,9 +5,8 @@
     {
       "chipFamily": "ESP32",
       "ota": {
-        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.66.bin",
         "md5": "52e446bb4ea5385d937a6f726fec2d61",
-        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.66",
+        "path": "http://github.com/IEQLab/samba/raw/main/firmware/samba_v1.99.66.bin",
         "summary": "Remove defined network in wifi.yaml"
       }
     }
