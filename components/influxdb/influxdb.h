@@ -71,6 +71,12 @@ class InfluxDB : public Component {
   bool send_mac_{false};  // Include MAC address tag
   uint32_t update_interval_{60000};  // 60 seconds default
 
+  // --- ESP-IDF HTTP client implementation ---
+  bool post_raw_idf_(const std::string &url,
+                     const std::string &body,
+                     const std::list<esphome::http_request::Header> &headers,
+                     bool verify_ssl);
+  
   // --- Runtime state ---
   std::string url_;
   std::string mac_address_;
@@ -82,9 +88,8 @@ class InfluxDB : public Component {
   http_request::HttpRequestComponent *http_request_{nullptr};
   time::RealTimeClock *time_source_{nullptr};
 
-  // --- Sensor management ---
+  // --- Sensor management (removed unused sensor_names_) ---
   std::unordered_map<std::string, std::string> sensor_measurements_;  // sensor_id -> measurement_name
-  std::unordered_map<std::string, std::string> sensor_names_;         // ESPHome sensor IDs -> measurement names
   std::unordered_map<std::string, std::string> field_names_;          // sensor_id -> field_name
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>> static_tags_;   // sensor_id -> {tag_key -> tag_value}
   std::unordered_map<std::string, std::string> global_tags_;          // tag_key -> tag_value (applied to all measurements)
@@ -97,9 +102,11 @@ class InfluxDB : public Component {
 #endif
 
   // --- Helper methods ---
+  bool validate_required_config_();
   void collect_sensors_();
   void build_url_();
   void setup_headers_();
+  size_t estimate_payload_size_() const;
   
   std::string build_line_protocol_line_(const std::string &sensor_id, const std::string &value, bool is_string_value = false);
   std::string build_measurement_name_(const std::string &sensor_id) const;
@@ -113,6 +120,12 @@ class InfluxDB : public Component {
   std::string get_field_name_(const std::string &sensor_id) const;
   bool has_sensor_mapping_(const std::string &sensor_id) const;
   bool should_publish_() const;
+  
+  // --- Constants ---
+  static constexpr size_t BASE_LINE_SIZE = 64;  // Estimated base size per line
+  static constexpr size_t MIN_BUFFER_SIZE = 256;
+  static constexpr uint32_t BASE_BACKOFF_MS = 500;
+  static constexpr uint32_t BACKOFF_RANGE_MS = 1500;
 };
 
 }  // namespace influxdb
