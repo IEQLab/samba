@@ -276,11 +276,12 @@ button:
     icon: mdi:check-all
     on_press:
       - logger.log:
-          format: "Checking for SAMBA firmware"
+          format: "Flashing SAMBA production firmware"
           level: INFO
           tag: "samba"
-      - update.perform:
-          id: fw_update
+      - ota.http_request.flash:
+          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.66.bin
+          md5: "52e446bb4ea5385d937a6f726fec2d61"
   - platform: template
     name: "Deploy test firmware"
     id: button_testing
@@ -289,12 +290,12 @@ button:
     icon: mdi:bug-check
     on_press:
       - logger.log:
-          format: "Checking for SAMBA firmware"
+          format: "Flashing SAMBA test firmware"
           level: INFO
           tag: "samba"
       - ota.http_request.flash:
-          url: https://github.com/IEQLab/samba/raw/main/firmware/samba_testing.bin
-          md5_url: https://github.com/IEQLab/samba/raw/main/firmware/samba_testing.md5
+          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_testing.bin
+          md5_url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_testing.md5
 
 
 #### LOCATION FIELDS ####

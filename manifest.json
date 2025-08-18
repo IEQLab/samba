@@ -1,6 +1,7 @@
 {
   "name": "SAMBA Indoor Environmental Monitor",
   "version": "1.99.70",
+  "home_assistant_domain": "esphome",
   "builds": [
     {
       "chipFamily": "ESP32",

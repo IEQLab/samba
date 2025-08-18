@@ -27,20 +27,17 @@ ota:
 update:
   - platform: http_request
     id: fw_update
-    name: "Firmware Update"
+    name: "Firmware"
     source: http://github.com/IEQLab/samba/raw/main/manifest.json
-    update_interval: 12h
-    on_update_available:
-      - logger.log: "Firmware update available"
-
+    disabled_by_default: true
 
 # Enable HTTP Request component for OTA and Influx
 # https://esphome.io/components/http_request.html
 http_request:
     id: http_client
-    verify_ssl: false
-    timeout: 5s
-    watchdog_timeout: 8s
+    verify_ssl: true
+    timeout: 8s
+    watchdog_timeout: 10s
 
 # Explicitly enable safe mode
 # https://esphome.io/components/safe_mode
