@@ -1,35 +1,15 @@
 {
   "name": "SAMBA Indoor Environmental Monitor",
+  "version": "1.99.66",
   "builds": [
     {
       "chipFamily": "ESP32",
-      "version": "1.99.66",
       "ota": {
         "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.66.bin",
-        "md5": "52e446bb4ea5385d937a6f726fec2d61"
-      },
-      "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.66",
-      "summary": "Remove defined network in wifi.yaml"
-    },
-    {
-      "chipFamily": "ESP32",
-      "version": "1.99.65",
-      "ota": {
-        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.65.bin",
-        "md5": "3e91705c8c9ce54e61d1c7688fd1c9c9"
-      },
-      "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.65",
-      "summary": "Tweak what gets sent to Influx"
-    },
-    {
-      "chipFamily": "ESP32",
-      "version": "1.99.64",
-      "ota": {
-        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.64.bin",
-        "md5": "d33c16e62733bf1ff7282fb104e08d1c"
-      },
-      "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.64",
-      "summary": "Properly handle component.update"
+        "md5": "52e446bb4ea5385d937a6f726fec2d61",
+        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.66",
+        "summary": "Remove defined network in wifi.yaml"
+      }
     }
   ]
 }
