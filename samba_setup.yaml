@@ -281,7 +281,7 @@ button:
           tag: "samba"
       - ota.http_request.flash:
           url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.70.bin
-          md5: "52e446bb4ea5385d937a6f726fec2d61"
+          md5: "ce1bd0b374d8e68244af4135812157ab"
   - platform: template
     name: "Deploy test firmware"
     id: button_testing
