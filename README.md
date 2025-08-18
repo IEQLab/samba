@@ -117,7 +117,7 @@ Access to the ESP32 is through the USB-C port on SAMBAs main PCB. There is a sin
 0. [Optional] Erase the ESP32 flash memory from earlier deployments: `esptool.py --chip esp32 erase_flash`.
 1.  Clone the [SAMBA Github Repository](https://github.com/IEQLab/samba/tree/main) to your local device and open that directory.
 2.  Open a terminal window and `cd` to the working folder where the SAMBA Github repo was cloned.
-3.  The initial setup script is `samba_setup.yaml`. It contains placeholder calibration coefficients stored as arrays e.g. `{1.0, 0.0}` for two terms, `{1.0, 1.0, 0.0}` for three terms etc. These can be changed later.
+3.  The initial setup script is `samba_setup.yaml`. It contains placeholder calibration coefficients - these can be changed later.
 4.  Enter the following command to compile and upload the binary file to the SAMBA: `esphome run samba_setup.yaml`. Note that you will need to select the serial device before uploading; alternatively, specify the serial connection e.g. `esphome run setup.yaml --device /dev/cu.usbserial-10`.
 
 It should take about 30 seconds to flash the firmware. The Led should flash green and blue to indicate it is on but not connected to WiFi. If the SAMBA is being relocated, disconnect the USB-C cable once it is finished flashing, unplug the power, put the housing back on, and tighten the hex bolt. Place the SAMBA in its new location, power it on, and follow the below steps to configure the WiFi:
@@ -125,8 +125,8 @@ It should take about 30 seconds to flash the firmware. The Led should flash gree
 1.  Use another device (e.g. smartphone, laptp) to join the `samba_connect` ad-hoc WiFi and open the [captive portal](https://esphome.io/components/captive_portal.html) by entering [http://192.168.4.1/](http://192.168.4.1/) into your browser.
 2.  Select the 2.4GHz network to join from the list and enter in the password.
 3.  The SAMBA will connect to the network and then launch a web server to display the configuration settings and terminal window. This can be accessed through a browser at the IP address of the SAMBA e.g. `192.168.1.50`. 
-4.  Enter the location (building name, level/room number, and zone name) and the calibration coefficients. CO2, illuminance, air temperature, relative humidity, and globe temperature are linear calibrations (e.g. y = mx + b); the two air speed sensors are power regressions (e.g. y = a * x^b). Note: these must be entered as strings e.g. '1.0'.
-3.  Once the configuration is complete, click the 'Deploy SAMBA' button to attempt to download and flash the firmware stored in [`firmware/`](https://github.com/IEQLab/samba/tree/main/firmware) on the IEQ Lab Github. Once that is done, the SAMBA will reboot and start sampling automatically. The status LED should blink slower to indicate it is warming up; this will stop once it enters the sampling routine.
+4.  Enter the location (building name, level/room number, and zone name) and the calibration coefficients. CO2, illuminance, air temperature, relative humidity, and globe temperature are linear calibrations (e.g. y = mx + b); the two air speed sensors are power regressions (e.g. y = a * x^b).
+3.  Once the configuration is complete, click the 'Deploy SAMBA' button to attempt to download and flash the latest firmware stored in [`firmware/`](https://github.com/IEQLab/samba/tree/main/firmware) on the IEQ Lab Github. Once that is done, the SAMBA will reboot and start sampling automatically. The status LED should blink slower to indicate it is warming up; this will stop once it enters the sampling routine.
 
 #### 🎯 Compiling Base Firmware [IEQ Lab] ####
 
@@ -136,9 +136,10 @@ The IEQ Lab will actively maintain the SAMBA firmware and publish updates to the
 2.  Make the agreed modifications to the relevant .yaml files in `config/...` and test EXTENSIVELY.
 3.  Bump the project version in [`esp32.yaml`](https://github.com/IEQLab/samba/blob/ebebc4b091f836f893ec4236af8086405198ec6a/config/esp32.yaml#L16)
 4.  Once the new firmware is confirmed stable, generate the compiled bin: `esphome compile samba.yaml`
-5.  Move the compiled ota firmware to the firmware directory: `cp .esphome/build/samba/.pioenvs/samba/firmware.ota.bin firmware/`
-6.  Generate a new md5 hash: `md5 -q firmware/firmware.ota.bin > firmware/firmware.md5`
-7.  Push the new .bin and .md5 to the SAMBA Github repository.
+5.  Move the compiled ota firmware to the firmware directory: `cp .esphome/build/samba/.pioenvs/samba/firmware.ota.bin firmware/samba_v2.XX.XX.bin`
+6.  Generate a new md5 hash and print it to terminal: `md5 firmware/samba_v2.XX.XX.bin`
+7.  Update the [`manifest.json`](https://github.com/IEQLab/samba/blob/main/manifest.json) file to include the new bin path and md5 hash.
+7.  Push the new .bin and updated manifest.json to the SAMBA Github repository.
 
 Currently, SAMBAs only check for new firmware during their initial setup. Future firmware will implement routine updates e.g. check once per week. As such, it's extremely important that firmware are extensively tested otherwise they could (worst case scenario) brick the entire SAMBA fleet.
 
@@ -149,7 +150,7 @@ Users are free to modify the SAMBA firmware to suit their needs. However, we str
 1.  Define your project-specific parameters in the [secrets.yaml](https://esphome.io/guides/yaml.html#secrets-and-the-secrets-yaml-file).
 2.  Make whatever modifications to the relevant .yaml files in `config/...`.
 3.  [Optional] There are two ways to update any calibration coefficients:
-    - Change the relevant lambda function in the template sensor to the new value. For example, changing the CO2 regression slope would mean modifying [this line](https://github.com/IEQLab/samba/blob/ebebc4b091f836f893ec4236af8086405198ec6a/config/co2.yaml#L37) so that `id(calibration_co2)[0]` becomes the new coefficient value.
+    - Change the relevant lambda function in the template sensor to the new value. For example, changing the CO2 regression slope would mean modifying [this line](https://github.com/IEQLab/samba/blob/ebebc4b091f836f893ec4236af8086405198ec6a/config/co2.yaml#L37) so that `id(calibration_co2_m)` becomes the new coefficient value.
     - Modify the global variable that stores the calibration coefficient. This is more robust but requires a bit more work to get right - speak to Tom if needed.
 4.  Compile and upload the firmware to SAMBA via USB-C with `esphome run samba.yaml` or wirelessly (if in the same WLAN) with the SAMBA IP address `esphome run samba.yaml --device 192.168.1.XXX`.
 
