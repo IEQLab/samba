@@ -67,12 +67,8 @@ async def to_code(config):
 
     # Set automatic baseline correction (ABC) interval
     abc_interval = config[CONF_ABC_INTERVAL]
-    if isinstance(abc_interval, str) and abc_interval == "0s":
-        cg.add(var.set_abc_interval(0))
-    else:
-        # Convert time period to seconds
-        abc_seconds = abc_interval.total_seconds
-        cg.add(var.set_abc_interval(int(abc_seconds)))
+    abc_seconds = 0 if abc_interval == "0s" else int(abc_interval.total_seconds)
+    cg.add(var.set_abc_interval(abc_seconds))
 
     # Set retry parameters
     cg.add(var.set_retry_delay_ms(config[CONF_RETRY_DELAY_MS]))

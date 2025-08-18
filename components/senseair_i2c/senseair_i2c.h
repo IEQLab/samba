@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/i2c/i2c.h"
@@ -31,7 +32,7 @@ class SenseairI2CSensor : public sensor::Sensor, public PollingComponent, public
   // --- User options with sensible defaults ---
   uint32_t abc_interval_{648000};   // 180h default ABC interval (seconds)
   uint32_t retry_delay_ms_{200};    // Retry wait (ms)
-  uint8_t max_retries_{5};          // Max I²C retries per state
+  uint8_t max_retries_{5};          // Max IÂ²C retries per state
 
   // --- Setup state machine for ABC configuration ---
   enum SetupStep { SETUP_IDLE, SETUP_READ_METER, SETUP_CONFIGURE_ABC, SETUP_DONE };
@@ -49,6 +50,8 @@ class SenseairI2CSensor : public sensor::Sensor, public PollingComponent, public
   void attempt_measurement_();
 
   // --- Helper methods ---
+  void handle_retry_(std::function<void()> operation, uint8_t& retry_count, 
+                    const char* operation_name, std::function<void()> on_failure);
   bool validate_checksum_(const uint8_t *data, size_t data_len, uint8_t received_checksum) const;
   uint8_t calculate_checksum_(const uint8_t *data, size_t len) const;
 };

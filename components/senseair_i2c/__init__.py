@@ -1,1 +1,1 @@
-CODEOWNERS = ["@tom-parkinson"]
+CODEOWNERS = ["@IEQLab"]
