@@ -1,6 +1,6 @@
 {
   "name": "SAMBA Indoor Environmental Monitor",
-  "version": "1.99.70",
+  "version": "1.99.71",
   "home_assistant_domain": "esphome",
   "builds": [
     {
