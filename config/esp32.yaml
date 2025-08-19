@@ -60,7 +60,6 @@ esphome:
                       id(calibration_tg_m), id(calibration_tg_b),
                       id(calibration_as1_c), id(calibration_as1_m), id(calibration_as1_b),
                       id(calibration_as2_c), id(calibration_as2_m), id(calibration_as2_b));
-        - component.suspend: fw_update
 
 # Set logging to errors only
 # https://esphome.io/components/logger
@@ -71,6 +70,8 @@ logger:
     main: WARN
     component: NONE
     sensor: NONE
+    i2c: INFO
+    wire.cpp: NONE
     ads1115.sensor: ERROR
     ntc: NONE
     resistance: NONE
@@ -80,7 +81,6 @@ logger:
     sensirion_i2c: ERROR
     sgp4x: ERROR
     sound_level_meter: ERROR
-    wire.cpp: NONE
     http_request: ERROR
     influxdb: INFO
 
@@ -91,8 +91,8 @@ i2c:
     scl: GPIO25
     sda: GPIO26
     scan: true
-    frequency: 100kHz
-    timeout: 5ms
+    frequency: 50kHz
+    timeout: 7ms
 
 # Configure UART
 # https://esphome.io/components/uart
