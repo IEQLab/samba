@@ -29,7 +29,7 @@ update:
     id: fw_update
     name: "Firmware"
     source: https://github.com/IEQLab/samba/raw/main/firmware.json
-    update_interval: 1h
+    update_interval: 12h
 
 # Enable HTTP Request component for OTA and Influx
 # https://esphome.io/components/http_request.html
