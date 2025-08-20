@@ -28,8 +28,8 @@ update:
   - platform: http_request
     id: fw_update
     name: "Firmware"
-    source: http://github.com/IEQLab/samba/raw/main/manifest.json
-    disabled_by_default: true
+    source: https://github.com/IEQLab/samba/raw/main/firmware.json
+    update_interval: 1h
 
 # Enable HTTP Request component for OTA and Influx
 # https://esphome.io/components/http_request.html
@@ -49,28 +49,46 @@ safe_mode:
           id: samba_led
           effect: slow_pulse
       - ota.http_request.flash:
-          md5_url: http://github.com/IEQLab/samba/raw/main/restore/firmware.md5
-          url: http://github.com/IEQLab/samba/raw/main/restore/firmware.ota.bin
+          md5_url: http://github.com/IEQLab/samba/raw/main/restore/firmware_recovery.md5
+          url: http://github.com/IEQLab/samba/raw/main/restore/firmware_recovery.bin
 
-# Define script to scatter friwmare update checks
+# Store jitter delay as a global variable
+globals:
+  - id: fw_jitter_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
+# Define script to scatter firmware update checks
 script:
   - id: fw_check
-    mode: restart
+    mode: queued
     then:
-      # Add 0-15 minute jitter
+      # compute 0–10 min jitter
       - lambda: |-
-          uint32_t jitter_ms = esp_random() % (15 * 60 * 1000);
-          ESP_LOGI("update", "Weekly update check; jitter = %u ms", jitter_ms);
-          delay(jitter_ms);
-      - component.update: fw_update
+          id(fw_jitter_ms) = esp_random() % (10 * 60 * 1000);
+      - logger.log:
+          format: "Weekly update check; jitter = %u ms"
+          args: ['id(fw_jitter_ms)']
+          level: INFO
+          tag: "samba"
+
+      # yield to scheduler for the jitter duration
+      - delay: !lambda 'return id(fw_jitter_ms);'
+
+      # then do the update check
       - if:
           condition:
             update.is_available: fw_update
           then:
-            - logger.log: "Update available; starting OTA"
+            - logger.log: 
+                format: "Update available; starting OTA"
+                level: INFO
+                tag: "samba"
             - update.perform:
                 id: fw_update
           else:
-            - logger.log: "No update available"
-      - component.suspend: fw_update
-
+            - logger.log: 
+                format: "No update available"
+                level: INFO
+                tag: "samba"
