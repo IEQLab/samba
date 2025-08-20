@@ -21,7 +21,7 @@ esphome:
   min_version: "2025.7.0"
   project:
     name: "IEQLab.SAMBA"
-    version: "1.99.70"
+    version: "1.99.71"
   on_boot:
     - priority: 100
       then: 
