@@ -18,6 +18,7 @@ sensor:
     id: ads_as1
     multiplexer: 'A0_GND'
     gain: 6.144
+    sample_rate: 250
     update_interval: 2s
     internal: true
 
@@ -27,6 +28,7 @@ sensor:
     id: ads_as2
     multiplexer: 'A1_GND'
     gain: 6.144
+    sample_rate: 250
     update_interval: 2s
     internal: true
 
@@ -36,5 +38,6 @@ sensor:
     id: ads_ntc
     multiplexer: 'A2_GND'
     gain: 6.144
+    sample_rate: 128
     update_interval: 30s
     internal: true
