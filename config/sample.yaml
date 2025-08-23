@@ -89,6 +89,7 @@ script:
                       tag: "samba"
             - light.turn_off:
                 id: samba_led
+                transition_length: 300ms
           else:
             - component.update: sys_uptime
             - logger.log: 
