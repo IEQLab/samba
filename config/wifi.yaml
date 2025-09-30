@@ -10,6 +10,8 @@ wifi:
 #  networks:
 #  - ssid: "${wifi_ssid}"
 #    password: "${wifi_password}"
+#  - ssid: "${hotspot_ssid}"
+#    password: "${hotspot_password}"
 #  - ssid: "${enterprise_ssid}"
 #    eap:
 #      username: "${enterprise_user}"
