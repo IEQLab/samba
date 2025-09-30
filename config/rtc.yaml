@@ -9,7 +9,6 @@ time:
   - platform: ds1307
     id: ds1307_time
     address: 0x68
-    update_interval: never
 
 # Define loop for sensor measurements
 # https://esphome.io/guides/automations.html#component-update-action
@@ -23,13 +22,21 @@ time:
         minutes: 0
         seconds: 0
         then:
-          - lambda: |-
-              if (id(sntp_time).now().is_valid()) {
-               id(ds1307_time).write_time();
-               ESP_LOGI("time_sync", "RTC updated from SNTP");
-              } else {
-               ESP_LOGW("time_sync", "SNTP invalid – skipping RTC update");
-              }
+          - if:
+              condition:
+                time.has_time: 
+                  id: sntp_time
+              then:
+                - delay: 300ms
+                - ds1307.write_time:
+                    id: ds1307_time
+                - logger.log:
+                    level: INFO
+                    format: "RTC updated from SNTP"
+              else:
+                - logger.log:
+                    level: WARN
+                    format: "SNTP invalid – skipping RTC update"
       - days_of_week: MON
         hours: 4
         minutes: 0
