@@ -1,15 +1,15 @@
 {
   "name": "SAMBA Indoor Environmental Monitor",
-  "version": "1.99.72",
+  "version": "1.99.80",
   "home_assistant_domain": "esphome",
   "builds": [
     {
       "chipFamily": "ESP32",
       "ota": {
-        "md5": "21703950636d978974a8a3934944815c",
-        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.72.bin",
-        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.72",
-        "summary": "Reduce ADC samples for i2c crash"
+        "md5": "57b42fbea4070d33804efaf98d9b2897",
+        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.80.bin",
+        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.80",
+        "summary": "Support new I2C stack and InfluxDB tags"
       }
     }
   ]

@@ -118,7 +118,7 @@ esphome:
   name: "samba"
   friendly_name: "SAMBA Config Tool"
   name_add_mac_suffix: false
-  min_version: "2025.7.0"
+  min_version: "2025.9.0"
   on_boot:
     - priority: 100
       then: 
@@ -280,8 +280,8 @@ button:
           level: INFO
           tag: "samba"
       - ota.http_request.flash:
-          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.70.bin
-          md5: "ce1bd0b374d8e68244af4135812157ab"
+          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.80.bin
+          md5: "57b42fbea4070d33804efaf98d9b2897"
   - platform: template
     name: "Deploy test firmware"
     id: button_testing
