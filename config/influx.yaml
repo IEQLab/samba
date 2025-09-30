@@ -43,9 +43,9 @@ influxdb:
 
   # Define global tags applied to all measurements
   global_tags:
-    building: "wilkinson"
-    level: "420"
-    zone: "testing"
+    building: !lambda "return id(building_tag);"
+    level: !lambda "return id(level_tag);"
+    zone: !lambda "return id(zone_tag);"
 
 #  # Define measurement-specific tags
 #  sensor_tags:
