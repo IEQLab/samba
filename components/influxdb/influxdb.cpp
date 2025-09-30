@@ -112,7 +112,7 @@ bool InfluxDB::post_raw_idf_(const std::string &url,
   
   int written = esp_http_client_write(client, body.data(), body.size());
   if (written < 0 || static_cast<size_t>(written) != body.size()) {
-    ESP_LOGE(TAG, "HTTP write failed: %d", written);
+    ESP_LOGE(TAG, "HTTP write failed (wrote %d of %u bytes)", written, (unsigned)body.size());
     esp_http_client_close(client);
     esp_http_client_cleanup(client);
     return false;
@@ -123,11 +123,17 @@ bool InfluxDB::post_raw_idf_(const std::string &url,
   int status = esp_http_client_get_status_code(client);
   ESP_LOGD(TAG, "HTTP status: %d", status);
   
-  // Drain response body as per ESP-IDF documentation
+  // Drain response body with safety limit to prevent infinite loop
   char tmp[256];
-  while (true) {
+  int total_read = 0;
+  while (total_read < MAX_HTTP_RESPONSE_SIZE) {
     int r = esp_http_client_read(client, tmp, sizeof(tmp));
     if (r <= 0) break;
+    total_read += r;
+  }
+  
+  if (total_read >= MAX_HTTP_RESPONSE_SIZE) {
+    ESP_LOGW(TAG, "Response body exceeded %d bytes, truncated", MAX_HTTP_RESPONSE_SIZE);
   }
   
   esp_http_client_close(client);
@@ -143,12 +149,12 @@ void InfluxDB::loop() {
 }
 
 void InfluxDB::build_url_() {
-  // Validation already done in setup, just build
+  // Validation already done in setup, just build with URL encoding
   this->url_ = (this->use_ssl_ ? "https://" : "http://");
   this->url_ += this->host_ + ":" + this->port_;
   this->url_ += "/api/v2/write";
-  this->url_ += "?org=" + this->org_;
-  this->url_ += "&bucket=" + this->bucket_;
+  this->url_ += "?org=" + this->url_encode_(this->org_);
+  this->url_ += "&bucket=" + this->url_encode_(this->bucket_);
   this->url_ += "&precision=" + this->timestamp_unit_;
   
   ESP_LOGD(TAG, "Built URL: %s", this->url_.c_str());
@@ -212,7 +218,7 @@ void InfluxDB::collect_sensors_() {
 #ifdef USE_BINARY_SENSOR
            this->binary_sensor_states_.size()
 #else
-           (size_t)0
+             (size_t)0
 #endif
   );
 }
@@ -223,8 +229,8 @@ bool InfluxDB::should_publish_() const {
     return false;
   }
   
-  // "Never" (UINT32_MAX) or invalid (0)
-  if (this->update_interval_ == UINT32_MAX || this->update_interval_ == 0) {
+  // "Never" or invalid (0)
+  if (this->update_interval_ == UPDATE_INTERVAL_NEVER || this->update_interval_ == 0) {
     return false;
   }
   
@@ -251,7 +257,8 @@ size_t InfluxDB::estimate_payload_size_() const {
 
 void InfluxDB::publish_now() {
   if (this->is_failed() || this->publish_in_progress_) {
-    ESP_LOGW(TAG, "Cannot publish: component failed or publish in progress");
+    ESP_LOGW(TAG, "Cannot publish: component %s", 
+             this->is_failed() ? "has failed" : "publish already in progress");
     return;
   }
   
@@ -279,8 +286,8 @@ void InfluxDB::publish_now() {
   }
   
 #ifdef USE_BINARY_SENSOR
-  for (const auto &pair : this->binary_sensor_states_) {
-    body += this->build_line_protocol_line_(pair.first, std::to_string(pair.second ? 1 : 0));
+  for (const auto &[sensor_id, state] : this->binary_sensor_states_) {
+    body += this->build_line_protocol_line_(sensor_id, std::to_string(state ? 1 : 0));
     data_points++;
   }
 #endif
@@ -303,23 +310,23 @@ void InfluxDB::publish_now() {
   const bool verify_ssl = this->url_.rfind("https://", 0) == 0;
   
   // Retry logic with exponential backoff
-  int attempts = 0, max_retries = 2;
+  int attempts = 0;
   bool ok = false;
   do {
     ok = this->post_raw_idf_(this->url_, body, this->headers_, verify_ssl);
-    if (!ok && attempts < max_retries) {
+    if (!ok && attempts < MAX_RETRY_ATTEMPTS) {
       uint32_t backoff = BASE_BACKOFF_MS + (esp_random() % BACKOFF_RANGE_MS);
       ESP_LOGW(TAG, "POST failed, retrying in %u ms (attempt %d/%d)",
-               backoff, attempts + 1, max_retries);
+               backoff, attempts + 1, MAX_RETRY_ATTEMPTS);
       delay(backoff);
     }
-  } while (!ok && ++attempts <= max_retries);
+  } while (!ok && ++attempts <= MAX_RETRY_ATTEMPTS);
   
   // Free the request body's capacity immediately
   std::string().swap(body);
   
   if (!ok) {
-    ESP_LOGW(TAG, "InfluxDB POST failed after %d attempts", max_retries + 1);
+    ESP_LOGW(TAG, "InfluxDB POST failed after %d attempts", MAX_RETRY_ATTEMPTS + 1);
   } else {
     ESP_LOGD(TAG, "Successfully published to InfluxDB");
   }
@@ -353,16 +360,37 @@ std::string InfluxDB::build_tags_(const std::string &sensor_id) const {
   std::string tags;
   tags.reserve(128);  // Pre-allocate for typical tag size
   
-  // Global tags
-  for (const auto &pair : this->global_tags_) {
-    tags += "," + this->escape_influx_key_(pair.first) + "=" + this->escape_influx_key_(pair.second);
+  // Global static tags
+  for (const auto &[key, value] : this->global_tags_) {
+    tags += "," + this->escape_influx_key_(key) + "=" + this->escape_influx_key_(value);
+  }
+  
+  // Global template tags (evaluated at runtime)
+  // Note: Templates are assumed to be safe as they're generated by ESPHome's codegen
+  for (const auto &[key, template_func] : this->global_tag_templates_) {
+    std::string tag_value = template_func();  // Call the template function
+    if (!tag_value.empty()) {  // Only add non-empty values
+      tags += "," + this->escape_influx_key_(key) + "=" + this->escape_influx_key_(tag_value);
+    }
   }
   
   // Static tags for this sensor
   auto static_it = this->static_tags_.find(sensor_id);
   if (static_it != this->static_tags_.end()) {
-    for (const auto &pair : static_it->second) {
-      tags += "," + this->escape_influx_key_(pair.first) + "=" + this->escape_influx_key_(pair.second);
+    for (const auto &[key, value] : static_it->second) {
+      tags += "," + this->escape_influx_key_(key) + "=" + this->escape_influx_key_(value);
+    }
+  }
+  
+  // Template tags for this sensor (evaluated at runtime)
+  // Note: Templates are assumed to be safe as they're generated by ESPHome's codegen
+  auto template_it = this->static_tag_templates_.find(sensor_id);
+  if (template_it != this->static_tag_templates_.end()) {
+    for (const auto &[key, template_func] : template_it->second) {
+      std::string tag_value = template_func();  // Call the template function
+      if (!tag_value.empty()) {  // Only add non-empty values
+        tags += "," + this->escape_influx_key_(key) + "=" + this->escape_influx_key_(tag_value);
+      }
     }
   }
   
@@ -388,7 +416,19 @@ std::string InfluxDB::build_timestamp_() const {
   if (this->time_source_ != nullptr) {
     auto now = this->time_source_->now();
     if (now.is_valid()) {
-      return std::string(" ") + to_string(now.timestamp);
+      int64_t timestamp = now.timestamp;
+      
+      // Scale timestamp to requested unit (default is seconds)
+      if (this->timestamp_unit_ == "ms") {
+        timestamp *= 1000;
+      } else if (this->timestamp_unit_ == "us") {
+        timestamp *= 1000000;
+      } else if (this->timestamp_unit_ == "ns") {
+        timestamp *= 1000000000;
+      }
+      // else: "s" (seconds) - no scaling needed
+      
+      return std::string(" ") + to_string(timestamp);
     }
   }
   return "";  // InfluxDB will use server timestamp if not provided
@@ -412,6 +452,25 @@ std::string InfluxDB::escape_influx_string_value_(const std::string &input) cons
     output += c;
   }
   return output;
+}
+
+std::string InfluxDB::url_encode_(const std::string &value) const {
+  std::string encoded;
+  encoded.reserve(static_cast<size_t>(value.length() * 1.2f));
+  
+  for (unsigned char c : value) {
+    // Unreserved characters per RFC 3986
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+      encoded += c;
+    } else {
+      // Percent-encode everything else
+      char hex[4];
+      snprintf(hex, sizeof(hex), "%%%02X", c);
+      encoded += hex;
+    }
+  }
+  
+  return encoded;
 }
 
 std::string InfluxDB::get_field_name_(const std::string &sensor_id) const {
@@ -446,13 +505,26 @@ void InfluxDB::set_field_name(const std::string &sensor_id,
   this->field_names_[sensor_id] = field_name;
 }
 
+// --- Template support methods ---
+
+void InfluxDB::add_static_tag_template(const std::string &sensor_id,
+                                       const std::string &tag_key,
+                                       std::function<std::string()> func) {
+  this->static_tag_templates_[sensor_id][tag_key] = std::move(func);
+}
+
+void InfluxDB::add_global_tag_template(const std::string &tag_key,
+                                       std::function<std::string()> func) {
+  this->global_tag_templates_[tag_key] = std::move(func);
+}
+
 void InfluxDB::dump_config() {
   ESP_LOGCONFIG(TAG, "InfluxDB:");
   ESP_LOGCONFIG(TAG, "  URL: %s", this->url_.c_str());
   ESP_LOGCONFIG(TAG, "  Organization: %s", this->org_.c_str());
   ESP_LOGCONFIG(TAG, "  Bucket: %s", this->bucket_.c_str());
   ESP_LOGCONFIG(TAG, "  Timestamp Unit: %s", this->timestamp_unit_.c_str());
-  if (this->update_interval_ == UINT32_MAX) {
+  if (this->update_interval_ == UPDATE_INTERVAL_NEVER) {
     ESP_LOGCONFIG(TAG, "  Update Interval: never (manual only)");
   } else {
     ESP_LOGCONFIG(TAG, "  Update Interval: %u ms", this->update_interval_);
@@ -461,8 +533,26 @@ void InfluxDB::dump_config() {
   ESP_LOGCONFIG(TAG, "  Send MAC: %s", this->send_mac_ ? "YES" : "NO");
   ESP_LOGCONFIG(TAG, "  Configured sensors: %zu", this->sensor_measurements_.size());
   
+  // Log template tag counts
+  ESP_LOGCONFIG(TAG, "  Global static tags: %zu", this->global_tags_.size());
+  ESP_LOGCONFIG(TAG, "  Global template tags: %zu", this->global_tag_templates_.size());
+  
+  size_t total_static_tags = 0;
+  for (const auto &[sensor_id, tags] : this->static_tags_) {
+    total_static_tags += tags.size();
+  }
+  ESP_LOGCONFIG(TAG, "  Sensor static tags: %zu", total_static_tags);
+  
+  size_t total_template_tags = 0;
+  for (const auto &[sensor_id, tags] : this->static_tag_templates_) {
+    total_template_tags += tags.size();
+  }
+  ESP_LOGCONFIG(TAG, "  Sensor template tags: %zu", total_template_tags);
+  
   if (this->time_source_ == nullptr) {
     ESP_LOGCONFIG(TAG, "  Time source: Not configured (server timestamp will be used)");
+  } else {
+    ESP_LOGCONFIG(TAG, "  Time source: Configured");
   }
 }
 

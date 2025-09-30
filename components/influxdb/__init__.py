@@ -2,6 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import http_request, time
 from esphome.const import CONF_ID, CONF_UPDATE_INTERVAL
+from esphome import core
 
 CODEOWNERS = ["@IEQLab"]
 DEPENDENCIES = ["http_request", "time"]
@@ -29,6 +30,11 @@ def validate_update_interval(value):
     # Use ESPHome's native update_interval validation which handles "never"
     return cv.update_interval(value)
 
+# Template validation for tag values
+def validate_tag_value(value):
+    """Validate tag values - can be string or template."""
+    return cv.templatable(cv.string)(value)
+
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(InfluxDB),
     cv.Required(CONF_HTTP_REQUEST_ID): cv.use_id(http_request.HttpRequestComponent),
@@ -48,11 +54,11 @@ CONFIG_SCHEMA = cv.Schema({
     }),
     cv.Optional(CONF_TAGS, default={}): cv.Schema({
         cv.string: cv.Schema({
-            cv.string: cv.string
+            cv.string: validate_tag_value  # Now supports templates
         })
     }),
     cv.Optional(CONF_GLOBAL_TAGS, default={}): cv.Schema({
-        cv.string: cv.string
+        cv.string: validate_tag_value  # Now supports templates
     }),
 }).extend(cv.COMPONENT_SCHEMA)
 
@@ -80,7 +86,6 @@ async def to_code(config):
     cg.add(var.set_send_mac(config[CONF_SEND_MAC]))
     
     # Handle update interval using ESPHome's standard approach
-    # ESPHome's cv.update_interval converts "never" to UINT32_MAX (4294967295)
     update_interval_value = config[CONF_UPDATE_INTERVAL]
     cg.add(var.set_update_interval(update_interval_value))
 
@@ -89,16 +94,30 @@ async def to_code(config):
         for sensor_id, measurement_name in config[CONF_SENSORS_NAMES].items():
             cg.add(var.add_sensor_mapping(sensor_id, measurement_name))
     
-    # Global tags (applied to all measurements)
+    # Global tags (now supporting templates)
     if CONF_GLOBAL_TAGS in config:
         for tag_key, tag_value in config[CONF_GLOBAL_TAGS].items():
-            cg.add(var.add_global_tag(tag_key, tag_value))
+            # Fixed: Check if it's a Lambda object (core.Lambda)
+            if isinstance(tag_value, core.Lambda):
+                # It's a lambda/template - generate template code
+                template = await cg.templatable(tag_value, [], cg.std_string)
+                cg.add(var.add_global_tag_template(tag_key, template))
+            else:
+                # It's a static string
+                cg.add(var.add_global_tag(tag_key, tag_value))
     
-    # Static tags (per-sensor)
+    # Static tags (per-sensor, now supporting templates)
     if CONF_TAGS in config:
         for sensor_id, tags in config[CONF_TAGS].items():
             for tag_key, tag_value in tags.items():
-                cg.add(var.add_static_tag(sensor_id, tag_key, tag_value))
+                # Fixed: Check if it's a Lambda object (core.Lambda)
+                if isinstance(tag_value, core.Lambda):
+                    # It's a lambda/template
+                    template = await cg.templatable(tag_value, [], cg.std_string)
+                    cg.add(var.add_static_tag_template(sensor_id, tag_key, template))
+                else:
+                    # It's a static string
+                    cg.add(var.add_static_tag(sensor_id, tag_key, tag_value))
     
     # Field names
     if CONF_FIELD_NAME in config:

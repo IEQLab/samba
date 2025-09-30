@@ -5,6 +5,7 @@
 #include <list>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
@@ -24,18 +25,33 @@ namespace influxdb {
  * 
  * Collects sensor data from ESPHome and sends it to InfluxDB v2 via HTTP API.
  * Supports automatic sensor discovery, custom tags, field names, and timestamping.
+ * Now supports templateable tag values using ESPHome globals.
+ * 
+ * @note This component uses ESP-IDF HTTP client directly for better memory management
+ *       and SSL certificate validation. Each publish creates a one-shot HTTP connection
+ *       that is cleaned up immediately to free TLS buffers.
  */
 class InfluxDB : public Component {
- public:
+public:
+  // --- Constants ---
+  static constexpr uint32_t DEFAULT_UPDATE_INTERVAL_MS = 60000;  // 60 seconds
+  static constexpr uint32_t UPDATE_INTERVAL_NEVER = UINT32_MAX;
+  static constexpr int MAX_RETRY_ATTEMPTS = 2;
+  static constexpr size_t BASE_LINE_SIZE = 64;  // Estimated base size per line
+  static constexpr size_t MIN_BUFFER_SIZE = 256;
+  static constexpr uint32_t BASE_BACKOFF_MS = 500;
+  static constexpr uint32_t BACKOFF_RANGE_MS = 1500;
+  static constexpr int MAX_HTTP_RESPONSE_SIZE = 8192;  // 8KB limit for response drain
+  
   // --- Component lifecycle ---
   void setup() override;
   void loop() override;
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::AFTER_CONNECTION; }
-
+  
   // --- Public API ---
   void publish_now();
-
+  
   // --- Configuration setters (called by Python codegen) ---
   void set_host(const std::string &host) { host_ = host; }
   void set_port(const std::string &port) { port_ = port; }
@@ -52,14 +68,18 @@ class InfluxDB : public Component {
   // --- Component dependencies ---
   void set_http_request(http_request::HttpRequestComponent *request) { http_request_ = request; }
   void set_time_source(time::RealTimeClock *time_source) { time_source_ = time_source; }
-
+  
   // --- Sensor configuration ---
   void add_sensor_mapping(const std::string &sensor_id, const std::string &measurement_name);
   void add_static_tag(const std::string &sensor_id, const std::string &tag_key, const std::string &tag_value);
   void add_global_tag(const std::string &tag_key, const std::string &tag_value);
   void set_field_name(const std::string &sensor_id, const std::string &field_name);
-
- protected:
+  
+  // --- Template support for dynamic tags ---
+  void add_static_tag_template(const std::string &sensor_id, const std::string &tag_key, std::function<std::string()> func);
+  void add_global_tag_template(const std::string &tag_key, std::function<std::string()> func);
+  
+protected:
   // --- Configuration ---
   std::string host_;  // InfluxDB host
   std::string port_{"8086"};
@@ -69,8 +89,8 @@ class InfluxDB : public Component {
   std::string timestamp_unit_{"s"};
   bool use_ssl_{false};  // Use HTTPS if true
   bool send_mac_{false};  // Include MAC address tag
-  uint32_t update_interval_{60000};  // 60 seconds default
-
+  uint32_t update_interval_{DEFAULT_UPDATE_INTERVAL_MS};
+  
   // --- ESP-IDF HTTP client implementation ---
   bool post_raw_idf_(const std::string &url,
                      const std::string &body,
@@ -87,20 +107,26 @@ class InfluxDB : public Component {
   // --- Component dependencies ---
   http_request::HttpRequestComponent *http_request_{nullptr};
   time::RealTimeClock *time_source_{nullptr};
-
-  // --- Sensor management (removed unused sensor_names_) ---
+  
+  // --- Sensor management ---
   std::unordered_map<std::string, std::string> sensor_measurements_;  // sensor_id -> measurement_name
   std::unordered_map<std::string, std::string> field_names_;          // sensor_id -> field_name
+  
+  // --- Tag management (static strings) ---
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>> static_tags_;   // sensor_id -> {tag_key -> tag_value}
   std::unordered_map<std::string, std::string> global_tags_;          // tag_key -> tag_value (applied to all measurements)
-
+  
+  // --- Template tag management (dynamic values) ---
+  std::unordered_map<std::string, std::unordered_map<std::string, std::function<std::string()>>> static_tag_templates_;  // sensor_id -> {tag_key -> template_func}
+  std::unordered_map<std::string, std::function<std::string()>> global_tag_templates_;  // tag_key -> template_func
+  
   // --- Sensor collections ---
   std::vector<sensor::Sensor *> sensors_;
   std::vector<text_sensor::TextSensor *> text_sensors_;
 #ifdef USE_BINARY_SENSOR
   std::unordered_map<std::string, bool> binary_sensor_states_;
 #endif
-
+  
   // --- Helper methods ---
   bool validate_required_config_();
   void collect_sensors_();
@@ -110,22 +136,17 @@ class InfluxDB : public Component {
   
   std::string build_line_protocol_line_(const std::string &sensor_id, const std::string &value, bool is_string_value = false);
   std::string build_measurement_name_(const std::string &sensor_id) const;
-  std::string build_tags_(const std::string &sensor_id) const;
+  std::string build_tags_(const std::string &sensor_id) const;  // Modified to handle templates
   std::string build_fields_(const std::string &sensor_id, const std::string &value, bool is_string_value = false) const;
   std::string build_timestamp_() const;
   
   std::string escape_influx_key_(const std::string &input) const;
   std::string escape_influx_string_value_(const std::string &input) const;
+  std::string url_encode_(const std::string &value) const;
   
   std::string get_field_name_(const std::string &sensor_id) const;
   bool has_sensor_mapping_(const std::string &sensor_id) const;
   bool should_publish_() const;
-  
-  // --- Constants ---
-  static constexpr size_t BASE_LINE_SIZE = 64;  // Estimated base size per line
-  static constexpr size_t MIN_BUFFER_SIZE = 256;
-  static constexpr uint32_t BASE_BACKOFF_MS = 500;
-  static constexpr uint32_t BACKOFF_RANGE_MS = 1500;
 };
 
 }  // namespace influxdb
