@@ -13,7 +13,8 @@ sensor:
     internal: true
     update_interval: 15s
     abc_interval: 180h
-    retry_delay_ms: 100
+    read_delay_ms: 50
+    retry_delay_ms: 150
     max_retries: 5
     filters:
       - filter_out: nan
