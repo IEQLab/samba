@@ -92,7 +92,7 @@ i2c:
     sda: GPIO26
     scan: true
     frequency: 50kHz
-    timeout: 7ms
+    timeout: 15ms
 
 # Configure UART
 # https://esphome.io/components/uart
