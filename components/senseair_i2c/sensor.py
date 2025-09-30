@@ -30,6 +30,7 @@ SenseairI2CSensor = senseair_i2c_ns.class_(
 CONF_ABC_INTERVAL = "abc_interval"
 CONF_RETRY_DELAY_MS = "retry_delay_ms"
 CONF_MAX_RETRIES = "max_retries"
+CONF_READ_DELAY_MS = "read_delay_ms"
 
 CONFIG_SCHEMA = (
     sensor.sensor_schema(
@@ -52,6 +53,7 @@ CONFIG_SCHEMA = (
             # Robustness options
             cv.Optional(CONF_RETRY_DELAY_MS, default=200): cv.positive_int,
             cv.Optional(CONF_MAX_RETRIES, default=5): cv.positive_int,
+            cv.Optional(CONF_READ_DELAY_MS, default=50): cv.positive_int,
         }
     )
     .extend(cv.polling_component_schema("60s"))
@@ -73,3 +75,4 @@ async def to_code(config):
     # Set retry parameters
     cg.add(var.set_retry_delay_ms(config[CONF_RETRY_DELAY_MS]))
     cg.add(var.set_max_retries(config[CONF_MAX_RETRIES]))
+    cg.add(var.set_read_delay_ms(config[CONF_READ_DELAY_MS]))

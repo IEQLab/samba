@@ -13,8 +13,7 @@ static const char *const TAG = "senseair_i2c";
 static const uint8_t SENSEAIR_MEASURE_CMD[] = {0x22, 0x00, 0x08, 0x2A};
 static const uint8_t READ_METER_CMD[] = {0x41, 0x00, 0x3E, 0x7F};
 
-// Timing constants
-static const uint32_t I2C_RESPONSE_DELAY_MS = 25;
+// ABC enable mask
 static const uint8_t ABC_ENABLE_MASK = 0x02;
 
 void SenseairI2CSensor::setup() {
@@ -25,8 +24,9 @@ void SenseairI2CSensor::setup() {
 }
 
 void SenseairI2CSensor::handle_retry_(std::function<void()> operation, uint8_t& retry_count, 
-                                    const char* operation_name, std::function<void()> on_failure) {
+                                      const char* operation_name, std::function<void()> on_failure) {
   if (++retry_count < this->max_retries_) {
+    ESP_LOGV(TAG, "%s retry %d/%d", operation_name, retry_count, this->max_retries_);
     this->set_timeout(this->retry_delay_ms_, std::move(operation));
   } else {
     ESP_LOGW(TAG, "%s failed after %d retries", operation_name, this->max_retries_);
@@ -37,29 +37,31 @@ void SenseairI2CSensor::handle_retry_(std::function<void()> operation, uint8_t& 
 void SenseairI2CSensor::setup_read_meter_control_() {
   auto error = this->write(READ_METER_CMD, sizeof(READ_METER_CMD));
   if (error != i2c::ERROR_OK) {
+    ESP_LOGV(TAG, "Meter control write error: %d", error);
     this->handle_retry_([this]() { this->setup_read_meter_control_(); }, 
-                       this->setup_retry_count_, "Meter control write",
-                       [this]() { this->setup_step_ = SETUP_DONE; });
+                        this->setup_retry_count_, "Meter control write",
+                        [this]() { this->setup_step_ = SETUP_DONE; });
     return;
   }
-
-  // Schedule read after I2C response delay
-  this->set_timeout(I2C_RESPONSE_DELAY_MS, [this]() {
+  
+  // Schedule read after delay to allow sensor to prepare response
+  this->set_timeout(this->read_delay_ms_, [this]() {
     auto read_err = this->read(this->setup_data_, 3);
     if (read_err != i2c::ERROR_OK) {
+      ESP_LOGV(TAG, "Meter control read error: %d", read_err);
       this->handle_retry_([this]() { this->setup_read_meter_control_(); }, 
-                         this->setup_retry_count_, "Meter control read",
-                         [this]() { this->setup_step_ = SETUP_DONE; });
+                          this->setup_retry_count_, "Meter control read",
+                          [this]() { this->setup_step_ = SETUP_DONE; });
       return;
     }
-
+    
     // Validate checksum
     if (!this->validate_checksum_(this->setup_data_, 2, this->setup_data_[2])) {
       ESP_LOGE(TAG, "Meter control checksum mismatch");
       this->setup_step_ = SETUP_DONE;
       return;
     }
-
+    
     // Check if ABC configuration change is needed
     bool abc_should_enable = (this->abc_interval_ > 0);
     bool abc_is_enabled = this->setup_data_[1] & ABC_ENABLE_MASK;
@@ -68,7 +70,7 @@ void SenseairI2CSensor::setup_read_meter_control_() {
                   abc_should_enable ? "ENABLED" : "DISABLED", 
                   this->abc_interval_,
                   abc_is_enabled ? "ENABLED" : "DISABLED");
-
+    
     if (abc_should_enable != abc_is_enabled) {
       this->setup_step_ = SETUP_CONFIGURE_ABC;
       this->setup_retry_count_ = 0;
@@ -86,22 +88,23 @@ void SenseairI2CSensor::setup_configure_abc_() {
   
   // Set ABC enable/disable bit
   configure_abc_command[3] = abc_enable ? 
-    (this->setup_data_[1] | ABC_ENABLE_MASK) : 
+  (this->setup_data_[1] | ABC_ENABLE_MASK) : 
     (this->setup_data_[1] & ~ABC_ENABLE_MASK);
   
   // Calculate checksum
   configure_abc_command[4] = this->calculate_checksum_(configure_abc_command, 4);
-
+  
   ESP_LOGD(TAG, "Configuring ABC: %s", abc_enable ? "ENABLED" : "DISABLED");
-
+  
   auto error = this->write(configure_abc_command, sizeof(configure_abc_command));
   if (error != i2c::ERROR_OK) {
+    ESP_LOGV(TAG, "ABC configuration write error: %d", error);
     this->handle_retry_([this]() { this->setup_configure_abc_(); }, 
-                       this->setup_retry_count_, "ABC configuration write",
-                       [this]() { this->setup_step_ = SETUP_DONE; });
+                        this->setup_retry_count_, "ABC configuration write",
+                        [this]() { this->setup_step_ = SETUP_DONE; });
     return;
   }
-
+  
   // Set ABC interval if enabling
   if (abc_enable) {
     ESP_LOGD(TAG, "Setting ABC interval to %us", this->abc_interval_);
@@ -117,7 +120,7 @@ void SenseairI2CSensor::setup_configure_abc_() {
       ESP_LOGW(TAG, "Failed to set ABC interval, using sensor default");
     }
   }
-
+  
   this->setup_step_ = SETUP_DONE;
 }
 
@@ -126,12 +129,12 @@ void SenseairI2CSensor::update() {
     ESP_LOGV(TAG, "Setup not complete, skipping measurement");
     return;
   }
-
+  
   if (this->measure_step_ != MEASURE_IDLE) {
     ESP_LOGV(TAG, "Measurement already in progress, skipping update");
     return;
   }
-
+  
   ESP_LOGV(TAG, "Starting CO2 measurement");
   this->measure_step_ = MEASURE_WRITE;
   this->measure_retry_count_ = 0;
@@ -142,40 +145,46 @@ void SenseairI2CSensor::attempt_measurement_() {
   if (this->measure_step_ == MEASURE_WRITE) {
     auto error = this->write(SENSEAIR_MEASURE_CMD, sizeof(SENSEAIR_MEASURE_CMD));
     if (error != i2c::ERROR_OK) {
+      ESP_LOGV(TAG, "Measurement write error: %d", error);
       this->handle_retry_([this]() { this->attempt_measurement_(); }, 
-                         this->measure_retry_count_, "Measurement write",
-                         [this]() { this->measure_step_ = MEASURE_IDLE; });
+                          this->measure_retry_count_, "Measurement write",
+                          [this]() { this->measure_step_ = MEASURE_IDLE; });
       return;
     }
-
+    
     this->measure_step_ = MEASURE_READ;
-    this->set_timeout(I2C_RESPONSE_DELAY_MS, [this]() { this->attempt_measurement_(); });
+    // Use configurable delay to allow sensor time to prepare response
+    this->set_timeout(this->read_delay_ms_, [this]() { this->attempt_measurement_(); });
     return;
   }
-
+  
   if (this->measure_step_ == MEASURE_READ) {
     auto error = this->read(this->measure_data_, 4);
     if (error != i2c::ERROR_OK) {
-      this->handle_retry_([this]() { this->attempt_measurement_(); }, 
-                         this->measure_retry_count_, "Measurement read",
-                         [this]() { this->measure_step_ = MEASURE_IDLE; });
+      ESP_LOGV(TAG, "Measurement read error: %d", error);
+      this->handle_retry_([this]() { 
+        // Go back to WRITE state to resend command
+        this->measure_step_ = MEASURE_WRITE;
+        this->attempt_measurement_(); 
+      }, this->measure_retry_count_, "Measurement read",
+      [this]() { this->measure_step_ = MEASURE_IDLE; });
       return;
     }
-
+    
     // Check if measurement is ready
     if ((this->measure_data_[0] & 0x01) != 0x01) {
       ESP_LOGW(TAG, "Measurement not ready (status: 0x%02X)", this->measure_data_[0]);
       this->measure_step_ = MEASURE_IDLE;
       return;
     }
-
+    
     // Validate checksum
     if (!this->validate_checksum_(this->measure_data_, 3, this->measure_data_[3])) {
       ESP_LOGE(TAG, "Measurement checksum validation failed");
       this->measure_step_ = MEASURE_IDLE;
       return;
     }
-
+    
     // Extract and publish CO2 value
     uint16_t co2_ppm = (static_cast<uint16_t>(this->measure_data_[1]) << 8) | this->measure_data_[2];
     ESP_LOGV(TAG, "CO2 measurement: %u ppm", co2_ppm);
@@ -202,9 +211,11 @@ void SenseairI2CSensor::dump_config() {
   ESP_LOGCONFIG(TAG, "Senseair I2C CO2 Sensor:");
   LOG_I2C_DEVICE(this);
   LOG_SENSOR("  ", "CO2", this);
-  ESP_LOGCONFIG(TAG, "  ABC: %s (%us), Retries: %u, Delay: %ums", 
+  ESP_LOGCONFIG(TAG, "  ABC: %s (%us)", 
                 this->abc_interval_ > 0 ? "enabled" : "disabled",
-                this->abc_interval_, this->max_retries_, this->retry_delay_ms_);
+                this->abc_interval_);
+  ESP_LOGCONFIG(TAG, "  Retries: %u, Retry Delay: %ums, Read Delay: %ums", 
+                this->max_retries_, this->retry_delay_ms_, this->read_delay_ms_);
 }
 
 }  // namespace senseair_i2c
