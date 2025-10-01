@@ -42,11 +42,13 @@ esphome:
         
         # Print useful diagnostics
         - lambda: |-
-            ESP_LOGI("samba", "Startup OK :) Building: %s, Level: %s, Zone: %s, Influx: %s, SD Card: %s, Time: %s",
+            ESP_LOGI("samba", "Building: %s, Level: %s, Zone: %s, Time: %s",
                      id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str(),
-                     id(influx_enable) ? "true" : "false", id(sd_enable) ? "true" : "false",
                      ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str());
-
+            
+            ESP_LOGI("samba", "Influx: %s, SD Card: %s, Updates: %s",
+                     id(influx_enable) ? "true" : "false", id(sd_enable) ? "true" : "false", id(updates_enable) ? "true" : "false");
+            
             ESP_LOGI("samba", "Calibrations:\n"
                               "CO2:  y = ppm*%.4fx + %.4f\n"
                               "Lux:  y = lux*%.4fx + %.4f\n"
@@ -94,8 +96,8 @@ i2c:
     scl: GPIO25
     sda: GPIO26
     scan: true
-    frequency: 50kHz
-    timeout: 20ms
+    frequency: 100kHz
+    timeout: 13ms
 
 # Configure UART
 # https://esphome.io/components/uart
