@@ -290,8 +290,8 @@ button:
           level: INFO
           tag: "samba"
       - ota.http_request.flash:
-          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.80.bin
-          md5: "57b42fbea4070d33804efaf98d9b2897"
+          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.90.bin
+          md5: "71ac75fca4dbba750bd8325aa8025491"
   - platform: template
     name: "Deploy custom firmware"
     id: button_custom
