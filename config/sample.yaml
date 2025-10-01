@@ -87,6 +87,42 @@ script:
                       format: "Influx upload skipped"
                       level: INFO
                       tag: "samba"
+            - if:
+                condition: 
+                  - switch.is_on: switch_sdcard
+                then:
+                  - sd_spi_card.append_file:
+                      id: sd0
+                      path: "/samba.txt"
+                      content: !lambda |-
+                        auto t = id(ds1307_time).now();
+                        char ts[32];
+                        t.strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S");
+
+                        char buf[256];
+                        snprintf(buf, sizeof(buf),
+                          "%s,%.2f,%.2f,%.1f,%.3f,%.2f,%.0f,%.0f,%.1f,%.0f,%.0f,%.1f,%.1f,%.1f\n",
+                          ts,
+                          id(samba_temperature).state,
+                          id(samba_globe).state,
+                          id(samba_humidity).state,
+                          id(samba_airspeed).state,
+                          id(samba_mrt).state,
+                          id(samba_co2).state,
+                          id(samba_lux).state,
+                          id(samba_pm25).state,
+                          id(samba_tvoc).state,
+                          id(samba_nox).state,
+                          id(samba_laeq).state,
+                          id(samba_lamin).state,
+                          id(samba_lamax).state
+                        );
+                        return std::string(buf);
+                else:
+                  - logger.log:
+                      format: "SD card write skipped"
+                      level: INFO
+                      tag: "samba"
             - light.turn_off:
                 id: samba_led
                 transition_length: 300ms
