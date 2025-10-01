@@ -22,6 +22,7 @@ packages:
   - !include config/tair.yaml
   - !include config/tglobe.yaml
   - !include config/airspeed.yaml
+  - !include config/sd.yaml
   - !include config/globals.yaml
   - !include config/substitutions.yaml
   - !include config/diagnostics.yaml
