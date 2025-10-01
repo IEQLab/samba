@@ -10,6 +10,7 @@ sd_spi_card:
   mosi_pin: GPIO23
   miso_pin: GPIO19
   cs_pin: GPIO5
+  auto_mount: true
   
   # Create file on succesful mount
   on_mount:
@@ -36,3 +37,14 @@ switch:
     turn_off_action:
       - lambda: 'id(sd_enable) = false;'
 
+# Manually mount SD card
+button:
+  - platform: template
+    name: "SD Card Mount"
+    id: button_sdcard
+    icon: mdi:sd
+    on_press:
+      then:
+        - sd_spi_card.mount:
+            id: sd0
+      

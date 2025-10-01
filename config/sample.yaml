@@ -77,7 +77,7 @@ script:
                 state: !lambda 'return id(samba_lamax).state;'
             - delay: 300ms
             - if:
-                condition: 
+                condition:
                   - switch.is_on: switch_influx
                 then:
                   - lambda: |-
@@ -88,8 +88,10 @@ script:
                       level: INFO
                       tag: "samba"
             - if:
-                condition: 
-                  - switch.is_on: switch_sdcard
+                condition:
+                  and:
+                    - switch.is_on: switch_sdcard
+                    - lambda: 'return id(sd0).is_mounted();'
                 then:
                   - sd_spi_card.append_file:
                       id: sd0
