@@ -40,10 +40,15 @@ public:
   
   void set_mount_point(const std::string &path) { mount_point_ = path; }
   
+  void set_auto_mount(bool auto_mount) { auto_mount_ = auto_mount; }
+  
   // Register mount trigger
   void add_on_mount_callback(std::function<void()> &&callback) {
     this->mount_callback_.add(std::move(callback));
   }
+  
+  // Manually mount the card
+  bool mount();
   
   // Improved file helpers with error reporting
   WriteResult write_file(const std::string &path, const std::vector<uint8_t> &data);
@@ -62,6 +67,7 @@ protected:
   
 private:
   bool mounted_{false};
+  bool auto_mount_{true};
   std::string mount_point_{"/sd"};
   sdmmc_card_t *card_{nullptr};
   

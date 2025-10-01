@@ -20,9 +20,13 @@ void SdSpiCard::setup() {
     return;
   }
   
-  if (!this->mount_card_()) {
-    ESP_LOGW(TAG, "Initial mount failed - will retry periodically");
-    // Don't mark as failed - allow loop() to retry mounting
+  if (auto_mount_) {
+    if (!this->mount_card_()) {
+      ESP_LOGW(TAG, "Initial mount failed - will retry periodically");
+      // Don't mark as failed - allow loop() to retry mounting
+    }
+  } else {
+    ESP_LOGI(TAG, "Auto-mount disabled - use mount action to mount card");
   }
 }
 
@@ -120,6 +124,11 @@ void SdSpiCard::unmount_card_() {
 }
 
 void SdSpiCard::loop() {
+  // Skip periodic checks if auto_mount is disabled
+  if (!auto_mount_) {
+    return;
+  }
+  
   uint32_t now = millis();
   
   // Periodic card presence check
@@ -156,9 +165,20 @@ bool SdSpiCard::check_and_remount() {
   return this->mount_card_();
 }
 
+bool SdSpiCard::mount() {
+  if (mounted_) {
+    ESP_LOGI(TAG, "Card already mounted");
+    return true;
+  }
+  
+  ESP_LOGI(TAG, "Manually mounting SD card...");
+  return this->mount_card_();
+}
+
 void SdSpiCard::dump_config() {
   ESP_LOGCONFIG(TAG, "SD SPI Card:");
   ESP_LOGCONFIG(TAG, "  Mount Point: %s", mount_point_.c_str());
+  ESP_LOGCONFIG(TAG, "  Auto Mount: %s", auto_mount_ ? "YES" : "NO");
   ESP_LOGCONFIG(TAG, "  Mounted: %s", mounted_ ? "YES" : "NO");
   ESP_LOGCONFIG(TAG, "  CLK: GPIO%d", clk_pin_);
   ESP_LOGCONFIG(TAG, "  MOSI: GPIO%d", mosi_pin_);

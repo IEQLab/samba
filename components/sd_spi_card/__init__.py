@@ -3,10 +3,11 @@ import esphome.config_validation as cv
 from esphome import pins, automation
 from esphome.const import CONF_ID, CONF_TRIGGER_ID
 
-CODEOWNERS = ["@yourname"]
+CODEOWNERS = ["@IEQLab"]
 DEPENDENCIES = []
 
 CONF_ON_MOUNT = "on_mount"
+CONF_AUTO_MOUNT = "auto_mount"
 
 sd_ns = cg.esphome_ns.namespace("sd_spi_card")
 SdSpiCard = sd_ns.class_("SdSpiCard", cg.Component)
@@ -19,6 +20,7 @@ AppendFileAction = sd_ns.class_("AppendFileAction", automation.Action)
 WriteFileAction = sd_ns.class_("WriteFileAction", automation.Action)
 SyncAction = sd_ns.class_("SyncAction", automation.Action)
 CreateFileAction = sd_ns.class_("CreateFileAction", automation.Action)
+MountAction = sd_ns.class_("MountAction", automation.Action)
 
 # Define config keys
 CONF_PATH = "path"
@@ -31,6 +33,7 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Required("mosi_pin"): pins.internal_gpio_output_pin_number,
         cv.Required("miso_pin"): pins.internal_gpio_input_pin_number,
         cv.Required("cs_pin"): pins.internal_gpio_output_pin_number,
+        cv.Optional(CONF_AUTO_MOUNT, default=True): cv.boolean,
         cv.Optional(CONF_ON_MOUNT): automation.validate_automation(
             {
                 cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(SdSpiCardMountTrigger),
@@ -50,6 +53,8 @@ async def to_code(config):
         config["miso_pin"],
         config["cs_pin"]
     ))
+    
+    cg.add(var.set_auto_mount(config[CONF_AUTO_MOUNT]))
     
     # Register on_mount trigger
     for conf in config.get(CONF_ON_MOUNT, []):
@@ -145,4 +150,20 @@ async def create_file_action_to_code(config, action_id, template_arg, args):
     template_ = await cg.templatable(config[CONF_CONTENT], args, cg.std_string)
     cg.add(var.set_content(template_))
     
+    return var
+
+
+# Mount action
+@automation.register_action(
+    "sd_spi_card.mount",
+    MountAction,
+    cv.Schema(
+        {
+            cv.GenerateID(): cv.use_id(SdSpiCard),
+        }
+    ),
+)
+async def mount_action_to_code(config, action_id, template_arg, args):
+    parent = await cg.get_variable(config[CONF_ID])
+    var = cg.new_Pvariable(action_id, template_arg, parent)
     return var
