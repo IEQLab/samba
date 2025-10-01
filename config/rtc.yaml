@@ -9,6 +9,8 @@ time:
   - platform: ds1307
     id: ds1307_time
     address: 0x68
+    update_interval: 1h
+
 
 # Define loop for sensor measurements
 # https://esphome.io/guides/automations.html#component-update-action
