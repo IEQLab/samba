@@ -43,6 +43,7 @@ button:
     name: "SD Card Mount"
     id: button_sdcard
     icon: mdi:sd
+    entity_category: "config"
     on_press:
       then:
         - sd_spi_card.mount:
