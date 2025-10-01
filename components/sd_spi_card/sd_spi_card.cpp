@@ -12,17 +12,17 @@ static const char *TAG = "sd_spi_card";
 
 void SdSpiCard::setup() {
   ESP_LOGI(TAG, "Setting up SD card over SPI...");
-
+  
   if (clk_pin_ == GPIO_NUM_NC || mosi_pin_ == GPIO_NUM_NC ||
       miso_pin_ == GPIO_NUM_NC || cs_pin_ == GPIO_NUM_NC) {
     ESP_LOGE(TAG, "Pins not configured!");
     this->mark_failed();
     return;
   }
-
+  
   if (!this->mount_card_()) {
-    ESP_LOGE(TAG, "Initial mount failed");
-    this->mark_failed();
+    ESP_LOGW(TAG, "Initial mount failed - will retry periodically");
+    // Don't mark as failed - allow loop() to retry mounting
   }
 }
 
@@ -31,12 +31,12 @@ bool SdSpiCard::mount_card_() {
     ESP_LOGW(TAG, "Card already mounted");
     return true;
   }
-
+  
   ESP_LOGI(TAG, "Mounting SD card...");
-
+  
   sdmmc_host_t host = SDSPI_HOST_DEFAULT();
   host.slot = spi_host_;
-
+  
   // Only initialize SPI bus once
   if (!spi_initialized_) {
     spi_bus_config_t bus_cfg = {};
@@ -46,7 +46,7 @@ bool SdSpiCard::mount_card_() {
     bus_cfg.quadwp_io_num = -1;
     bus_cfg.quadhd_io_num = -1;
     bus_cfg.max_transfer_sz = 4000;
-
+    
     esp_err_t ret = spi_bus_initialize((spi_host_device_t)host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
       ESP_LOGE(TAG, "Failed to initialize SPI bus: %s", esp_err_to_name(ret));
@@ -54,16 +54,16 @@ bool SdSpiCard::mount_card_() {
     }
     spi_initialized_ = true;
   }
-
+  
   sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
   slot_config.gpio_cs = cs_pin_;
   slot_config.host_id = (spi_host_device_t)host.slot;
-
+  
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-      .format_if_mount_failed = false,
-      .max_files = 5,
-      .allocation_unit_size = 16 * 1024};
-
+    .format_if_mount_failed = false,
+    .max_files = 5,
+    .allocation_unit_size = 16 * 1024};
+  
   esp_err_t ret = esp_vfs_fat_sdspi_mount(mount_point_.c_str(), &host, 
                                           &slot_config, &mount_config, &card_);
   if (ret != ESP_OK) {
@@ -78,21 +78,21 @@ bool SdSpiCard::mount_card_() {
     }
     return false;
   }
-
+  
   ESP_LOGI(TAG, "SD card mounted at %s", mount_point_.c_str());
   mounted_ = true;
   failed_writes_ = 0;
-
+  
   // Detect and log filesystem type
   FATFS *fs;
   DWORD free_clusters;
   if (f_getfree("0:", &free_clusters, &fs) == FR_OK) {
     const char *fs_type = "Unknown";
     switch (fs->fs_type) {
-      case FS_FAT12: fs_type = "FAT12"; break;
-      case FS_FAT16: fs_type = "FAT16"; break;
-      case FS_FAT32: fs_type = "FAT32"; break;
-      case FS_EXFAT: fs_type = "exFAT (unsupported)"; break;
+    case FS_FAT12: fs_type = "FAT12"; break;
+    case FS_FAT16: fs_type = "FAT16"; break;
+    case FS_FAT32: fs_type = "FAT32"; break;
+    case FS_EXFAT: fs_type = "exFAT (unsupported)"; break;
     }
     ESP_LOGI(TAG, "Filesystem type: %s", fs_type);
     
@@ -112,7 +112,7 @@ void SdSpiCard::unmount_card_() {
   if (!mounted_) {
     return;
   }
-
+  
   ESP_LOGI(TAG, "Unmounting SD card...");
   esp_vfs_fat_sdcard_unmount(mount_point_.c_str(), card_);
   mounted_ = false;
@@ -139,7 +139,7 @@ void SdSpiCard::loop() {
       }
     }
   }
-
+  
   // If too many failed writes, try remounting
   if (failed_writes_ >= MAX_FAILED_WRITES && mounted_) {
     ESP_LOGW(TAG, "Too many failed writes, attempting remount...");
@@ -179,15 +179,15 @@ void SdSpiCard::dump_info() {
     ESP_LOGW(TAG, "No card mounted");
     return;
   }
-
+  
   ESP_LOGCONFIG(TAG, "SD Card Info:");
   ESP_LOGCONFIG(TAG, "  Name: %s", card_->cid.name);
-
+  
   // Calculate actual capacity properly
   uint64_t capacity_bytes = ((uint64_t)card_->csd.capacity) * card_->csd.sector_size;
   uint64_t size_mb = capacity_bytes / (1024 * 1024);
   uint64_t size_gb = capacity_bytes / (1024 * 1024 * 1024);
-
+  
   // Determine card type based on capacity
   std::string type;
   if (size_gb >= 32) {
@@ -198,10 +198,10 @@ void SdSpiCard::dump_info() {
     type = "SDSC";
   }
   ESP_LOGCONFIG(TAG, "  Type: %s", type.c_str());
-
+  
   // Speed in MHz
   ESP_LOGCONFIG(TAG, "  Speed: %.2f MHz", (double)card_->csd.tr_speed / 1000000.0);
-
+  
   // Display size in appropriate units
   if (size_gb > 0) {
     ESP_LOGCONFIG(TAG, "  Size: %llu GB (%llu MB)", 
@@ -209,19 +209,19 @@ void SdSpiCard::dump_info() {
   } else {
     ESP_LOGCONFIG(TAG, "  Size: %llu MB", (unsigned long long)size_mb);
   }
-
+  
   ESP_LOGCONFIG(TAG, "  Sector size: %d bytes", card_->csd.sector_size);
   ESP_LOGCONFIG(TAG, "  Read block length: %d bytes", 1 << card_->csd.read_block_len);
 }
 
 WriteResult SdSpiCard::write_file(const std::string &path, 
-                                   const std::vector<uint8_t> &data) {
+                                  const std::vector<uint8_t> &data) {
   if (!mounted_) {
     ESP_LOGE(TAG, "Card not mounted, cannot write file");
     failed_writes_++;
     return WriteResult::NOT_MOUNTED;
   }
-
+  
   std::string full_path = mount_point_ + path;
   FILE *f = fopen(full_path.c_str(), "w");
   if (!f) {
@@ -229,14 +229,14 @@ WriteResult SdSpiCard::write_file(const std::string &path,
     failed_writes_++;
     return WriteResult::FILE_ERROR;
   }
-
+  
   size_t written = fwrite(data.data(), 1, data.size(), f);
   
   // Ensure data is flushed to card and check for errors
   int flush_result = fflush(f);
   int sync_result = fsync(fileno(f));
   fclose(f);
-
+  
   if (written != data.size()) {
     ESP_LOGE(TAG, "Write incomplete: %d/%d bytes to %s", 
              (int)written, (int)data.size(), path.c_str());
@@ -250,7 +250,7 @@ WriteResult SdSpiCard::write_file(const std::string &path,
     failed_writes_++;
     return WriteResult::WRITE_ERROR;
   }
-
+  
   // Only log success after confirming write succeeded
   ESP_LOGD(TAG, "Wrote %d bytes to %s", (int)data.size(), path.c_str());
   std::string content(data.begin(), data.end());
@@ -271,19 +271,19 @@ bool SdSpiCard::file_exists(const std::string &path) {
 }
 
 WriteResult SdSpiCard::create_file(const std::string &path, 
-                                    const std::vector<uint8_t> &data) {
+                                   const std::vector<uint8_t> &data) {
   if (!mounted_) {
     ESP_LOGE(TAG, "Card not mounted, cannot create file");
     failed_writes_++;
     return WriteResult::NOT_MOUNTED;
   }
-
+  
   // Check if file already exists
   if (file_exists(path)) {
     ESP_LOGI(TAG, "File already exists, skipping creation: %s", path.c_str());
     return WriteResult::SUCCESS;
   }
-
+  
   // File doesn't exist, create it
   std::string full_path = mount_point_ + path;
   FILE *f = fopen(full_path.c_str(), "w");
@@ -292,14 +292,14 @@ WriteResult SdSpiCard::create_file(const std::string &path,
     failed_writes_++;
     return WriteResult::FILE_ERROR;
   }
-
+  
   size_t written = fwrite(data.data(), 1, data.size(), f);
   
   // Ensure data is flushed to card and check for errors
   int flush_result = fflush(f);
   int sync_result = fsync(fileno(f));
   fclose(f);
-
+  
   if (written != data.size()) {
     ESP_LOGE(TAG, "Write incomplete during file creation: %d/%d bytes to %s", 
              (int)written, (int)data.size(), path.c_str());
@@ -313,7 +313,7 @@ WriteResult SdSpiCard::create_file(const std::string &path,
     failed_writes_++;
     return WriteResult::WRITE_ERROR;
   }
-
+  
   ESP_LOGI(TAG, "Created file %s: %d bytes", path.c_str(), (int)data.size());
   
   // Log content if not too large
@@ -327,13 +327,13 @@ WriteResult SdSpiCard::create_file(const std::string &path,
 }
 
 WriteResult SdSpiCard::append_file(const std::string &path, 
-                                    const std::vector<uint8_t> &data) {
+                                   const std::vector<uint8_t> &data) {
   if (!mounted_) {
     ESP_LOGE(TAG, "Card not mounted, cannot append file");
     failed_writes_++;
     return WriteResult::NOT_MOUNTED;
   }
-
+  
   std::string full_path = mount_point_ + path;
   FILE *f = fopen(full_path.c_str(), "a");
   if (!f) {
@@ -346,14 +346,14 @@ WriteResult SdSpiCard::append_file(const std::string &path,
     failed_writes_++;
     return WriteResult::FILE_ERROR;
   }
-
+  
   size_t written = fwrite(data.data(), 1, data.size(), f);
   
   // Ensure data is flushed to card and check for errors
   int flush_result = fflush(f);
   int sync_result = fsync(fileno(f));
   fclose(f);
-
+  
   if (written != data.size()) {
     ESP_LOGE(TAG, "Append incomplete: %d/%d bytes to %s", 
              (int)written, (int)data.size(), path.c_str());
@@ -367,7 +367,7 @@ WriteResult SdSpiCard::append_file(const std::string &path,
     failed_writes_++;
     return WriteResult::WRITE_ERROR;
   }
-
+  
   // Only log success after confirming write succeeded
   ESP_LOGD(TAG, "Appended %d bytes to %s", (int)data.size(), path.c_str());
   std::string content(data.begin(), data.end());
