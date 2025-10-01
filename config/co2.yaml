@@ -11,7 +11,7 @@ sensor:
     i2c_id: bus_a
     address: 0x69
     internal: true
-    update_interval: 15s
+    update_interval: 14.73s
     abc_interval: 180h
     read_delay_ms: 50
     retry_delay_ms: 150
@@ -20,7 +20,7 @@ sensor:
       - filter_out: nan
       - clamp:
           min_value: 380
-          max_value: 9000
+          max_value: 10000
           ignore_out_of_range: true
       - median:
           window_size: 20
