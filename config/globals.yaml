@@ -29,6 +29,11 @@ globals:
     restore_value: yes
     initial_value: 'true'
 
+  - id: sd_enable
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
+
   # CO2 calibration (y = mx + b)
   - id: calibration_co2_m
     type: double

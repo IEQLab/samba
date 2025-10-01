@@ -1,0 +1,51 @@
+# SAMBA v2 FIRMWARE
+# configure SD card
+# written by Thomas Parkinson, Oct 2025
+
+
+# define SD card
+sd_spi_card:
+  id: sd0
+  clk_pin: GPIO18
+  mosi_pin: GPIO23
+  miso_pin: GPIO19
+  cs_pin: GPIO5
+  auto_mount: true
+  
+  # Create file on succesful mount
+  on_mount:
+    - sd_spi_card.create_file:
+        id: sd0
+        path: "/samba.txt"
+        content: !lambda 'return "time,ta,tg,rh,as,mrt,co2,lux,pm25,tvoc,nox,laeq,lamin,lamax\n";'
+    - logger.log: 
+        level: INFO
+        format: "SD card mounted and initialized!"
+
+# Toggle SD write
+switch:
+  - platform: template
+    name: "SD Card Write"
+    id: switch_sdcard
+    icon: mdi:sd
+    entity_category: "config"
+    restore_mode: DISABLED
+    lambda: |-
+      return id(sd_enable);
+    turn_on_action:
+      - lambda: 'id(sd_enable) = true;'
+    turn_off_action:
+      - lambda: 'id(sd_enable) = false;'
+
+# Manually mount SD card
+button:
+  - platform: template
+    name: "SD Card Mount"
+    id: button_sdcard
+    icon: mdi:sd
+    entity_category: "config"
+    on_press:
+      then:
+        - sd_spi_card.mount:
+            id: sd0
+      

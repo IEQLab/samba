@@ -29,6 +29,11 @@ globals:
     restore_value: yes
     initial_value: 'true'
 
+  - id: sd_enable
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
+
   # CO2 Calibration (y = mx + b)
   - id: calibration_co2_m
     type: double
@@ -631,3 +636,17 @@ switch:
       - lambda: |-
           id(influx_enable) = false;
 
+  - platform: template
+    name: "Enable SD Card"
+    id: switch_sd
+    web_server:
+      sorting_group_id: sort_upload_settings
+    restore_mode: DISABLED
+    lambda: |-
+      return id(sd_enable);
+    turn_on_action:
+      - lambda: |-
+          id(sd_enable) = true;
+    turn_off_action:
+      - lambda: |-
+          id(sd_enable) = false;

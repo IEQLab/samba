@@ -24,6 +24,7 @@ This repository is structured to allow modification of the configuration files u
 |   ├── pm25.yaml           # PM2.5 sensor
 |   ├── rtc.yaml            # clocks
 |   ├── sample.yaml         # sampling loop
+|   ├── sd.yaml             # SD card
 |   ├── spl.yaml            # sound pressure level sensor
 |   ├── substitutions.yaml  # substitutions
 |   ├── tair.yaml           # air temperature and RH sensor
@@ -33,7 +34,7 @@ This repository is structured to allow modification of the configuration files u
 |   └── ...
 ```
 
-The configuration of these components has been setup for the reliable operation of SAMBA as per the requirements of the IEQ Lab. However, it is possible for someone to modify the way SAMBA works by editing these files. An example configuration for the temperature and humidity sensor is as follows:
+The configuration of these components has been set-up for the reliable operation of SAMBA as per the requirements of the IEQ Lab. However, it is possible for someone to modify the way SAMBA works by editing these files. An example configuration for the temperature and humidity sensor is as follows:
 
 ```
 sensor:
@@ -48,10 +49,10 @@ This is a basic configuration that will return temperature and relative humidity
 
 The `components/` subdirectory is where ESPHome expects to find [external components](https://esphome.io/components/external_components.html) that provide additional functionality beyond what is offered natively in ESPHome. We are using four external components in SAMBA: 
 
-1.  `i2s` to sample audio with the microphone.
-2.  `sound_level_meter` for calculating SPL (eq, dBA, dBC).
-3.  `senseair_i2c` to communicate with [K30 CO2 sensor](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module). 
-4.  `influxdb_writer` for uploading samples to an InfluxDB bucket.
+1.  `sound_level_meter` for calculating SPL (eq, dBA, dBC etc.).
+2.  `senseair_i2c` to communicate with [K30 CO2 sensor](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module). 
+3.  `influxdb` for uploading samples to an InfluxDB bucket.
+4.  `sd_spi_card` for writing measurements to an SD card
 
 The hope is to have these external components merged into esphome at some point so the broader community can use them.
 
@@ -75,9 +76,9 @@ SAMBA is equipped with sensors that are configured using .yaml files in `config/
 A key part of the SAMBA configuration is the sampling routine. SAMBA is configured to constantly measure environmental parameters, periodically summarise those measurements using the median with a moving window, and then upload them at a set interval. The sampling routine is as follows:
 
 1.  Each sensor is set to measure at a given frequency. This ranges from 500ms (for SPL) to 60s for VOC/NOx Index; see table below for summary.
-2.  Simple quality assurance is done on the measurements. Sensors have a [filter](https://esphome.io/components/sensor/index.html#clamp) to remove obvious outliers e.g. temperatures below -10°C and above 60°C. Some have sensors have a linear calibration (implemented as a [lambda function](https://esphome.io/cookbook/lambda_magic.html)) e.g. converting voltage to airspeed. All sensors use a [simple moving median](https://esphome.io/components/sensor/index.html#median) that updates the sensor value every 30s.
+2.  Simple quality assurance is done on the measurements. Sensors have a [filter](https://esphome.io/components/sensor/index.html#clamp) to remove obvious outliers (e.g. temperatures below -10°C and above 60°C) or NaN readings. Some have sensors have a linear calibration (implemented as a [lambda function](https://esphome.io/cookbook/lambda_magic.html)) e.g. converting voltage to airspeed. All sensors use a [simple moving median](https://esphome.io/components/sensor/index.html#median).
 3.  The sample loop is triggered every 5-minutes using a [cron task on the RTC](https://esphome.io/components/time/index.html). The loop is a [script component](https://esphome.io/guides/automations.html#script-component) that executes a set of steps; details are given in [sample.yaml](https://github.com/IEQLab/samba/blob/main/config/sample.yaml) in `config/`. 
-4. The script first updates the [template sensors](https://esphome.io/components/sensor/template.html) to retrieve the latest measurement from the sensor (after the filters and moving median), and then publishes those data to Home Assistant or InfluxDB. The LED will flash with each upload.
+4.  The script first updates the [template sensors](https://esphome.io/components/sensor/template.html) to retrieve the latest measurement from the sensor (after the filters and moving median), and then publishes those data to Home Assistant, InfluxDB and/or an SD card. The LED will turn on for 2s with each upload.
 
 The following table summarises the sampling and filters (ordered sequentially) used in the default SAMBA configuration. Again, users are free to modify this but no support will be offered by the IEQ Lab.
 
@@ -86,8 +87,8 @@ The following table summarises the sampling and filters (ordered sequentially) u
 | Air Temperature | 30s | clamp; moving median; linear calibration |
 | Relative Humidity | 30s | clamp; moving median; linear calibration |
 | Globe Temperature | 30s | clamp; moving median; linear calibration |
-| Air Speed | 1s | clamp; moving median; multivariate calibration; clamp |
-| CO2 | 30s | filter; clamp; moving median; linear calibration; clamp |
+| Air Speed | 2s | clamp; moving median; multivariate calibration; clamp |
+| CO2 | 15s | filter; clamp; moving median; linear calibration; clamp |
 | PM2.5 | 1s | clamp; moving median |
 | VOC Index | 30s | moving median |
 | NOx Index | 30s | moving median |
@@ -96,19 +97,17 @@ The following table summarises the sampling and filters (ordered sequentially) u
 
 ### 📈 Data
 
-The published measurements from SAMBA get sent every 5-minutes to a Home Assistant instance and/or an InfluxDB bucket. 
+The published measurements from SAMBA get sent every 5-minutes to a Home Assistant instance, an InfluxDB bucket, and/or an SD card.
 
 [Home Assistant](https://www.home-assistant.io) is an open-source home automation platform that integrates thousands of consumer devices in a no-code environment. The advantage of Home Assistant is it is easy to use (especially for non-technical types). The disadvantage is that it requires another piece of hardware (e.g. Raspberry Pi) and it requires some tinkering to store raw data longer than 10 days. It is most beneficial if the research project involves other kinds of measurements e.g. energy monitoring or window/door openings. Communication between the SAMBA and Home Assistant is done using the native [API Component](https://esphome.io/components/api.html) in ESPHome.
 
-[InfluxDB](https://www.influxdata.com/products/influxdb-overview/) is an open-source time series database. It has high-speed read and write that is optimised for real-time data in IoT applications. It can be deployed on most server environments for free, and [InfluxData](https://www.influxdata.com) offer a hosted service that has a free and paid tiers (based on usage). The advantage is that it removes additional hardware layers. The disadvantage is that it requires the SAMBA device to have an active internet connection. It is most beneficial when the research project is deploying SAMBAs only e.g. a field study in office buildings. Communication between the SAMBA and InfluxDB is done using the external component in `components/influxdb_writer`.
-
-If you want to modify the InfluxDB configuration then we recommend familiarising yourself with [key concepts of InfluxDB](https://docs.influxdata.com/influxdb/v1/concepts/key_concepts/) first, like measurement, tags, and fields. No support is given for InfluxDB buckets other than those maintained by the IEQ Lab.
+[InfluxDB](https://www.influxdata.com/products/influxdb-overview/) is an open-source time series database. It has high-speed read and write that is optimised for real-time data in IoT applications. It can be deployed on most server environments for free, and [InfluxData](https://www.influxdata.com) offer a hosted service that has a free and paid tiers (based on usage). The advantage is that it removes additional hardware layers. The disadvantage is that it requires the SAMBA device to have an active internet connection. It is most beneficial when the research project is deploying SAMBAs only e.g. a field study in office buildings. Communication between the SAMBA and InfluxDB is done using the external component in `components/influxdb`. By default, the InfluxDB tags used for all measurement uploads are the building, level, and zone IDs that are set as [global variables](https://github.com/IEQLab/samba/tree/main/config/globals.yaml) on the SAMBA device. If you want to modify the InfluxDB configuration, we recommend familiarising yourself with [key concepts of InfluxDB](https://docs.influxdata.com/influxdb/v1/concepts/key_concepts/) first, like measurement, tags, and fields. No support is given for InfluxDB buckets other than those maintained by the IEQ Lab.
 
 ### 🚀️ User Guide ###
 
-The following section details how every SAMBA device is configured by the IEQ Lab. To begin, make sure the [ESPHome Command Line Interface](https://esphome.io/guides/cli.html) is installed. Instructions can be found on the [ESPHome website](https://esphome.io/guides/installing_esphome).
+The following section details how every SAMBA device is configured by the IEQ Lab. To begin, make sure the [ESPHome Command Line Interface](https://esphome.io/guides/cli.html) is installed. Instructions can be found on the [ESPHome website](https://esphome.io/guides/installing_esphome). The minimum version of ESPHome is currently 2025.10.0. 
 
-SAMBAs are initially flashed with [`setup.yaml`](https://github.com/IEQLab/samba/blob/main/setup.yaml) in the root directory, a basic configuration that loads device-specific parameters (e.g. calibration coefficients), creates a wireless hotspot to configure WiFi networks, and then downloads the latest SAMBA firmware from Github. The latest SAMBA firmware is compiled from [`samba.yaml`](https://github.com/IEQLab/samba/blob/main/samba.yaml) in the root directory, which will source all the relevant configuration in `config/`.
+SAMBAs are initially flashed with [`samba_setup.yaml`](https://github.com/IEQLab/samba/blob/main/samba_setup.yaml) in the root directory. This is a basic configuration that loads device-specific parameters (e.g. calibration coefficients), creates a wireless hotspot to configure WiFi networks, and then starts a web server that allows users to configure the device. Once done, the user can initiate the download of the [latest production firmware from Github](https://github.com/IEQLab/samba/tree/main/firmware) that has been compiled from [`samba.yaml`](https://github.com/IEQLab/samba/blob/main/samba.yaml) in the root directory.
 
 #### 🌱 Initial Setup ####
 
@@ -117,31 +116,31 @@ Access to the ESP32 is through the USB-C port on SAMBAs main PCB. There is a sin
 0. [Optional] Erase the ESP32 flash memory from earlier deployments: `esptool.py --chip esp32 erase_flash`.
 1.  Clone the [SAMBA Github Repository](https://github.com/IEQLab/samba/tree/main) to your local device and open that directory.
 2.  Open a terminal window and `cd` to the working folder where the SAMBA Github repo was cloned.
-3.  The initial setup script is `samba_setup.yaml`. It contains placeholder calibration coefficients - these can be changed later.
+3.  The initial set-up script is `samba_setup.yaml`. It contains placeholder calibration coefficients - these can be changed later.
 4.  Enter the following command to compile and upload the binary file to the SAMBA: `esphome run samba_setup.yaml`. Note that you will need to select the serial device before uploading; alternatively, specify the serial connection e.g. `esphome run setup.yaml --device /dev/cu.usbserial-10`.
 
-It should take about 30 seconds to flash the firmware. The Led should flash green and blue to indicate it is on but not connected to WiFi. If the SAMBA is being relocated, disconnect the USB-C cable once it is finished flashing, unplug the power, put the housing back on, and tighten the hex bolt. Place the SAMBA in its new location, power it on, and follow the below steps to configure the WiFi:
+It should take about 30 seconds to flash the firmware. The LED should flash green and blue to indicate it is on but not connected to WiFi. If the SAMBA is being relocated, disconnect the USB-C cable once it is finished flashing, unplug the power, put the housing back on, and tighten the hex bolt. Place the SAMBA in its new location, power it on, and follow the below steps to configure the WiFi:
 
-1.  Use another device (e.g. smartphone, laptp) to join the `samba_connect` ad-hoc WiFi and open the [captive portal](https://esphome.io/components/captive_portal.html) by entering [http://192.168.4.1/](http://192.168.4.1/) into your browser.
-2.  Select the 2.4GHz network to join from the list and enter in the password.
-3.  The SAMBA will connect to the network and then launch a web server to display the configuration settings and terminal window. This can be accessed through a browser at the IP address of the SAMBA e.g. `192.168.1.50`. 
-4.  Enter the location (building name, level/room number, and zone name) and the calibration coefficients. CO2, illuminance, air temperature, relative humidity, and globe temperature are linear calibrations (e.g. y = mx + b); the two air speed sensors are power regressions (e.g. y = a * x^b).
-3.  Once the configuration is complete, click the 'Deploy SAMBA' button to attempt to download and flash the latest firmware stored in [`firmware/`](https://github.com/IEQLab/samba/tree/main/firmware) on the IEQ Lab Github. Once that is done, the SAMBA will reboot and start sampling automatically. The status LED should blink slower to indicate it is warming up; this will stop once it enters the sampling routine.
+1.  Use another device (e.g. smartphone, laptop) to join the `samba_connect` ad-hoc WiFi and open the [captive portal](https://esphome.io/components/captive_portal.html) by navigating to [http://192.168.4.1/](http://192.168.4.1/) into your browser.
+2.  Select the available 2.4GHz network to join from the list and enter the password.
+3.  SAMBA will connect to the network and then launch a web server to display the configuration settings and terminal window. This can be accessed through a browser at the IP address of the SAMBA on the local network e.g. `192.168.1.XXX`. 
+4.  Enter the location tags (building name, level/room number, and zone name) and the calibration coefficients. CO2, illuminance, air temperature, relative humidity, and globe temperature are linear calibrations (e.g. y = mx + b); the two air speed sensors are power regressions (e.g. y = a * x^b).
+3.  Once the configuration is complete, click the 'Deploy SAMBA' button to attempt to download and flash the latest firmware stored in [`firmware/`](https://github.com/IEQLab/samba/tree/main/firmware) on the IEQ Lab Github. Once that is done, the SAMBA will reboot and start sampling automatically. The status LED should blink green to indicate it is warming up; this will stop once it enters the sampling routine.
 
 #### 🎯 Compiling Base Firmware [IEQ Lab] ####
 
-The IEQ Lab will actively maintain the SAMBA firmware and publish updates to the [Github repository](https://github.com/IEQLab/samba/tree/main). This might involve performance improvements or additional features. In this case, the IEQ Lab will push new binaries to `firmware/` which can then be flashed remotely using [OTA updates](https://esphome.io/components/ota/http_request.html). For Lab staff wishing to update the firmware, follow these steps:
+The IEQ Lab will actively maintain the SAMBA firmware and publish updates to the [Github repository](https://github.com/IEQLab/samba/tree/main). This might involve performance improvements or additional features. In this case, the IEQ Lab will push new binaries to `firmware/` which will be flashed remotely using [OTA updates](https://esphome.io/components/ota/http_request.html). For Lab staff wishing to update the firmware, follow these steps:
 
 1.  [Required] Speak to Tom before doing anything 🤠
-2.  Make the agreed modifications to the relevant .yaml files in `config/...` and test EXTENSIVELY.
+2.  Make the agreed modifications to the relevant .yaml files in `config/` and test EXTENSIVELY.
 3.  Bump the project version in [`esp32.yaml`](https://github.com/IEQLab/samba/blob/ebebc4b091f836f893ec4236af8086405198ec6a/config/esp32.yaml#L16)
 4.  Once the new firmware is confirmed stable, generate the compiled bin: `esphome compile samba.yaml`
 5.  Move the compiled ota firmware to the firmware directory: `cp .esphome/build/samba/.pioenvs/samba/firmware.ota.bin firmware/samba_v2.XX.XX.bin`
 6.  Generate a new md5 hash and print it to terminal: `md5 firmware/samba_v2.XX.XX.bin`
-7.  Update the [`manifest.json`](https://github.com/IEQLab/samba/blob/main/manifest.json) file to include the new bin path and md5 hash.
+7.  Update the [`manifest.json`](https://github.com/IEQLab/samba/blob/main/manifest.json) file and the [`samba_setup.yaml`](https://github.com/IEQLab/samba/blob/main/samba_setup.yaml) to include the new bin path and md5 hash.
 7.  Push the new .bin and updated manifest.json to the SAMBA Github repository.
 
-Currently, SAMBAs only check for new firmware during their initial setup. Future firmware will implement routine updates e.g. check once per week. As such, it's extremely important that firmware are extensively tested otherwise they could (worst case scenario) brick the entire SAMBA fleet.
+SAMBAs will check for updates once per week (4 am on Mondays) and automatically flash anew update if available. As such, it's extremely important that firmware are extensively tested BEFORE being pushed to Github otherwise they could (worst case scenario) brick the entire SAMBA fleet.
 
 #### 🆕 Modifying Firmware ####
 
@@ -155,3 +154,7 @@ Users are free to modify the SAMBA firmware to suit their needs. However, we str
 4.  Compile and upload the firmware to SAMBA via USB-C with `esphome run samba.yaml` or wirelessly (if in the same WLAN) with the SAMBA IP address `esphome run samba.yaml --device 192.168.1.XXX`.
 
 The user is responsible for managing the device if the firmware is modified.
+
+### 🛠️ Project Maintenance
+
+This is an active project to build an open research platform to help advance healthy, high-performance buildings. If you're interested in using SAMBA in your project or contributing to it's development, let's chat 😊 You can start a [Github discussion thread](https://github.com/IEQLab/samba/discussions) or email Tom.
