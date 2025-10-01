@@ -64,27 +64,22 @@ script:
   - id: fw_check
     mode: queued
     then:
-      # compute 0–10 min jitter
-      - lambda: |-
-          id(fw_jitter_ms) = esp_random() % (10 * 60 * 1000);
-      - logger.log:
-          format: "Weekly update check; jitter = %u ms"
-          args: ['id(fw_jitter_ms)']
-          level: INFO
-          tag: "samba"
-
-      # yield to scheduler for the jitter duration
-      - delay: !lambda 'return id(fw_jitter_ms);'
-
-      # then do the update check
       - if:
           condition:
-            update.is_available: fw_update
+            and:
+              - update.is_available: fw_update
+              - switch.is_on: switch_updates
           then:
-            - logger.log: 
-                format: "Update available; starting OTA"
+            # compute 0–10 min jitter
+            - lambda: |-
+                id(fw_jitter_ms) = esp_random() % (10 * 60 * 1000);
+            - logger.log:
+                format: "Update available; jitter = %u ms"
+                args: ['id(fw_jitter_ms)']
                 level: INFO
                 tag: "samba"
+            # yield to scheduler for the jitter duration
+            - delay: !lambda 'return id(fw_jitter_ms);'
             - update.perform:
                 id: fw_update
           else:
@@ -92,3 +87,18 @@ script:
                 format: "No update available"
                 level: INFO
                 tag: "samba"
+
+# Toggle automatic FW updates
+switch:
+  - platform: template
+    name: "Automatic Updates"
+    id: switch_updates
+    icon: mdi:update
+    entity_category: "config"
+    restore_mode: DISABLED
+    lambda: |-
+      return id(updates_enable);
+    turn_on_action:
+      - lambda: 'id(updates_enable) = true;'
+    turn_off_action:
+      - lambda: 'id(updates_enable) = false;'

@@ -24,6 +24,11 @@ globals:
     restore_value: yes
     initial_value: '"zone"'
 
+  - id: updates_enable
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
+
   - id: influx_enable
     type: bool
     restore_value: yes
@@ -288,19 +293,19 @@ button:
           url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.80.bin
           md5: "57b42fbea4070d33804efaf98d9b2897"
   - platform: template
-    name: "Deploy test firmware"
-    id: button_testing
+    name: "Deploy custom firmware"
+    id: button_custom
     web_server:
       sorting_group_id: sort_firmware_settings
     icon: mdi:bug-check
     on_press:
       - logger.log:
-          format: "Flashing SAMBA test firmware"
+          format: "Flashing custom SAMBA firmware"
           level: INFO
           tag: "samba"
       - ota.http_request.flash:
-          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_testing.bin
-          md5_url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_testing.md5
+          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_custom.bin
+          md5_url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_custom.md5
 
 
 #### LOCATION FIELDS ####
@@ -621,6 +626,21 @@ number:
 
 # Define switches
 switch:
+  - platform: template
+    name: "Enable Updates"
+    id: switch_updates
+    web_server:
+      sorting_group_id: sort_upload_settings
+    restore_mode: DISABLED
+    lambda: |-
+      return id(updates_enable);
+    turn_on_action:
+      - lambda: |-
+          id(updates_enable) = true;
+    turn_off_action:
+      - lambda: |-
+          id(updates_enable) = false;
+
   - platform: template
     name: "Enable InfluxDB"
     id: switch_influx
