@@ -121,6 +121,9 @@ void SdSpiCard::unmount_card_() {
   esp_vfs_fat_sdcard_unmount(mount_point_.c_str(), card_);
   mounted_ = false;
   card_ = nullptr;
+  
+  // Set timer to try remounting sooner (30 seconds)
+  last_check_millis_ = millis() - check_interval_ms_ + remount_retry_interval_ms_;
 }
 
 void SdSpiCard::loop() {
@@ -391,7 +394,7 @@ WriteResult SdSpiCard::append_file(const std::string &path,
   // Only log success after confirming write succeeded
   ESP_LOGD(TAG, "Appended %d bytes to %s", (int)data.size(), path.c_str());
   std::string content(data.begin(), data.end());
-  ESP_LOGI(TAG, "Appended to %s: %d bytes: %s", path.c_str(), (int)data.size(), content.c_str());
+  ESP_LOGI(TAG, "Appended %d bytes to %s: %s", (int)data.size(), path.c_str(), content.c_str());
   
   failed_writes_ = 0;
   return WriteResult::SUCCESS;
