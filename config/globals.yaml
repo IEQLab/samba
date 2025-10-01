@@ -24,6 +24,11 @@ globals:
     restore_value: yes
     initial_value: '"zone"'
 
+  - id: updates_enable
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
+
   - id: influx_enable
     type: bool
     restore_value: yes
