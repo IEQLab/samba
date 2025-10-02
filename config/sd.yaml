@@ -14,13 +14,42 @@ sd_spi_card:
   
   # Create file on succesful mount
   on_mount:
+    - lambda: |-
+        // Get MAC address (without colons for filename)
+        std::string mac = get_mac_address_pretty();
+        mac.erase(std::remove(mac.begin(), mac.end(), ':'), mac.end());
+        
+        // Get boot timestamp
+        auto t = id(ds1307_time).now();
+        char timestamp[32];
+        t.strftime(timestamp, sizeof(timestamp), "%y%m%d_%H%M");
+        
+        // Create filename
+        id(sd_filename) = "/" + mac + "_" + std::string(timestamp) + ".txt";
+
     - sd_spi_card.create_file:
         id: sd0
-        path: "/samba.txt"
-        content: !lambda 'return "time,ta,tg,rh,as,mrt,co2,lux,pm25,tvoc,nox,laeq,lamin,lamax\n";'
+        path: !lambda |- 
+          return id(sd_filename);
+        content: !lambda |- 
+          char header[256];
+          snprintf(header, sizeof(header),
+                   "# version: %s\n# building: %s\n# level: %s\n# zone: %s\ntime,ta,tg,rh,as,mrt,co2,lux,pm25,tvoc,nox,laeq,lamin,lamax\n",
+                   ESPHOME_VERSION,
+                   id(building_tag).c_str(),
+                   id(level_tag).c_str(),
+                   id(zone_tag).c_str());
+          return std::string(header);
     - logger.log: 
         level: INFO
-        format: "SD card mounted and initialized!"
+        format: "SD card initialised: Logging to: %s"
+        args: ['id(sd_filename).c_str()']
+
+# Store filename as global variable
+globals:
+  - id: sd_filename
+    type: std::string
+    initial_value: '"/samba.txt"'
 
 # Toggle SD write
 switch:
