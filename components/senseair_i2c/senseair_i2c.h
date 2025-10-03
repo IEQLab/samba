@@ -14,6 +14,7 @@ namespace senseair_i2c {
  *   - Platform sensor for K30/K33 (and compatible) CO₂ sensors over I²C.
  *   - Robust, non-blocking state-machine for configuration and measurement.
  *   - Automatic baseline correction (ABC) configurable at boot.
+ *   - ABC settings written to EEPROM (requires power cycle to take effect)
  */
 class SenseairI2CSensor : public sensor::Sensor, public PollingComponent, public i2c::I2CDevice {
 public:
@@ -37,17 +38,28 @@ protected:
   uint32_t read_delay_ms_{50};      // Delay before reading response (ms)
   
   // --- Setup state machine for ABC configuration ---
-  enum SetupStep { SETUP_IDLE, SETUP_READ_METER, SETUP_CONFIGURE_ABC, SETUP_DONE };
+  enum SetupStep { 
+    SETUP_IDLE, 
+    SETUP_READ_METER, 
+    SETUP_CONFIGURE_ABC, 
+    SETUP_WRITE_ABC_INTERVAL,
+    SETUP_DONE 
+  };
   SetupStep setup_step_{SETUP_IDLE};
   uint8_t setup_retry_count_{0};
+  bool setup_success_{false};  // Track if setup actually succeeded
+  bool abc_config_pending_{false};  // Track if ABC changes need power cycle
   uint8_t setup_data_[3];
   void setup_read_meter_control_();
   void setup_configure_abc_();
+  void setup_write_abc_interval_();
+  void setup_failed_();
   
   // --- Measurement state machine ---
   enum MeasureStep { MEASURE_IDLE, MEASURE_WRITE, MEASURE_READ };
   MeasureStep measure_step_{MEASURE_IDLE};
-  uint8_t measure_retry_count_{0};
+  uint8_t measure_write_retry_count_{0};
+  uint8_t measure_read_retry_count_{0};
   uint8_t measure_data_[4];
   void attempt_measurement_();
   
@@ -56,6 +68,7 @@ protected:
                      const char* operation_name, std::function<void()> on_failure);
   bool validate_checksum_(const uint8_t *data, size_t data_len, uint8_t received_checksum) const;
   uint8_t calculate_checksum_(const uint8_t *data, size_t len) const;
+  bool validate_co2_value_(int16_t co2_ppm) const;
 };
 
 }  // namespace senseair_i2c
