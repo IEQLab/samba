@@ -23,7 +23,7 @@ script:
           mac.erase(std::remove(mac.begin(), mac.end(), ':'), mac.end());
           
           // Get boot timestamp
-          auto t = id(ds1307_time).now();
+          auto t = id(ds1307_time).utcnow();
           char timestamp[32];
           t.strftime(timestamp, sizeof(timestamp), "%y%m%d_%H%M");
           
