@@ -43,10 +43,12 @@ time:
                     id: ds1307_time
                 - logger.log:
                     level: INFO
+                    tag: "samba"
                     format: "RTC updated from SNTP"
               else:
                 - logger.log:
                     level: WARN
+                    tag: "samba"
                     format: "SNTP invalid – skipping RTC update"
       - days_of_week: MON
         hours: 4
