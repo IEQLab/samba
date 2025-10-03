@@ -339,12 +339,6 @@ WriteResult SdSpiCard::create_file(const std::string &path,
   
   ESP_LOGI(TAG, "Created file %s: %d bytes", path.c_str(), (int)data.size());
   
-  // Log content if not too large
-  if (data.size() > 0 && data.size() < 200) {
-    std::string content(data.begin(), data.end());
-    ESP_LOGI(TAG, "Initial content: %s", content.c_str());
-  }
-  
   failed_writes_ = 0;
   return WriteResult::SUCCESS;
 }
