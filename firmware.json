@@ -1,15 +1,15 @@
 {
   "name": "SAMBA Indoor Environmental Monitor",
-  "version": "1.99.90",
+  "version": "1.99.91",
   "home_assistant_domain": "esphome",
   "builds": [
     {
       "chipFamily": "ESP32",
       "ota": {
-        "md5": "71ac75fca4dbba750bd8325aa8025491",
-        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.90.bin",
-        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.90",
-        "summary": "Add support for SD card"
+        "md5": "e9f2b55fe9fef7967a6071c5fdf4eb2f",
+        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.91.bin",
+        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.91",
+        "summary": "Use unique log files"
       }
     }
   ]
