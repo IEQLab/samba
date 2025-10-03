@@ -95,7 +95,7 @@ script:
                 then:
                   - sd_spi_card.append_file:
                       id: sd0
-                      path: "/samba.txt"
+                      path: !lambda 'return id(sd_filename);'
                       content: !lambda |-
                         auto t = id(ds1307_time).now();
                         char ts[32];
