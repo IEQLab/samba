@@ -11,10 +11,10 @@ sensor:
     i2c_id: bus_a
     address: 0x69
     internal: true
-    update_interval: 14.73s
+    update_interval: 30.23s
     abc_interval: 180h
-    read_delay_ms: 50
-    retry_delay_ms: 150
+    read_delay_ms: 40
+    retry_delay_ms: 160
     max_retries: 5
     filters:
       - filter_out: nan
@@ -23,8 +23,8 @@ sensor:
           max_value: 10000
           ignore_out_of_range: true
       - median:
-          window_size: 20
-          send_every: 3
+          window_size: 10
+          send_every: 2
           send_first_at: 1
 
 # Define CO2 measurements
