@@ -1,15 +1,15 @@
 {
   "name": "SAMBA Indoor Environmental Monitor",
-  "version": "1.99.91",
+  "version": "1.99.92",
   "home_assistant_domain": "esphome",
   "builds": [
     {
       "chipFamily": "ESP32",
       "ota": {
-        "md5": "e9f2b55fe9fef7967a6071c5fdf4eb2f",
-        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.91.bin",
-        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.91",
-        "summary": "Use unique log files"
+        "md5": "fdadb4a9435505504aa36959e89eea62",
+        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.92.bin",
+        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.92",
+        "summary": "Improved functionality for Senseair and InfluxDB components"
       }
     }
   ]
