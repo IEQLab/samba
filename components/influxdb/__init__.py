@@ -3,6 +3,7 @@ import esphome.config_validation as cv
 from esphome.components import http_request, time
 from esphome.const import CONF_ID, CONF_UPDATE_INTERVAL
 from esphome import core
+from esphome import automation
 
 CODEOWNERS = ["@IEQLab"]
 DEPENDENCIES = ["http_request", "time"]
@@ -21,9 +22,11 @@ CONF_FIELD_NAME = "field_names"
 CONF_USE_SSL = "use_ssl"
 CONF_SENSORS_NAMES = "sensor_names"
 CONF_SEND_MAC = "send_mac"
+CONF_SENSOR_IDS = "sensor_ids"
 
 influxdb_ns = cg.esphome_ns.namespace("influxdb")
 InfluxDB = influxdb_ns.class_("InfluxDB", cg.Component)
+PublishSensorsAction = influxdb_ns.class_("PublishSensorsAction", automation.Action)
 
 def validate_update_interval(value):
     """Validate update interval using ESPHome's built-in validation that supports 'never'."""
@@ -123,3 +126,24 @@ async def to_code(config):
     if CONF_FIELD_NAME in config:
         for sensor_id, field_name in config[CONF_FIELD_NAME].items():
             cg.add(var.set_field_name(sensor_id, field_name))
+
+
+# Register action for selective sensor publishing
+@automation.register_action(
+    "influxdb.publish_sensors",
+    PublishSensorsAction,
+    cv.Schema(
+        {
+            cv.GenerateID(): cv.use_id(InfluxDB),
+            cv.Required(CONF_SENSOR_IDS): cv.ensure_list(cv.string),
+        }
+    ),
+)
+async def influxdb_publish_sensors_to_code(config, action_id, template_arg, args):
+    parent = await cg.get_variable(config[CONF_ID])
+    var = cg.new_Pvariable(action_id, template_arg, parent)
+    
+    for sensor_id in config[CONF_SENSOR_IDS]:
+        cg.add(var.add_sensor_id(sensor_id))
+    
+    return var

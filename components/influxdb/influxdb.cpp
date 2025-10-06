@@ -255,7 +255,21 @@ size_t InfluxDB::estimate_payload_size_() const {
   return std::max(estimated_size, MIN_BUFFER_SIZE);
 }
 
+// Add these method implementations to your influxdb.cpp
+// Replace your existing publish_now() method with these three methods
+
 void InfluxDB::publish_now() {
+  // Publish all configured sensors (no filter)
+  this->publish_internal_(nullptr);
+}
+
+void InfluxDB::publish_sensors(const std::vector<std::string> &sensor_ids) {
+  // Convert vector to unordered_set for O(1) lookup performance
+  std::unordered_set<std::string> filter(sensor_ids.begin(), sensor_ids.end());
+  this->publish_internal_(&filter);
+}
+
+void InfluxDB::publish_internal_(const std::unordered_set<std::string> *filter) {
   if (this->is_failed() || this->publish_in_progress_) {
     ESP_LOGW(TAG, "Cannot publish: component %s", 
              this->is_failed() ? "has failed" : "publish already in progress");
@@ -268,10 +282,16 @@ void InfluxDB::publish_now() {
   body.reserve(estimated_size);
   size_t data_points = 0;
   
-  // Build payload efficiently - no preflight checks
+  // Build payload efficiently - apply filter if provided
   for (auto *sensor : this->sensors_) {
     if (!std::isnan(sensor->state)) {
       const std::string &sensor_id = sensor->get_object_id();
+      
+      // Skip if filter is active and sensor not in filter
+      if (filter != nullptr && filter->find(sensor_id) == filter->end()) {
+        continue;
+      }
+      
       body += this->build_line_protocol_line_(sensor_id, to_string(sensor->state));
       data_points++;
     }
@@ -280,6 +300,12 @@ void InfluxDB::publish_now() {
   for (auto *text_sensor : this->text_sensors_) {
     if (!text_sensor->state.empty()) {
       const std::string &sensor_id = text_sensor->get_object_id();
+      
+      // Skip if filter is active and sensor not in filter
+      if (filter != nullptr && filter->find(sensor_id) == filter->end()) {
+        continue;
+      }
+      
       body += this->build_line_protocol_line_(sensor_id, text_sensor->state, true);
       data_points++;
     }
@@ -287,6 +313,11 @@ void InfluxDB::publish_now() {
   
 #ifdef USE_BINARY_SENSOR
   for (const auto &[sensor_id, state] : this->binary_sensor_states_) {
+    // Skip if filter is active and sensor not in filter
+    if (filter != nullptr && filter->find(sensor_id) == filter->end()) {
+      continue;
+    }
+    
     body += this->build_line_protocol_line_(sensor_id, std::to_string(state ? 1 : 0));
     data_points++;
   }
@@ -300,7 +331,11 @@ void InfluxDB::publish_now() {
   // Shrink buffer to actual size
   body.shrink_to_fit();
   
-  ESP_LOGI(TAG, "Publishing %zu data points to InfluxDB", data_points);
+  if (filter != nullptr) {
+    ESP_LOGI(TAG, "Publishing %zu filtered data points to InfluxDB", data_points);
+  } else {
+    ESP_LOGI(TAG, "Publishing %zu data points to InfluxDB", data_points);
+  }
   ESP_LOGVV(TAG, "Request body length: %u bytes", (unsigned) body.size());
   
   this->publish_in_progress_ = true;

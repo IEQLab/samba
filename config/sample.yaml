@@ -80,8 +80,24 @@ script:
                 condition:
                   - switch.is_on: switch_influx
                 then:
-                  - lambda: |-
-                      id(influx).publish_now();
+                  - influxdb.publish_sensors:
+                      id: influx
+                      sensor_ids:
+                        - samba_temperature
+                        - samba_globe
+                        - samba_humidity
+                        - samba_airspeed
+                        - samba_mrt
+                        - samba_co2
+                        - samba_lux
+                        - samba_pm25
+                        - samba_tvoc
+                        - samba_nox
+                        - samba_laeq
+                        - samba_lamin
+                        - samba_lamax
+#                  - lambda: |-
+#                      id(influx).publish_now();
                 else:
                   - logger.log:
                       format: "Influx upload skipped"
