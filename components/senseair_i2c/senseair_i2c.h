@@ -34,6 +34,7 @@ public:
   
   // --- Manual calibration actions ---
   void background_calibration();
+  void background_calibration_with_ppm(uint16_t target_ppm);
   void abc_get_period();
   
 protected:
@@ -82,10 +83,10 @@ protected:
   uint8_t calibration_data_[4];
   void perform_calibration_command_(uint16_t address, uint16_t command, const char* name);
   void read_abc_period_();
+  uint16_t get_calibration_address_() const;
   
-  // Calibration command addresses (from TDE4700.pdf section 10.2)
-  // Note: Address differs by model - K30 uses 0x67, K33/K50 may use 0x32 or 0x42
-  static const uint16_t CALIBRATION_ADDR_K30 = 0x0067;
+  // ZeroTrim register for calibration offset (TDE4700 Table 18)
+  static const uint16_t ZEROTRIM_ADDR = 0x0048;
   
   // --- Diagnostic data read during setup ---
   struct DiagnosticData {
@@ -111,24 +112,41 @@ protected:
 /** Action to trigger background calibration */
 template<typename... Ts> 
 class BackgroundCalibrationAction : public Action<Ts...> {
- public:
+public:
   BackgroundCalibrationAction(SenseairI2CSensor *parent) : parent_(parent) {}
-
+  
   void play(Ts... x) override { this->parent_->background_calibration(); }
+  
+protected:
+  SenseairI2CSensor *parent_;
+};
 
- protected:
+/** Action to trigger background calibration with custom target ppm */
+template<typename... Ts> 
+class BackgroundCalibrationWithPPMAction : public Action<Ts...> {
+public:
+  BackgroundCalibrationWithPPMAction(SenseairI2CSensor *parent) : parent_(parent) {}
+  
+  TEMPLATABLE_VALUE(uint16_t, target_ppm)
+  
+  void play(Ts... x) override { 
+    auto ppm = this->target_ppm_.value(x...);
+    this->parent_->background_calibration_with_ppm(ppm);
+  }
+  
+protected:
   SenseairI2CSensor *parent_;
 };
 
 /** Action to read ABC period from sensor */
 template<typename... Ts> 
 class ABCGetPeriodAction : public Action<Ts...> {
- public:
+public:
   ABCGetPeriodAction(SenseairI2CSensor *parent) : parent_(parent) {}
-
+  
   void play(Ts... x) override { this->parent_->abc_get_period(); }
-
- protected:
+  
+protected:
   SenseairI2CSensor *parent_;
 };
 
