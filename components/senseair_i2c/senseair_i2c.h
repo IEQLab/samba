@@ -5,6 +5,7 @@
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/i2c/i2c.h"
+#include "esphome/core/automation.h"
 
 namespace esphome {
 namespace senseair_i2c {
@@ -15,6 +16,7 @@ namespace senseair_i2c {
  *   - Robust, non-blocking state-machine for configuration and measurement.
  *   - Automatic baseline correction (ABC) configurable at boot.
  *   - ABC settings written to EEPROM (requires power cycle to take effect)
+ *   - Manual calibration actions available
  */
 class SenseairI2CSensor : public sensor::Sensor, public PollingComponent, public i2c::I2CDevice {
 public:
@@ -30,6 +32,10 @@ public:
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
   
+  // --- Manual calibration actions ---
+  void background_calibration();
+  void abc_get_period();
+  
 protected:
   // --- User options with sensible defaults ---
   uint32_t abc_interval_{648000};   // 180h default ABC interval (seconds)
@@ -43,6 +49,7 @@ protected:
     SETUP_READ_METER, 
     SETUP_CONFIGURE_ABC, 
     SETUP_WRITE_ABC_INTERVAL,
+    SETUP_READ_DIAGNOSTICS,
     SETUP_DONE 
   };
   SetupStep setup_step_{SETUP_IDLE};
@@ -63,12 +70,66 @@ protected:
   uint8_t measure_data_[4];
   void attempt_measurement_();
   
+  // --- Calibration state machine ---
+  enum CalibrationStep { 
+    CAL_IDLE, 
+    CAL_WRITE, 
+    CAL_READ_RESPONSE,
+    CAL_READ_ABC_PERIOD
+  };
+  CalibrationStep calibration_step_{CAL_IDLE};
+  uint8_t calibration_retry_count_{0};
+  uint8_t calibration_data_[4];
+  void perform_calibration_command_(uint16_t address, uint16_t command, const char* name);
+  void read_abc_period_();
+  
+  // Calibration command addresses (from TDE4700.pdf section 10.2)
+  // Note: Address differs by model - K30 uses 0x67, K33/K50 may use 0x32 or 0x42
+  static const uint16_t CALIBRATION_ADDR_K30 = 0x0067;
+  
+  // --- Diagnostic data read during setup ---
+  struct DiagnosticData {
+    bool valid{false};
+    uint8_t firmware_type{0};
+    uint8_t firmware_main{0};
+    uint8_t firmware_sub{0};
+    uint8_t error_status{0};
+    uint32_t serial_number{0};
+    uint8_t memory_map_id{0};
+  } diagnostic_data_;
+  
+  void read_diagnostics_();
+  
   // --- Helper methods ---
   void handle_retry_(std::function<void()> operation, uint8_t& retry_count, 
                      const char* operation_name, std::function<void()> on_failure);
   bool validate_checksum_(const uint8_t *data, size_t data_len, uint8_t received_checksum) const;
   uint8_t calculate_checksum_(const uint8_t *data, size_t len) const;
   bool validate_co2_value_(int16_t co2_ppm) const;
+};
+
+/** Action to trigger background calibration */
+template<typename... Ts> 
+class BackgroundCalibrationAction : public Action<Ts...> {
+ public:
+  BackgroundCalibrationAction(SenseairI2CSensor *parent) : parent_(parent) {}
+
+  void play(Ts... x) override { this->parent_->background_calibration(); }
+
+ protected:
+  SenseairI2CSensor *parent_;
+};
+
+/** Action to read ABC period from sensor */
+template<typename... Ts> 
+class ABCGetPeriodAction : public Action<Ts...> {
+ public:
+  ABCGetPeriodAction(SenseairI2CSensor *parent) : parent_(parent) {}
+
+  void play(Ts... x) override { this->parent_->abc_get_period(); }
+
+ protected:
+  SenseairI2CSensor *parent_;
 };
 
 }  // namespace senseair_i2c

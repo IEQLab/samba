@@ -112,9 +112,10 @@ void SenseairI2CSensor::setup_read_meter_control_() {
       this->setup_retry_count_ = 0;
       this->setup_configure_abc_();
     } else {
-      this->setup_step_ = SETUP_DONE;
-      this->setup_success_ = true;
-      ESP_LOGI(TAG, "ABC configuration matches request");
+      // ABC matches, proceed to read diagnostics
+      this->setup_step_ = SETUP_READ_DIAGNOSTICS;
+      this->setup_retry_count_ = 0;
+      this->read_diagnostics_();
     }
   });
 }
@@ -141,7 +142,7 @@ void SenseairI2CSensor::setup_configure_abc_() {
   ESP_LOGI(TAG, "Writing ABC %s to EEPROM", abc_enable ? "ENABLE" : "DISABLE");
   ESP_LOGD(TAG, "ABC Command: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X", 
            configure_abc_command[0], configure_abc_command[1], 
-                                                          configure_abc_command[2], configure_abc_command[3], configure_abc_command[4]);
+           configure_abc_command[2], configure_abc_command[3], configure_abc_command[4]);
   
   auto error = this->write(configure_abc_command, sizeof(configure_abc_command));
   if (error != i2c::ERROR_OK) {
@@ -194,9 +195,9 @@ void SenseairI2CSensor::setup_configure_abc_() {
       this->setup_retry_count_ = 0;
       this->setup_write_abc_interval_();
     } else {
-      this->setup_step_ = SETUP_DONE;
-      this->setup_success_ = true;
-      ESP_LOGW(TAG, "ABC changes written - POWER CYCLE SENSOR to activate!");
+      this->setup_step_ = SETUP_READ_DIAGNOSTICS;
+      this->setup_retry_count_ = 0;
+      this->read_diagnostics_();
     }
   });
 }
@@ -233,7 +234,7 @@ void SenseairI2CSensor::setup_write_abc_interval_() {
   
   ESP_LOGD(TAG, "ABC Interval Command: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",
            interval_cmd[0], interval_cmd[1], interval_cmd[2], 
-                                                         interval_cmd[3], interval_cmd[4], interval_cmd[5]);
+           interval_cmd[3], interval_cmd[4], interval_cmd[5]);
   
   auto error = this->write(interval_cmd, sizeof(interval_cmd));
   if (error != i2c::ERROR_OK) {
@@ -275,9 +276,119 @@ void SenseairI2CSensor::setup_write_abc_interval_() {
     }
     
     ESP_LOGI(TAG, "ABC period written to EEPROM successfully");
+    
+    // Proceed to read diagnostics
+    this->setup_step_ = SETUP_READ_DIAGNOSTICS;
+    this->setup_retry_count_ = 0;
+    this->read_diagnostics_();
+  });
+}
+
+void SenseairI2CSensor::read_diagnostics_() {
+  ESP_LOGD(TAG, "Reading sensor diagnostics...");
+  
+  // Read firmware identification (0x62-0x64 in RAM, 3 bytes)
+  uint8_t fw_cmd[] = {0x23, 0x00, 0x62, 0x88};  // Read RAM, 3 bytes from 0x62
+  auto error = this->write(fw_cmd, sizeof(fw_cmd));
+  if (error != i2c::ERROR_OK) {
+    ESP_LOGD(TAG, "Firmware read command failed, skipping diagnostics");
     this->setup_step_ = SETUP_DONE;
     this->setup_success_ = true;
-    ESP_LOGW(TAG, "ABC changes written - POWER CYCLE SENSOR to activate!");
+    if (this->abc_config_pending_) {
+      ESP_LOGW(TAG, "ABC changes written - POWER CYCLE SENSOR to activate!");
+    }
+    return;
+  }
+  
+  this->set_timeout(this->read_delay_ms_, [this]() {
+    uint8_t fw_response[5];  // status + 3 data bytes + checksum
+    if (this->read(fw_response, 5) == i2c::ERROR_OK && 
+        this->validate_checksum_(fw_response, 4, fw_response[4]) &&
+        (fw_response[0] & STATUS_COMPLETE_BIT)) {
+      this->diagnostic_data_.firmware_type = fw_response[1];
+      this->diagnostic_data_.firmware_main = fw_response[2];
+      this->diagnostic_data_.firmware_sub = fw_response[3];
+      this->diagnostic_data_.valid = true;
+      ESP_LOGD(TAG, "Firmware: Type 0x%02X, Version %u.%u",
+               this->diagnostic_data_.firmware_type,
+               this->diagnostic_data_.firmware_main,
+               this->diagnostic_data_.firmware_sub);
+    }
+    
+    // Read error status (0x1E in RAM, 1 byte)
+    uint8_t err_cmd[] = {0x21, 0x00, 0x1E, 0x3F};
+    if (this->write(err_cmd, sizeof(err_cmd)) == i2c::ERROR_OK) {
+      this->set_timeout(this->read_delay_ms_, [this]() {
+        uint8_t err_response[3];  // status + 1 data byte + checksum
+        if (this->read(err_response, 3) == i2c::ERROR_OK && 
+            this->validate_checksum_(err_response, 2, err_response[2]) &&
+            (err_response[0] & STATUS_COMPLETE_BIT)) {
+          this->diagnostic_data_.error_status = err_response[1];
+          if (this->diagnostic_data_.error_status != 0) {
+            ESP_LOGW(TAG, "Error status: 0x%02X (errors detected!)", this->diagnostic_data_.error_status);
+          } else {
+            ESP_LOGD(TAG, "Error status: OK");
+          }
+        }
+        
+        // Read memory map ID (0x2F in RAM, 1 byte)
+        uint8_t map_cmd[] = {0x21, 0x00, 0x2F, 0x50};
+        if (this->write(map_cmd, sizeof(map_cmd)) == i2c::ERROR_OK) {
+          this->set_timeout(this->read_delay_ms_, [this]() {
+            uint8_t map_response[3];
+            if (this->read(map_response, 3) == i2c::ERROR_OK && 
+                this->validate_checksum_(map_response, 2, map_response[2]) &&
+                (map_response[0] & STATUS_COMPLETE_BIT)) {
+              this->diagnostic_data_.memory_map_id = map_response[1];
+              ESP_LOGD(TAG, "Memory map: 0x%02X", this->diagnostic_data_.memory_map_id);
+            }
+            
+            // Read serial number (0x28-0x2B in RAM, 4 bytes)
+            uint8_t serial_cmd[] = {0x24, 0x00, 0x28, 0x50};
+            if (this->write(serial_cmd, sizeof(serial_cmd)) == i2c::ERROR_OK) {
+              this->set_timeout(this->read_delay_ms_, [this]() {
+                uint8_t serial_response[6];  // status + 4 data bytes + checksum
+                if (this->read(serial_response, 6) == i2c::ERROR_OK && 
+                    this->validate_checksum_(serial_response, 5, serial_response[5]) &&
+                    (serial_response[0] & STATUS_COMPLETE_BIT)) {
+                  this->diagnostic_data_.serial_number = 
+                    (static_cast<uint32_t>(serial_response[1]) << 24) |
+                    (static_cast<uint32_t>(serial_response[2]) << 16) |
+                    (static_cast<uint32_t>(serial_response[3]) << 8) |
+                    static_cast<uint32_t>(serial_response[4]);
+                  ESP_LOGD(TAG, "Serial number: %08X", this->diagnostic_data_.serial_number);
+                }
+                
+                // Diagnostics complete
+                this->setup_step_ = SETUP_DONE;
+                this->setup_success_ = true;
+                if (this->abc_config_pending_) {
+                  ESP_LOGW(TAG, "ABC changes written - POWER CYCLE SENSOR to activate!");
+                }
+              });
+            } else {
+              this->setup_step_ = SETUP_DONE;
+              this->setup_success_ = true;
+              if (this->abc_config_pending_) {
+                ESP_LOGW(TAG, "ABC changes written - POWER CYCLE SENSOR to activate!");
+              }
+            }
+          });
+        } else {
+          this->setup_step_ = SETUP_DONE;
+          this->setup_success_ = true;
+          if (this->abc_config_pending_) {
+            ESP_LOGW(TAG, "ABC changes written - POWER CYCLE SENSOR to activate!");
+          }
+        }
+      });
+    } else {
+      this->setup_step_ = SETUP_DONE;
+      this->setup_success_ = true;
+      if (this->abc_config_pending_) {
+        ESP_LOGW(TAG, "ABC changes written - POWER CYCLE SENSOR to activate!");
+      }
+    }
   });
 }
 
@@ -345,7 +456,7 @@ void SenseairI2CSensor::attempt_measurement_() {
     
     ESP_LOGVV(TAG, "Measurement raw: 0x%02X 0x%02X 0x%02X 0x%02X",
               this->measure_data_[0], this->measure_data_[1], 
-                                                         this->measure_data_[2], this->measure_data_[3]);
+              this->measure_data_[2], this->measure_data_[3]);
     
     // Check if measurement is ready (bit 0 of status should be 1)
     if ((this->measure_data_[0] & STATUS_COMPLETE_BIT) != STATUS_COMPLETE_BIT) {
@@ -382,6 +493,152 @@ void SenseairI2CSensor::attempt_measurement_() {
   }
 }
 
+// ============================================================================
+// Manual Calibration Actions
+// ============================================================================
+
+void SenseairI2CSensor::background_calibration() {
+  if (this->calibration_step_ != CAL_IDLE) {
+    ESP_LOGW(TAG, "Calibration already in progress, ignoring request");
+    return;
+  }
+  
+  ESP_LOGW(TAG, "Starting background calibration - sensor assumes current environment is 400ppm");
+  ESP_LOGW(TAG, "Ensure sensor is in fresh air for accurate calibration!");
+  
+  // Background calibration command: write 0x7C06 to address 0x67 (K30)
+  this->perform_calibration_command_(CALIBRATION_ADDR_K30, 0x7C06, "background calibration");
+}
+
+void SenseairI2CSensor::abc_get_period() {
+  if (this->calibration_step_ != CAL_IDLE) {
+    ESP_LOGW(TAG, "Calibration operation in progress, ignoring request");
+    return;
+  }
+  
+  ESP_LOGI(TAG, "Reading ABC period from sensor");
+  this->calibration_step_ = CAL_READ_ABC_PERIOD;
+  this->calibration_retry_count_ = 0;
+  this->read_abc_period_();
+}
+
+void SenseairI2CSensor::perform_calibration_command_(uint16_t address, uint16_t command, 
+                                                     const char* name) {
+  // Build write command: [cmd, addr_msb, addr_lsb, data_msb, data_lsb, checksum]
+  // 0x12 = Write RAM, 2 bytes
+  uint8_t cal_cmd[] = {
+    0x12,  // Write RAM, 2 bytes
+    static_cast<uint8_t>((address >> 8) & 0xFF),   // Address MSB
+    static_cast<uint8_t>(address & 0xFF),          // Address LSB
+    static_cast<uint8_t>((command >> 8) & 0xFF),   // Command MSB
+    static_cast<uint8_t>(command & 0xFF),          // Command LSB
+    0x00   // Checksum placeholder
+  };
+  cal_cmd[5] = this->calculate_checksum_(cal_cmd, 5);
+  
+  ESP_LOGD(TAG, "Calibration command (%s): 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",
+           name, cal_cmd[0], cal_cmd[1], cal_cmd[2], cal_cmd[3], cal_cmd[4], cal_cmd[5]);
+  
+  this->calibration_step_ = CAL_WRITE;
+  
+  auto error = this->write(cal_cmd, sizeof(cal_cmd));
+  if (error != i2c::ERROR_OK) {
+    ESP_LOGE(TAG, "Calibration command write failed: %d", error);
+    this->calibration_step_ = CAL_IDLE;
+    return;
+  }
+  
+  // Wait and read response
+  this->calibration_step_ = CAL_READ_RESPONSE;
+  this->set_timeout(this->read_delay_ms_, [this, name]() {
+    uint8_t response_data[2];
+    auto read_err = this->read(response_data, 2);
+    if (read_err != i2c::ERROR_OK) {
+      ESP_LOGE(TAG, "Calibration response read failed: %d", read_err);
+      this->calibration_step_ = CAL_IDLE;
+      return;
+    }
+    
+    ESP_LOGD(TAG, "Calibration response: status=0x%02X checksum=0x%02X",
+             response_data[0], response_data[1]);
+    
+    // Validate checksum
+    if (!this->validate_checksum_(response_data, 1, response_data[1])) {
+      ESP_LOGE(TAG, "Calibration response checksum mismatch");
+      this->calibration_step_ = CAL_IDLE;
+      return;
+    }
+    
+    // Check status
+    if ((response_data[0] & STATUS_COMPLETE_BIT) != STATUS_COMPLETE_BIT) {
+      ESP_LOGW(TAG, "Calibration command incomplete (status: 0x%02X)", response_data[0]);
+      this->calibration_step_ = CAL_IDLE;
+      return;
+    }
+    
+    ESP_LOGI(TAG, "Calibration command (%s) completed successfully", name);
+    ESP_LOGI(TAG, "Wait for sensor measurement cycle (~8 seconds) before taking readings");
+    this->calibration_step_ = CAL_IDLE;
+  });
+}
+
+void SenseairI2CSensor::read_abc_period_() {
+  // Read ABC period from EEPROM address 0x40 (2 bytes)
+  // Command: [cmd, addr_msb, addr_lsb, checksum]
+  // 0x42 = Read EEPROM, 2 bytes
+  uint8_t read_cmd[] = {0x42, 0x00, 0x40, 0x82};
+  
+  auto error = this->write(read_cmd, sizeof(read_cmd));
+  if (error != i2c::ERROR_OK) {
+    ESP_LOGE(TAG, "ABC period read command failed: %d", error);
+    this->calibration_step_ = CAL_IDLE;
+    return;
+  }
+  
+  // Wait and read response: [status, data_msb, data_lsb, checksum]
+  this->set_timeout(this->read_delay_ms_, [this]() {
+    uint8_t response_data[4];
+    auto read_err = this->read(response_data, 4);
+    if (read_err != i2c::ERROR_OK) {
+      ESP_LOGE(TAG, "ABC period read response failed: %d", read_err);
+      this->calibration_step_ = CAL_IDLE;
+      return;
+    }
+    
+    ESP_LOGD(TAG, "ABC period response: 0x%02X 0x%02X 0x%02X 0x%02X",
+             response_data[0], response_data[1], response_data[2], response_data[3]);
+    
+    // Validate checksum
+    if (!this->validate_checksum_(response_data, 3, response_data[3])) {
+      ESP_LOGE(TAG, "ABC period response checksum mismatch");
+      this->calibration_step_ = CAL_IDLE;
+      return;
+    }
+    
+    // Check status
+    if ((response_data[0] & STATUS_COMPLETE_BIT) != STATUS_COMPLETE_BIT) {
+      ESP_LOGW(TAG, "ABC period read incomplete (status: 0x%02X)", response_data[0]);
+      this->calibration_step_ = CAL_IDLE;
+      return;
+    }
+    
+    // Extract ABC period (big-endian, units in hours)
+    uint16_t abc_hours = (static_cast<uint16_t>(response_data[1]) << 8) | response_data[2];
+    
+    if (abc_hours == 0) {
+      ESP_LOGI(TAG, "ABC Period: DISABLED (0 hours)");
+    } else {
+      ESP_LOGI(TAG, "ABC Period: %u hours (%.1f days)", abc_hours, abc_hours / 24.0);
+    }
+    
+    this->calibration_step_ = CAL_IDLE;
+  });
+}
+
+// ============================================================================
+// Helper Methods
+// ============================================================================
+
 bool SenseairI2CSensor::validate_co2_value_(int16_t co2_ppm) const {
   // Per documentation: negative values are possible during calibration
   // but should be within reasonable bounds
@@ -415,6 +672,26 @@ void SenseairI2CSensor::dump_config() {
     ESP_LOGCONFIG(TAG, "  Setup: FAILED - measurements disabled");
   }
   
+  // Display diagnostics if available
+  if (this->diagnostic_data_.valid) {
+    ESP_LOGCONFIG(TAG, "  Diagnostics:");
+    ESP_LOGCONFIG(TAG, "    Firmware: Type 0x%02X, Version %u.%u", 
+                  this->diagnostic_data_.firmware_type,
+                  this->diagnostic_data_.firmware_main,
+                  this->diagnostic_data_.firmware_sub);
+    ESP_LOGCONFIG(TAG, "    Serial Number: %08X", this->diagnostic_data_.serial_number);
+    ESP_LOGCONFIG(TAG, "    Memory Map: 0x%02X", this->diagnostic_data_.memory_map_id);
+    
+    if (this->diagnostic_data_.error_status == 0) {
+      ESP_LOGCONFIG(TAG, "    Error Status: OK (0x00)");
+    } else {
+      ESP_LOGCONFIG(TAG, "    Error Status: 0x%02X (errors detected!)", 
+                    this->diagnostic_data_.error_status);
+    }
+  } else {
+    ESP_LOGCONFIG(TAG, "  Diagnostics: Not available");
+  }
+  
   ESP_LOGCONFIG(TAG, "  ABC: %s", 
                 this->abc_interval_ > 0 ? "enabled" : "disabled");
   if (this->abc_interval_ > 0) {
@@ -436,7 +713,6 @@ void SenseairI2CSensor::dump_config() {
   ESP_LOGCONFIG(TAG, "    Retry delay: %ums", this->retry_delay_ms_);
   ESP_LOGCONFIG(TAG, "    Max retries: %u", this->max_retries_);
   
-  ESP_LOGCONFIG(TAG, "  NOTE: ABC settings require power cycle to take effect");
 }
 
 }  // namespace senseair_i2c
