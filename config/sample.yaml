@@ -80,8 +80,24 @@ script:
                 condition:
                   - switch.is_on: switch_influx
                 then:
-                  - lambda: |-
-                      id(influx).publish_now();
+                  - influxdb.publish_sensors:
+                      id: influx
+                      sensor_ids:
+                        - air_temperature
+                        - globe_temperature
+                        - relative_humidity
+                        - air_speed
+                        - radiant_temperature
+                        - carbon_dioxide
+                        - illuminance
+                        - pm2_5
+                        - tvoc
+                        - nox_index
+                        - laeq
+                        - lamin
+                        - lamax
+                        - wifi_signal
+                        - device_uptime
                 else:
                   - logger.log:
                       format: "Influx upload skipped"
