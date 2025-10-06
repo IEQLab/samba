@@ -331,15 +331,16 @@ void InfluxDB::publish_internal_(const std::unordered_set<std::string> *filter) 
   // Shrink buffer to actual size
   body.shrink_to_fit();
   
+  this->publish_in_progress_ = true;
+  
   if (filter != nullptr) {
     ESP_LOGI(TAG, "Publishing %zu filtered data points to InfluxDB", data_points);
   } else {
+    this->last_publish_ = millis();
     ESP_LOGI(TAG, "Publishing %zu data points to InfluxDB", data_points);
   }
   ESP_LOGVV(TAG, "Request body length: %u bytes", (unsigned) body.size());
   
-  this->publish_in_progress_ = true;
-  this->last_publish_ = millis();
   
   // One-shot IDF client (verify SSL if URL is https)
   const bool verify_ssl = this->url_.rfind("https://", 0) == 0;
