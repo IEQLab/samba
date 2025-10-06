@@ -38,7 +38,7 @@ sensor:
     name: "TVOC"
     update_interval: never
     accuracy_decimals: 0
-    device_class: volatile_organic_compounds
+    device_class: volatile_organic_compounds_parts
     unit_of_measurement: "ppb"
     icon: mdi:radiator
     lambda: |-

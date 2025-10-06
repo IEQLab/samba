@@ -10,7 +10,16 @@ time:
     id: ds1307_time
     address: 0x68
     update_interval: 1h
-
+    
+# Only create log file on sd card after time has been synced
+    on_time_sync:
+      then:
+        - if:
+            condition:
+              lambda: 'return !id(sd_logfile);'
+            then:
+              - script.execute: sd_create
+              - lambda: 'id(sd_logfile) = true;'
 
 # Define loop for sensor measurements
 # https://esphome.io/guides/automations.html#component-update-action
@@ -34,10 +43,12 @@ time:
                     id: ds1307_time
                 - logger.log:
                     level: INFO
+                    tag: "samba"
                     format: "RTC updated from SNTP"
               else:
                 - logger.log:
                     level: WARN
+                    tag: "samba"
                     format: "SNTP invalid – skipping RTC update"
       - days_of_week: MON
         hours: 4

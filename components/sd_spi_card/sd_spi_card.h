@@ -75,7 +75,7 @@ private:
   uint32_t check_interval_ms_{300000};  // Check card every 5 minutes
   uint32_t remount_retry_interval_ms_{30000};  // Retry remount every 30 seconds after ejection
   uint32_t failed_writes_{0};
-  static constexpr uint32_t MAX_FAILED_WRITES = 3;
+  static constexpr uint32_t MAX_FAILED_WRITES = 2;
   
   gpio_num_t clk_pin_{GPIO_NUM_NC};
   gpio_num_t mosi_pin_{GPIO_NUM_NC};
