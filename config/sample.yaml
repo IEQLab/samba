@@ -100,7 +100,6 @@ script:
                         - laeq
                         - la90
                         - la10
-                        - la05
                         - wifi_signal
                         - device_uptime
                 else:
@@ -138,8 +137,7 @@ script:
                           id(samba_nox).state,
                           id(samba_laeq).state,
                           id(samba_la90).state,
-                          id(samba_la10).state,
-                          id(samba_la05).state
+                          id(samba_la10).state
                         );
                         return std::string(buf);
                 else:
