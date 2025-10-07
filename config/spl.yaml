@@ -29,7 +29,7 @@ sound_level_meter:
     microphone: samba_mic
     bits_per_sample: 32
   auto_start: true
-  ring_buffer_size: 100ms
+  ring_buffer_size: 125ms
   warmup_interval: 500ms
 
   # audio processing task
@@ -74,48 +74,59 @@ sound_level_meter:
   # calculate LAeq (average) sound level over specified period
   sensors:
     - type: eq
-      id: spl_laeq
+      id: spl_laeq_raw
       update_interval: 500ms
       internal: true
       dsp_filters: [f_ics43434, f_a]
       filters:
         - filter_out: nan
-        - median:
-            window_size: 600
-            send_every: 60
-            send_first_at: 30
 
-  # calculate Lmin over specified period
-    - type: min
-      id: spl_lamin
-      window_size: 1s
-      update_interval: 60s
-      internal: true
-      dsp_filters: [f_ics43434, f_a]
-      filters:
-        - filter_out: nan
-        - min:
-            window_size: 5
-            send_every: 1
-            send_first_at: 1
-
-  # calculate Lmax over specified period
-    - type: max
-      id: spl_lamax
-      window_size: 1s
-      update_interval: 60s
-      internal: true
-      dsp_filters: [f_ics43434, f_a]
-      filters:
-        - filter_out: nan
-        - max:
-            window_size: 5
-            send_every: 1
-            send_first_at: 1
-
-
-# Define SPL measurement
+# Derive percentiles from LAeq measurements
 sensor:
+  - platform: copy
+    source_id: spl_laeq_raw
+    id: spl_laeq
+    internal: true
+    filters:
+      - median:
+          window_size: 600
+          send_every: 120
+          send_first_at: 60
+
+  - platform: copy
+    source_id: spl_laeq_raw
+    id: spl_la90
+    internal: true
+    filters:
+      - quantile:
+          window_size: 600
+          quantile: 0.10
+          send_every: 120
+          send_first_at: 60
+
+  - platform: copy
+    source_id: spl_laeq_raw
+    id: spl_la10
+    internal: true
+    filters:
+      - quantile:
+          window_size: 600
+          quantile: 0.90
+          send_every: 120
+          send_first_at: 60
+
+  - platform: copy
+    source_id: spl_laeq_raw
+    id: spl_la05
+    internal: true
+    filters:
+      - quantile:
+          window_size: 600
+          quantile: 0.95
+          send_every: 120
+          send_first_at: 60
+
+# Define SPL measurements
   - platform: template
     id: samba_laeq
     name: "LAeq"
@@ -128,23 +139,34 @@ sensor:
       return id(spl_laeq).state;
 
   - platform: template
-    id: samba_lamin
-    name: "LAmin"
+    id: samba_la90
+    name: "LA90"
     update_interval: never
     accuracy_decimals: 1
     device_class: sound_pressure
     unit_of_measurement: "dBA"
     icon: mdi:volume-low
     lambda: |-
-      return id(spl_lamin).state;
+      return id(spl_la90).state;
 
   - platform: template
-    id: samba_lamax
-    name: "LAmax"
+    id: samba_la10
+    name: "LA10"
     update_interval: never
     accuracy_decimals: 1
     device_class: sound_pressure
     unit_of_measurement: "dBA"
     icon: mdi:volume-high
     lambda: |-
-      return id(spl_lamax).state;
+      return id(spl_la10).state;
+
+  - platform: template
+    id: samba_la05
+    name: "LA05"
+    update_interval: never
+    accuracy_decimals: 1
+    device_class: sound_pressure
+    unit_of_measurement: "dBA"
+    icon: mdi:volume-high
+    lambda: |-
+      return id(spl_la05).state;
