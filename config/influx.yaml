@@ -32,8 +32,9 @@ influxdb:
     nox_index: "nox"
     illuminance: "illuminance"
     laeq: "la_eq"
-    lamin: "la_min"
-    lamax: "la_max"
+    la90: "la_90"
+    la10: "la_10"
+    la05: "la_05"
     wifi_signal: "wifi"
     device_uptime: "uptime"
 

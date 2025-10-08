@@ -33,8 +33,9 @@ script:
             - component.update: samba_tvoc
             - component.update: samba_nox
             - component.update: samba_laeq
-            - component.update: samba_lamin
-            - component.update: samba_lamax
+            - component.update: samba_la90
+            - component.update: samba_la10
+            - component.update: samba_la05
             - delay: 100ms
             - sensor.template.publish:
                 id: samba_temperature
@@ -70,11 +71,14 @@ script:
                 id: samba_laeq
                 state: !lambda 'return id(samba_laeq).state;'
             - sensor.template.publish:
-                id: samba_lamin
-                state: !lambda 'return id(samba_lamin).state;'
+                id: samba_la90
+                state: !lambda 'return id(samba_la90).state;'
             - sensor.template.publish:
-                id: samba_lamax
-                state: !lambda 'return id(samba_lamax).state;'
+                id: samba_la10
+                state: !lambda 'return id(samba_la10).state;'
+            - sensor.template.publish:
+                id: samba_la05
+                state: !lambda 'return id(samba_la05).state;'
             - delay: 300ms
             - if:
                 condition:
@@ -94,8 +98,8 @@ script:
                         - tvoc
                         - nox_index
                         - laeq
-                        - lamin
-                        - lamax
+                        - la90
+                        - la10
                         - wifi_signal
                         - device_uptime
                 else:
@@ -132,8 +136,8 @@ script:
                           id(samba_tvoc).state,
                           id(samba_nox).state,
                           id(samba_laeq).state,
-                          id(samba_lamin).state,
-                          id(samba_lamax).state
+                          id(samba_la90).state,
+                          id(samba_la10).state
                         );
                         return std::string(buf);
                 else:
