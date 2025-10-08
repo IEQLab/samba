@@ -13,17 +13,9 @@ esp32:
     sdkconfig_options:
       CONFIG_FATFS_LFN_STACK: "y"
 
-# Define ESPHome settings
-# https://esphome.io/components/esphome
+# Define initialisation code
+# https://esphome.io/components/esphome/#on_boot
 esphome:
-  name: "samba"
-  friendly_name: "SAMBA"
-  comment: "Monitor IEQ using low-cost sensors - developed by the IEQ Lab"
-  name_add_mac_suffix: true
-  min_version: "2025.9.0"
-  project:
-    name: "IEQLab.SAMBA"
-    version: "1.99.92"
   on_boot:
     - priority: 100
       then: 
@@ -65,31 +57,7 @@ esphome:
                       id(calibration_as1_c), id(calibration_as1_m), id(calibration_as1_b),
                       id(calibration_as2_c), id(calibration_as2_m), id(calibration_as2_b));
 
-# Set logging to errors only
-# https://esphome.io/components/logger
-logger:
-  level: INFO
-  logs:
-    samba: INFO
-    main: WARN
-    component: NONE
-    sensor: NONE
-    i2c: INFO
-    wire.cpp: NONE
-    ads1115.sensor: ERROR
-    ntc: NONE
-    resistance: NONE
-    opt3001.sensor: NONE
-    pmsx003: NONE
-    senseair_i2c: ERROR
-    sensirion_i2c: ERROR
-    sd_spi_card: INFO
-    sgp4x: ERROR
-    sound_level_meter: ERROR
-    http_request: ERROR
-    influxdb: INFO
-
-# Define i2c
+# Configure i2c bus
 # https://esphome.io/components/i2c
 i2c:
   - id: bus_a
@@ -99,7 +67,7 @@ i2c:
     frequency: 100kHz
     timeout: 13ms
 
-# Configure UART
+# Configure UART bus
 # https://esphome.io/components/uart
 uart:
   - id: uart_pm
