@@ -49,8 +49,8 @@ safe_mode:
           id: samba_led
           effect: slow_pulse
       - ota.http_request.flash:
-          md5_url: http://github.com/IEQLab/samba/raw/main/restore/firmware_recovery.md5
-          url: http://github.com/IEQLab/samba/raw/main/restore/firmware_recovery.bin
+          md5_url: https://github.com/IEQLab/samba/raw/main/restore/firmware_recovery.md5
+          url: https://github.com/IEQLab/samba/raw/main/restore/firmware_recovery.bin
 
 # Store jitter delay as a global variable
 globals:
@@ -70,7 +70,7 @@ script:
               - update.is_available: fw_update
               - switch.is_on: switch_updates
           then:
-            # compute 0–10 min jitter
+            # compute 0 to 10 min jitter
             - lambda: |-
                 id(fw_jitter_ms) = esp_random() % (10 * 60 * 1000);
             - logger.log:
