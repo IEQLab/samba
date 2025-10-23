@@ -22,63 +22,37 @@ script:
                 red: 100%
                 green: 100%
                 blue: 100%
-            - component.update: samba_temperature
-            - component.update: samba_globe
-            - component.update: samba_humidity
-            - component.update: samba_airspeed
-            - component.update: samba_mrt
-            - component.update: samba_co2
-            - component.update: samba_lux
-            - component.update: samba_pm25
-            - component.update: samba_tvoc
-            - component.update: samba_nox
-            - component.update: samba_laeq
-            - component.update: samba_la90
-            - component.update: samba_la10
-            - component.update: samba_la05
+            - lambda: |-
+                id(samba_temperature).update();
+                id(samba_globe).update();
+                id(samba_humidity).update();
+                id(samba_airspeed).update();
+                id(samba_mrt).update();
+                id(samba_co2).update();
+                id(samba_lux).update();
+                id(samba_pm25).update();
+                id(samba_tvoc).update();
+                id(samba_nox).update();
+                id(samba_laeq).update();
+                id(samba_la90).update();
+                id(samba_la10).update();
+                id(samba_la05).update();
             - delay: 100ms
-            - sensor.template.publish:
-                id: samba_temperature
-                state: !lambda 'return id(samba_temperature).state;'
-            - sensor.template.publish:
-                id: samba_globe
-                state: !lambda 'return id(samba_globe).state;'
-            - sensor.template.publish:
-                id: samba_humidity
-                state: !lambda 'return id(samba_humidity).state;'
-            - sensor.template.publish:
-                id: samba_airspeed
-                state: !lambda 'return id(samba_airspeed).state;'
-            - sensor.template.publish:
-                id: samba_mrt
-                state: !lambda 'return id(samba_mrt).state;'
-            - sensor.template.publish:
-                id: samba_co2
-                state: !lambda 'return id(samba_co2).state;'
-            - sensor.template.publish:
-                id: samba_lux
-                state: !lambda 'return id(samba_lux).state;'
-            - sensor.template.publish:
-                id: samba_pm25
-                state: !lambda 'return id(samba_pm25).state;'
-            - sensor.template.publish:
-                id: samba_tvoc
-                state: !lambda 'return id(samba_tvoc).state;'
-            - sensor.template.publish:
-                id: samba_nox
-                state: !lambda 'return id(samba_nox).state;'
-            - sensor.template.publish:
-                id: samba_laeq
-                state: !lambda 'return id(samba_laeq).state;'
-            - sensor.template.publish:
-                id: samba_la90
-                state: !lambda 'return id(samba_la90).state;'
-            - sensor.template.publish:
-                id: samba_la10
-                state: !lambda 'return id(samba_la10).state;'
-            - sensor.template.publish:
-                id: samba_la05
-                state: !lambda 'return id(samba_la05).state;'
+            - lambda: |-
+                id(samba_co2).publish_state(id(samba_co2).state);
+                id(samba_lux).publish_state(id(samba_lux).state);
+                id(samba_temperature).publish_state(id(samba_temperature).state);
+                id(samba_globe).publish_state(id(samba_globe).state);
+                id(samba_humidity).publish_state(id(samba_humidity).state);
+                id(samba_airspeed).publish_state(id(samba_airspeed).state);
+                id(samba_mrt).publish_state(id(samba_mrt).state);
+                id(samba_pm25).publish_state(id(samba_pm25).state);
+                id(samba_tvoc).publish_state(id(samba_tvoc).state);
+                id(samba_nox).publish_state(id(samba_nox).state);
+                id(samba_laeq).publish_state(id(samba_laeq).state);
+                id(samba_la90).publish_state(id(samba_la90).state);
+                id(samba_la10).publish_state(id(samba_la10).state);
+                id(samba_la05).publish_state(id(samba_la05).state);
             - delay: 300ms
             - if:
                 condition:
