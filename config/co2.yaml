@@ -11,7 +11,7 @@ sensor:
     i2c_id: bus_a
     address: 0x69
     internal: true
-    update_interval: 30.23s
+    update_interval: 30s
     abc_interval: 180h
     read_delay_ms: 40
     retry_delay_ms: 160
