@@ -46,14 +46,34 @@ sensor:
     unit_of_measurement: "µg/m3"
     icon: mdi:molecule
     lambda: |-
-      if (id(pms_pm25).state < 30) {
-        return ((0.524 * id(pms_pm25).state) - (0.0862 * id(pms_rh).state) + 5.75);
-      } else if(id(pms_pm25).state < 50) {
-        return ((0.786 * (id(pms_pm25).state)/20.0 -3/2) + 0.524 * (1 - (id(pms_pm25).state)/20 -3/2) * id(pms_pm25).state - (0.0862 * id(pms_rh).state) + 5.75);
-      } else if(id(pms_pm25).state < 210) {
-        return ((0.786 * (id(pms_pm25).state)) - (0.0862 * id(pms_rh).state) + 5.75);
-      } else if(id(pms_pm25).state < 260) {
-        return ((0.69 * (id(pms_pm25).state)/50 -21/5) + 0.786 * (1 - (id(pms_pm25).state)/50 -21/5) * id(pms_pm25).state);
-      } else {
-        return id(pms_pm25).state;
+    
+    lambda: |-
+    
+      float pm = id(pms_pm25).state;
+      float rh = id(pms_rh).state;
+      
+      if (pm < 30.0) {
+        return (0.524 * pm - 0.0862 * rh + 5.75);
+      }
+      
+      else if (pm < 50.0) {
+        float alpha = pm / 20.0 - 1.5;
+        return (0.786 * alpha + 0.524 * (1.0 - alpha)) * pm - 0.0862 * rh + 5.75;
+      }
+      
+      else if (pm < 210.0) {
+        return (0.786 * pm - 0.0862 * rh + 5.75);
+      }
+      
+      else if (pm < 260.0) {
+        float alpha = pm / 50.0 - 4.2;
+        return (0.69 * alpha + 0.786 * (1.0 - alpha)) * pm
+               - 0.0862 * rh * (1.0 - alpha)
+               + 2.966 * alpha
+               + 5.75 * (1.0 - alpha)
+               + 8.84e-4 * pm * pm * alpha;
+      }
+      
+      else {
+        return 2.966 + 0.69 * pm + 8.84e-4 * pm * pm;
       }
