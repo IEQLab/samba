@@ -47,8 +47,6 @@ sensor:
     icon: mdi:molecule
     lambda: |-
     
-    lambda: |-
-    
       float pm = id(pms_pm25).state;
       float rh = id(pms_rh).state;
       
