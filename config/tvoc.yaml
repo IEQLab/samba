@@ -42,7 +42,7 @@ sensor:
     unit_of_measurement: "ppb"
     icon: mdi:radiator
     lambda: |-
-      return (log(501.0 - id(sgp_voc).state) - 6.24) * (-996.94);
+      return (log(501.0 - id(sgp_voc).state) - 6.24) * (-381.97);
     
 # Define NOx measurements
   - platform: template
