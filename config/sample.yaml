@@ -17,7 +17,7 @@ script:
           then:
             - light.turn_on:
                 id: samba_led
-                transition_length: 100ms
+                transition_length: 250ms
                 brightness: 25%
                 red: 100%
                 green: 100%
@@ -37,15 +37,15 @@ script:
                 id(samba_la90).update();
                 id(samba_la10).update();
                 id(samba_la05).update();
-            - delay: 100ms
+            - delay: 200ms
             - lambda: |-
-                id(samba_co2).publish_state(id(samba_co2).state);
-                id(samba_lux).publish_state(id(samba_lux).state);
                 id(samba_temperature).publish_state(id(samba_temperature).state);
                 id(samba_globe).publish_state(id(samba_globe).state);
                 id(samba_humidity).publish_state(id(samba_humidity).state);
                 id(samba_airspeed).publish_state(id(samba_airspeed).state);
                 id(samba_mrt).publish_state(id(samba_mrt).state);
+                id(samba_co2).publish_state(id(samba_co2).state);
+                id(samba_lux).publish_state(id(samba_lux).state);
                 id(samba_pm25).publish_state(id(samba_pm25).state);
                 id(samba_tvoc).publish_state(id(samba_tvoc).state);
                 id(samba_nox).publish_state(id(samba_nox).state);
@@ -53,7 +53,7 @@ script:
                 id(samba_la90).publish_state(id(samba_la90).state);
                 id(samba_la10).publish_state(id(samba_la10).state);
                 id(samba_la05).publish_state(id(samba_la05).state);
-            - delay: 300ms
+            - delay: 200ms
             - if:
                 condition:
                   - switch.is_on: switch_influx
@@ -81,6 +81,7 @@ script:
                       format: "Influx upload skipped"
                       level: INFO
                       tag: "samba"
+            - delay: 100ms
             - if:
                 condition:
                   and:
@@ -121,7 +122,7 @@ script:
                       tag: "samba"
             - light.turn_off:
                 id: samba_led
-                transition_length: 300ms
+                transition_length: 250ms
           else:
             - component.update: sys_uptime
             - logger.log: 
