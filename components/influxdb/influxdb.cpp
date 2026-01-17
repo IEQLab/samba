@@ -229,6 +229,11 @@ bool InfluxDB::should_publish_() const {
     return false;
   }
   
+  // Check if WiFi is connected
+  if (!wifi::global_wifi_component->is_connected()) {
+    return false;
+  }
+  
   // "Never" or invalid (0)
   if (this->update_interval_ == UPDATE_INTERVAL_NEVER || this->update_interval_ == 0) {
     return false;
@@ -273,6 +278,12 @@ void InfluxDB::publish_internal_(const std::unordered_set<std::string> *filter) 
   if (this->is_failed() || this->publish_in_progress_) {
     ESP_LOGW(TAG, "Cannot publish: component %s", 
              this->is_failed() ? "has failed" : "publish already in progress");
+    return;
+  }
+  
+  // Check if WiFi is connected
+  if (!wifi::global_wifi_component->is_connected()) {
+    ESP_LOGD(TAG, "Cannot publish: WiFi not connected");
     return;
   }
   

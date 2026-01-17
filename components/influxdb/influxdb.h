@@ -14,6 +14,7 @@
 #include "esphome/components/text_sensor/text_sensor.h"
 #include "esphome/components/http_request/http_request.h"
 #include "esphome/components/time/real_time_clock.h"
+#include "esphome/components/wifi/wifi_component.h"
 
 #ifdef USE_BINARY_SENSOR
 #include "esphome/components/binary_sensor/binary_sensor.h"
