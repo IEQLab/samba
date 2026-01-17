@@ -68,10 +68,11 @@ binary_sensor:
     on_press:
       - light.turn_on:
           id: samba_led
-          red: 100%
+          effect: none
+          red: 80%
           green: 50%
           blue: 0%
-          brightness: 70%
+          brightness: 50%
     on_release:
       - light.turn_off: samba_led
 
@@ -84,6 +85,7 @@ binary_sensor:
     on_press:
       - light.turn_on:
           id: samba_led
+          effect: none
           red: 100%
           green: 0%
           blue: 0%
