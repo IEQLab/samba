@@ -6,15 +6,12 @@ Senseair I2C CO₂ Sensor Platform for ESPHome
 - Validates ABC interval to prevent overflow (max 65535 hours).
 """
 
-from esphome import core, automation
+from esphome import automation
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import i2c, sensor
 from esphome.const import (
-    CONF_ADDRESS,
-    CONF_I2C_ID,
     CONF_ID,
-    CONF_UPDATE_INTERVAL,
     DEVICE_CLASS_CARBON_DIOXIDE,
     ICON_MOLECULE_CO2,
     STATE_CLASS_MEASUREMENT,
@@ -96,8 +93,6 @@ CONFIG_SCHEMA = (
     )
     .extend(
         {
-            cv.Optional(CONF_I2C_ID): cv.use_id(i2c.I2CBus),
-            cv.Optional(CONF_ADDRESS, default=0x68): cv.i2c_address,
             # ABC interval: "0s", "0h", "never" disables ABC, otherwise sets interval
             # Maximum 65535 hours due to 16-bit register limitation
             cv.Optional(CONF_ABC_INTERVAL, default="180h"): validate_abc_interval,
@@ -108,7 +103,7 @@ CONFIG_SCHEMA = (
         }
     )
     .extend(cv.polling_component_schema("60s"))
-    .extend(i2c.i2c_device_schema(0x68))
+    .extend(i2c.i2c_device_schema(0x69))  # K30 default address
 )
 
 
