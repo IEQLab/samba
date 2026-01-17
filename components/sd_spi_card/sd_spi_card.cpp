@@ -143,10 +143,10 @@ void SdSpiCard::loop() {
       ESP_LOGD(TAG, "Attempting to remount card...");
       this->mount_card_();
     } else {
-      // Verify card is still accessible
-      struct stat st;
-      if (stat(mount_point_.c_str(), &st) != 0) {
-        ESP_LOGW(TAG, "Card appears to be removed, unmounting...");
+      // Verify card is still accessible via direct SDMMC status check
+      esp_err_t err = sdmmc_get_status(card_);
+      if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Card appears to be removed (err=%s), unmounting...", esp_err_to_name(err));
         this->unmount_card_();
       }
     }
