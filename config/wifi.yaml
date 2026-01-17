@@ -19,6 +19,8 @@ wifi:
 #      ttls_phase_2: "${enterprise_ttls}"
   power_save_mode: none
   output_power: 10.0 dB
+  min_auth_mode: WPA
+  reboot_timeout: 0s
 #  manual_ip: 
 #    static_ip: 192.168.1.253
 #    gateway: 192.168.1.1
