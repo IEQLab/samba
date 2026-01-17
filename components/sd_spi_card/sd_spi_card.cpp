@@ -274,10 +274,7 @@ WriteResult SdSpiCard::write_file(const std::string &path,
     return WriteResult::WRITE_ERROR;
   }
   
-  // Only log success after confirming write succeeded
-  ESP_LOGD(TAG, "Wrote %d bytes to %s", (int)data.size(), path.c_str());
-  std::string content(data.begin(), data.end());
-  ESP_LOGI(TAG, "Written to %s: %d bytes: %s", path.c_str(), (int)data.size(), content.c_str());
+  ESP_LOGI(TAG, "Wrote %d bytes to %s", (int)data.size(), path.c_str());
   
   failed_writes_ = 0;
   return WriteResult::SUCCESS;
@@ -385,10 +382,7 @@ WriteResult SdSpiCard::append_file(const std::string &path,
     return WriteResult::WRITE_ERROR;
   }
   
-  // Only log success after confirming write succeeded
-  ESP_LOGD(TAG, "Appended %d bytes to %s", (int)data.size(), path.c_str());
-  std::string content(data.begin(), data.end());
-  ESP_LOGI(TAG, "Appended %d bytes to %s: %s", (int)data.size(), path.c_str(), content.c_str());
+  ESP_LOGI(TAG, "Appended %d bytes to %s", (int)data.size(), path.c_str());
   
   failed_writes_ = 0;
   return WriteResult::SUCCESS;
