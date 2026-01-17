@@ -7,7 +7,7 @@
 # Define component
 ads1115:
   - address: 0x4B
-    continuous_mode: off
+    continuous_mode: on
     id: ads_dac
 
 # Define raw measurements for sensors
@@ -41,3 +41,52 @@ sensor:
     sample_rate: 16
     update_interval: 30s
     internal: true
+
+# ADS1115 error counter
+  - platform: template
+    id: ads_error_count
+    internal: true
+    update_interval: 2s
+    accuracy_decimals: 0
+    lambda: |-
+      static int count = 0;
+      if (isnan(id(ads_as1).state) || isnan(id(ads_as2).state) || isnan(id(ads_ntc).state)) {
+        count++;
+      } else {
+        count = 0;
+      }
+      return count;
+
+# ADS1115 error detection
+binary_sensor:
+# Warning after 3min of continuous errors
+  - platform: template
+    id: ads_error_warning
+    internal: true
+    lambda: |-
+      return id(ads_error_count).state >= 90;
+    on_press:
+      - light.turn_on:
+          id: samba_led
+          red: 100%
+          green: 50%
+          blue: 0%
+          brightness: 70%
+    on_release:
+      - light.turn_off: samba_led
+
+# Reboot after 5min of continuous errors
+  - platform: template
+    id: ads_error_detected
+    internal: true
+    lambda: |-
+      return id(ads_error_count).state >= 150;
+    on_press:
+      - light.turn_on:
+          id: samba_led
+          red: 100%
+          green: 0%
+          blue: 0%
+          brightness: 100%
+      - delay: 5s
+      - button.press: sys_restart
