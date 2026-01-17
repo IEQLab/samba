@@ -2,9 +2,10 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import pins, automation
 from esphome.const import CONF_ID, CONF_TRIGGER_ID
+from esphome.components.esp32 import require_vfs_dir
 
 CODEOWNERS = ["@IEQLab"]
-DEPENDENCIES = []
+DEPENDENCIES = ["esp32"]
 
 CONF_ON_MOUNT = "on_mount"
 CONF_AUTO_MOUNT = "auto_mount"
@@ -44,6 +45,7 @@ CONFIG_SCHEMA = cv.Schema(
 
 
 async def to_code(config):
+    require_vfs_dir()
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
 
