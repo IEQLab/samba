@@ -23,7 +23,6 @@ sensor:
     name: "WiFi Signal"
     accuracy_decimals: 0
     unit_of_measurement: "%"
-    device_class: signal_strength
     icon: mdi:wifi-strength-3
     entity_category: "diagnostic"
     filters:
@@ -49,5 +48,29 @@ text_sensor:
       id: sys_ip
       name: "IP Address"
       icon: mdi:ip-network-outline
-      update_interval: 12h
-      entity_category: "diagnostic"    
+      entity_category: "diagnostic"
+
+# System control buttons
+# https://esphome.io/components/button/restart
+button:
+  - platform: restart
+    id: sys_restart
+    name: "Restart SAMBA"
+    icon: mdi:restart
+    entity_category: "config"
+
+# https://esphome.io/components/button/shutdown
+  - platform: shutdown
+    id: sys_shutdown
+    name: "Shutdown SAMBA"
+    icon: mdi:power
+    entity_category: "config"
+    disabled_by_default: true
+
+# https://esphome.io/components/safe_mode.html
+  - platform: safe_mode
+    id: sys_safemode
+    name: "Restart SAMBA (Safe Mode)"
+    icon: mdi:backup-restore
+    entity_category: "config"
+    disabled_by_default: true

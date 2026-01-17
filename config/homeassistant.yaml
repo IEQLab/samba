@@ -8,30 +8,6 @@
 api:
   reboot_timeout: 0s
 
-# Add restart button to Home Assistant
-# https://esphome.io/components/button/restart
-button:
-  - platform: restart
-    name: "Restart SAMBA"
-    icon: mdi:restart
-    entity_category: "config"
-
-# Add shutdown button to Home Assistant
-# https://esphome.io/components/button/shutdown
-  - platform: shutdown
-    name: "Shutdown SAMBA"
-    icon: mdi:power
-    entity_category: "config"
-    disabled_by_default: true
-
-# Add safe mode button to Home Assistant
-# https://esphome.io/components/safe_mode.html
-  - platform: safe_mode
-    name: "Restart SAMBA (Safe Mode)"
-    icon: mdi:backup-restore
-    entity_category: "config"
-    disabled_by_default: true
-
 # Add factory reset switch to Home Assistant
 # https://esphome.io/components/switch/factory_reset.html
 switch:
