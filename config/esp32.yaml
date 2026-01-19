@@ -29,33 +29,43 @@ esphome:
       then:
       
         # Synchronise system to RTC clock
-        - delay: 200ms
         - ds1307.read_time:
         
         # Print useful diagnostics
         - lambda: |-
-            ESP_LOGI("samba", "Building: %s, Level: %s, Zone: %s, Time: %s",
-                     id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str(),
-                     ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp).strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str());
-            
-            ESP_LOGI("samba", "Influx: %s, SD Card: %s, Updates: %s",
-                     id(influx_enable) ? "true" : "false", id(sd_enable) ? "true" : "false", id(updates_enable) ? "true" : "false");
-            
-            ESP_LOGI("samba", "Calibrations:\n"
-                              "CO2:  y = ppm*%.4fx + %.4f\n"
-                              "Lux:  y = lux*%.4fx + %.4f\n"
-                              "Ta:   y = ta*%.4fx + %.4f\n"
-                              "RH:   y = rh*%.4fx + %.4f\n"
-                              "Tg:   y = tg*%.4fx + %.4f\n"
-                              "AS1:  y = %.6f * mV^%.6f * ta^%.6f\n"
-                              "AS2:  y = %.6f * mV^%.6f * ta^%.6f",
-                      id(calibration_co2_m), id(calibration_co2_b),
-                      id(calibration_lux_m), id(calibration_lux_b),
-                      id(calibration_ta_m), id(calibration_ta_b),
-                      id(calibration_rh_m), id(calibration_rh_b),
-                      id(calibration_tg_m), id(calibration_tg_b),
-                      id(calibration_as1_c), id(calibration_as1_m), id(calibration_as1_b),
-                      id(calibration_as2_c), id(calibration_as2_m), id(calibration_as2_b));
+            char msg[768];
+        
+            snprintf(
+              msg, sizeof(msg),
+              "Building: %s, Level: %s, Zone: %s, Time: %s\n"
+              "Influx: %s, SD Card: %s, Updates: %s\n"
+              "Calibrations:\n"
+              "CO2:  y = ppm*%.4fx + %.4f\n"
+              "Lux:  y = lux*%.4fx + %.4f\n"
+              "Ta:   y = ta*%.4fx + %.4f\n"
+              "RH:   y = rh*%.4fx + %.4f\n"
+              "Tg:   y = tg*%.4fx + %.4f\n"
+              "AS1:  y = %.6f * mV^%.6f * ta^%.6f\n"
+              "AS2:  y = %.6f * mV^%.6f * ta^%.6f",
+              id(building_tag).c_str(),
+              id(level_tag).c_str(),
+              id(zone_tag).c_str(),
+              ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp)
+                .strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str(),
+              id(influx_enable) ? "true" : "false",
+              id(sd_enable) ? "true" : "false",
+              id(updates_enable) ? "true" : "false",
+              id(calibration_co2_m), id(calibration_co2_b),
+              id(calibration_lux_m), id(calibration_lux_b),
+              id(calibration_ta_m), id(calibration_ta_b),
+              id(calibration_rh_m), id(calibration_rh_b),
+              id(calibration_tg_m), id(calibration_tg_b),
+              id(calibration_as1_c), id(calibration_as1_m), id(calibration_as1_b),
+              id(calibration_as2_c), id(calibration_as2_m), id(calibration_as2_b)
+            );
+        
+            ESP_LOGI("samba", "%s", msg);
+
 
 # Configure i2c bus
 # https://esphome.io/components/i2c
@@ -67,7 +77,7 @@ i2c:
   - id: bus_a
     scl: GPIO25
     sda: GPIO26
-    scan: true
+    scan: false
     frequency: 50kHz
     timeout: 13ms
 
