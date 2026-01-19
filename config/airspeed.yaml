@@ -22,7 +22,7 @@ sensor:
       - lambda: |-
           return id(calibration_as1_c)
                   * pow(x, id(calibration_as1_m))
-                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as1_b));
+                  * pow(id(sht_temperature).state, id(calibration_as1_b));
       - clamp:
           min_value: 0.02
           max_value: 1.0
@@ -45,7 +45,7 @@ sensor:
       - lambda: |-
           return id(calibration_as2_c)
                   * pow(x, id(calibration_as2_m))
-                  * pow((id(sht_temperature).state - 4.5f), id(calibration_as2_b));
+                  * pow(id(sht_temperature).state, id(calibration_as2_b));
       - clamp:
           min_value: 0.02
           max_value: 1.0
