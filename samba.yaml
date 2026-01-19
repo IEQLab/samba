@@ -9,10 +9,10 @@ esphome:
   friendly_name: "SAMBA"
   comment: "Low-cost monitoring of indoor environments - developed by the IEQ Lab"
   name_add_mac_suffix: true
-  min_version: "2025.9.0"
+  min_version: "2025.12.0"
   project:
     name: "IEQLab.SAMBA"
-    version: "1.99.92"
+    version: "1.99.921"
 
 # Set logging levels
 # https://esphome.io/components/logger
