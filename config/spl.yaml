@@ -63,13 +63,13 @@ sound_level_meter:
         - [ 1.         , -0.709303   , -0.29071867 , -1.9822421  ,  0.9822986   ]
 
     # C-weighting
-    - id: f_c
-      type: sos
-      coeffs:
-        #       b0             b1             b2             a1             a2
-        - [ -0.49651518  , -0.12296628  , -0.0076134163, -0.37165618   , 0.03453208 ]
-        - [  1.          ,  1.3294908   ,  0.44188643  ,  1.2312505    , 0.37899444 ]
-        - [  1.          , -2.          ,  1.          , -1.9946145    , 0.9946217  ]
+#    - id: f_c
+#      type: sos
+#      coeffs:
+#        #       b0             b1             b2             a1             a2
+#        - [ -0.49651518  , -0.12296628  , -0.0076134163, -0.37165618   , 0.03453208 ]
+#        - [  1.          ,  1.3294908   ,  0.44188643  ,  1.2312505    , 0.37899444 ]
+#        - [  1.          , -2.          ,  1.          , -1.9946145    , 0.9946217  ]
 
   # calculate LAeq (average) sound level over specified period
   sensors:
@@ -115,16 +115,16 @@ sensor:
           send_every: 120
           send_first_at: 60
 
-  - platform: copy
-    source_id: spl_laeq_raw
-    id: spl_la05
-    internal: true
-    filters:
-      - quantile:
-          window_size: 600
-          quantile: 0.95
-          send_every: 120
-          send_first_at: 60
+#  - platform: copy
+#    source_id: spl_laeq_raw
+#    id: spl_la05
+#    internal: true
+#    filters:
+#      - quantile:
+#          window_size: 600
+#          quantile: 0.95
+#          send_every: 120
+#          send_first_at: 60
 
 # Define SPL measurements
   - platform: template
@@ -160,13 +160,13 @@ sensor:
     lambda: |-
       return id(spl_la10).state;
 
-  - platform: template
-    id: samba_la05
-    name: "LA05"
-    update_interval: never
-    accuracy_decimals: 1
-    device_class: sound_pressure
-    unit_of_measurement: "dBA"
-    icon: mdi:volume-high
-    lambda: |-
-      return id(spl_la05).state;
+#  - platform: template
+#    id: samba_la05
+#    name: "LA05"
+#    update_interval: never
+#    accuracy_decimals: 1
+#    device_class: sound_pressure
+#    unit_of_measurement: "dBA"
+#    icon: mdi:volume-high
+#    lambda: |-
+#      return id(spl_la05).state;

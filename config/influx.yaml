@@ -34,7 +34,7 @@ influxdb:
     laeq: "la_eq"
     la90: "la_90"
     la10: "la_10"
-    la05: "la_05"
+#    la05: "la_05"
     wifi_signal: "wifi"
     device_uptime: "uptime"
 

@@ -40,7 +40,7 @@ script:
                 id(samba_laeq).update();
                 id(samba_la90).update();
                 id(samba_la10).update();
-                id(samba_la05).update();
+#                id(samba_la05).update();
             - delay: 200ms
             - lambda: |-
                 id(samba_temperature).publish_state(id(samba_temperature).state);
@@ -56,7 +56,7 @@ script:
                 id(samba_laeq).publish_state(id(samba_laeq).state);
                 id(samba_la90).publish_state(id(samba_la90).state);
                 id(samba_la10).publish_state(id(samba_la10).state);
-                id(samba_la05).publish_state(id(samba_la05).state);
+#                id(samba_la05).publish_state(id(samba_la05).state);
             - delay: 200ms
             - if:
                 condition:
