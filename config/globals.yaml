@@ -43,11 +43,11 @@ globals:
   - id: calibration_co2_m
     type: double
     restore_value: yes
-    initial_value: '1.015844'
+    initial_value: '1.0'
   - id: calibration_co2_b
     type: double
     restore_value: yes
-    initial_value: '20.139092'
+    initial_value: '20.0'
 
   # Illuminance calibration
   - id: calibration_lux_m
