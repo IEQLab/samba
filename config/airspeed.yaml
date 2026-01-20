@@ -16,9 +16,9 @@ sensor:
           max_value: 5
           ignore_out_of_range: true
       - median:
-          window_size: 150
-          send_every: 60
-          send_first_at: 60
+          window_size: 90
+          send_every: 30
+          send_first_at: 30
       - lambda: |-
             float temp = id(samba_temperature).state;
             float floor = id(calibration_as1_d0) + id(calibration_as1_d1) * temp;
@@ -41,9 +41,9 @@ sensor:
           max_value: 5
           ignore_out_of_range: true
       - median:
-          window_size: 150
-          send_every: 60
-          send_first_at: 60
+          window_size: 90
+          send_every: 30
+          send_first_at: 30
       - lambda: |-
             float temp = id(samba_temperature).state;
             float floor = id(calibration_as2_d0) + id(calibration_as2_d1) * temp;
