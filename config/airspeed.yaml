@@ -20,9 +20,11 @@ sensor:
           send_every: 60
           send_first_at: 60
       - lambda: |-
-          return id(calibration_as1_c)
-                  * pow(x, id(calibration_as1_m))
-                  * pow(id(sht_temperature).state, id(calibration_as1_b));
+            float temp = id(samba_temperature).state;
+            float floor = id(calibration_as1_d0) + id(calibration_as1_d1) * temp;
+            float v_above_floor = std::max(x - floor, 0.001f);
+            return id(calibration_as1_a) * pow(v_above_floor, id(calibration_as1_b))
+                    + id(calibration_as1_c) * x * temp;
       - clamp:
           min_value: 0.02
           max_value: 1.0
@@ -43,9 +45,11 @@ sensor:
           send_every: 60
           send_first_at: 60
       - lambda: |-
-          return id(calibration_as2_c)
-                  * pow(x, id(calibration_as2_m))
-                  * pow(id(sht_temperature).state, id(calibration_as2_b));
+            float temp = id(samba_temperature).state;
+            float floor = id(calibration_as2_d0) + id(calibration_as2_d1) * temp;
+            float v_above_floor = std::max(x - floor, 0.001f);
+            return id(calibration_as2_a) * pow(v_above_floor, id(calibration_as2_b))
+                    + id(calibration_as2_c) * x * temp;
       - clamp:
           min_value: 0.02
           max_value: 1.0

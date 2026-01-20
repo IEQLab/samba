@@ -45,8 +45,8 @@ esphome:
               "Ta:   y = ta*%.4fx + %.4f\n"
               "RH:   y = rh*%.4fx + %.4f\n"
               "Tg:   y = tg*%.4fx + %.4f\n"
-              "AS1:  y = %.6f * mV^%.6f * ta^%.6f\n"
-              "AS2:  y = %.6f * mV^%.6f * ta^%.6f",
+              "AS1:  y = %.6f * V^%.6f + %.4f * V * ta; d0 = %.3f, d1 = %.3f\n"
+              "AS2:  y = %.6f * V^%.6f + %.4f * V * ta; d0 = %.3f, d1 = %.3f",
               id(building_tag).c_str(),
               id(level_tag).c_str(),
               id(zone_tag).c_str(),
@@ -60,8 +60,8 @@ esphome:
               id(calibration_ta_m), id(calibration_ta_b),
               id(calibration_rh_m), id(calibration_rh_b),
               id(calibration_tg_m), id(calibration_tg_b),
-              id(calibration_as1_c), id(calibration_as1_m), id(calibration_as1_b),
-              id(calibration_as2_c), id(calibration_as2_m), id(calibration_as2_b)
+              id(calibration_as1_a), id(calibration_as1_b), id(calibration_as1_c), id(calibration_as1_d0), id(calibration_as1_d1),
+              id(calibration_as2_a), id(calibration_as2_b), id(calibration_as2_c), id(calibration_as2_d0), id(calibration_as2_d1)
             );
         
             ESP_LOGI("samba", "%s", msg);
