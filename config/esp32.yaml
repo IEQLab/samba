@@ -29,6 +29,7 @@ esphome:
       then:
       
         # Synchronise system to RTC clock
+        - delay: 200ms
         - ds1307.read_time:
         
         # Print useful diagnostics
