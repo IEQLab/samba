@@ -7,7 +7,7 @@
 # Define component
 ads1115:
   - address: 0x4B
-    continuous_mode: on
+    continuous_mode: off
     id: ads_dac
 
 # Define raw measurements for sensors
