@@ -1,0 +1,16 @@
+{
+  "name": "SAMBA Indoor Environmental Monitor",
+  "version": "1.99.93",
+  "home_assistant_domain": "esphome",
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "ota": {
+        "md5": "c41a4c1c9423cbc5338a98d8fc297988",
+        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.93.bin",
+        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.93",
+        "summary": "Improve air speed model"
+      }
+    }
+  ]
+}
