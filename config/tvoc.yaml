@@ -63,13 +63,19 @@ globals:
     restore_value: no
     initial_value: '0'
 
-# Restart after 3 consecutive failures
+# Restart after 3 consecutive failures (after 100s warmup)
 interval:
   - interval: 30s
     then:
       - lambda: |-
           // Check if VOC sensor is returning valid data
           if (std::isnan(id(sgp_voc).state)) {
+
+            // Skip error counting during 100s warmup period
+            if (millis() < 100000) {
+              ESP_LOGD("samba", "SGP4x sensor warming up - skipping error check");
+              return;
+            }
 
             id(sgp_error_count)++;
             ESP_LOGW("samba", "SGP4x sensor failure %d/3", id(sgp_error_count));
