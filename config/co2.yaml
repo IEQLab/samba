@@ -39,3 +39,57 @@ sensor:
     filters:
       - lambda: |-
           return ((id(calibration_co2_m) * id(k30_co2).state) + id(calibration_co2_b));
+
+
+# Error counter for initialisation failure recovery
+globals:
+  - id: k30_error_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+# Re-initialise on first failure, restart after 3 failures
+interval:
+  - interval: 30s
+    then:
+      - lambda: |-
+          // Check if CO2 sensor is returning valid data
+          if (std::isnan(id(k30_co2).state)) {
+            id(k30_error_count)++;
+            if (id(k30_error_count) == 1) {
+
+              // Try re-initialisation on first failure
+              ESP_LOGW("samba", "K30 CO2 sensor failure - attempting re-initialisation");
+              id(k30_co2).reinitialize();
+
+            } else {
+              ESP_LOGW("samba", "K30 CO2 sensor failure %d/3", id(k30_error_count));
+            }
+
+            // Warning LED at 2 failures (cyan)
+            if (id(k30_error_count) == 2) {
+              auto call = id(samba_led).turn_on();
+              call.set_effect("none");
+              call.set_rgb(0.0, 0.8, 0.8);
+              call.set_brightness(0.5);
+              call.perform();
+            }
+
+            // Error LED at 3 failures (blue) then restart
+            if (id(k30_error_count) >= 3) {
+              auto call = id(samba_led).turn_on();
+              call.set_effect("none");
+              call.set_rgb(0.0, 0.0, 1.0);
+              call.set_brightness(1.0);
+              call.perform();
+
+              ESP_LOGE("samba", "K30 re-initialisation failed - restarting device");
+              id(sys_restart).press();
+            }
+
+          } else {
+            if (id(k30_error_count) > 0) {
+              id(samba_led).turn_off();
+            }
+            id(k30_error_count) = 0;
+          }
