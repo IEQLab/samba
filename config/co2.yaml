@@ -48,7 +48,7 @@ globals:
     restore_value: no
     initial_value: '0'
 
-# Re-initialise on first failure, restart after 3 failures
+# Re-initialise on first failure, restart after 4 failures (~2 mins)
 interval:
   - interval: 30s
     then:
@@ -63,11 +63,11 @@ interval:
               id(k30_co2).reinitialize();
 
             } else {
-              ESP_LOGW("samba", "K30 CO2 sensor failure %d/3", id(k30_error_count));
+              ESP_LOGW("samba", "K30 CO2 sensor failure %d/4", id(k30_error_count));
             }
 
-            // Warning LED at 2 failures (cyan)
-            if (id(k30_error_count) == 2) {
+            // Warning LED at 3 failures (cyan)
+            if (id(k30_error_count) == 3) {
               auto call = id(samba_led).turn_on();
               call.set_effect("none");
               call.set_rgb(0.0, 0.8, 0.8);
@@ -75,8 +75,8 @@ interval:
               call.perform();
             }
 
-            // Error LED at 3 failures (blue) then restart
-            if (id(k30_error_count) >= 3) {
+            // Error LED at 4 failures (blue) then restart
+            if (id(k30_error_count) >= 4) {
               auto call = id(samba_led).turn_on();
               call.set_effect("none");
               call.set_rgb(0.0, 0.0, 1.0);
@@ -89,6 +89,7 @@ interval:
 
           } else {
             if (id(k30_error_count) > 0) {
+              ESP_LOGI("samba", "K30 CO2 sensor recovered after re-initialisation");
               id(samba_led).turn_off();
             }
             id(k30_error_count) = 0;
