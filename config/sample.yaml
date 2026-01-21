@@ -15,17 +15,13 @@ script:
             lambda: |-
               return id(sys_uptime).state > 119;
           then:
-            - if:
-                condition:
-                  - binary_sensor.is_off: ads_error_warning
-                then:
-                  - light.turn_on:
-                      id: samba_led
-                      transition_length: 250ms
-                      brightness: 25%
-                      red: 100%
-                      green: 100%
-                      blue: 100%
+            - light.turn_on:
+                id: samba_led
+                transition_length: 250ms
+                brightness: 25%
+                red: 100%
+                green: 100%
+                blue: 100%
             - lambda: |-
                 id(samba_temperature).update();
                 id(samba_globe).update();
@@ -60,9 +56,7 @@ script:
             - delay: 200ms
             - if:
                 condition:
-                  and:
                     - switch.is_on: switch_influx
-                    - binary_sensor.is_off: ads_error_warning
                 then:
                   - influxdb.publish_sensors:
                       id: influx
@@ -93,7 +87,6 @@ script:
                   and:
                     - switch.is_on: switch_sdcard
                     - lambda: 'return id(sd0).is_mounted();'
-                    - binary_sensor.is_off: ads_error_warning
                 then:
                   - sd_spi_card.append_file:
                       id: sd0
@@ -127,13 +120,9 @@ script:
                       format: "SD card write skipped"
                       level: INFO
                       tag: "samba"
-            - if:
-                condition:
-                  - binary_sensor.is_off: ads_error_warning
-                then:
-                  - light.turn_off:
-                      id: samba_led
-                      transition_length: 250ms
+            - light.turn_off:
+                id: samba_led
+                transition_length: 250ms
           else:
             - component.update: sys_uptime
             - logger.log: 
