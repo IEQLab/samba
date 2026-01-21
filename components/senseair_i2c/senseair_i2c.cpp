@@ -810,6 +810,32 @@ void SenseairI2CSensor::dump_config() {
   ESP_LOGCONFIG(TAG, "  Actions available:");
   ESP_LOGCONFIG(TAG, "    - senseair_i2c.background_calibration");
   ESP_LOGCONFIG(TAG, "    - senseair_i2c.abc_get_period");
+  ESP_LOGCONFIG(TAG, "    - senseair_i2c.reinitialize");
+}
+
+void SenseairI2CSensor::reinitialize() {
+  ESP_LOGI(TAG, "Attempting sensor re-initialization");
+
+  // Reset setup state machine
+  this->setup_step_ = SETUP_READ_METER;
+  this->setup_retry_count_ = 0;
+  this->setup_success_ = false;
+  this->abc_config_pending_ = false;
+
+  // Reset measurement state
+  this->measure_step_ = MEASURE_IDLE;
+  this->measure_write_retry_count_ = 0;
+  this->measure_read_retry_count_ = 0;
+
+  // Reset calibration state
+  this->calibration_step_ = CAL_IDLE;
+  this->calibration_retry_count_ = 0;
+
+  // Clear diagnostics
+  this->diagnostic_data_.valid = false;
+
+  // Restart setup sequence
+  this->setup_read_meter_control_();
 }
 
 }  // namespace senseair_i2c

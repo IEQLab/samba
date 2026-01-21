@@ -36,6 +36,9 @@ public:
   void background_calibration();
   void background_calibration_with_ppm(uint16_t target_ppm);
   void abc_get_period();
+
+  // --- Recovery ---
+  void reinitialize();
   
 protected:
   // --- User options with sensible defaults ---
@@ -139,13 +142,25 @@ protected:
 };
 
 /** Action to read ABC period from sensor */
-template<typename... Ts> 
+template<typename... Ts>
 class ABCGetPeriodAction : public Action<Ts...> {
 public:
   ABCGetPeriodAction(SenseairI2CSensor *parent) : parent_(parent) {}
-  
+
   void play(Ts... x) override { this->parent_->abc_get_period(); }
-  
+
+protected:
+  SenseairI2CSensor *parent_;
+};
+
+/** Action to trigger sensor re-initialization */
+template<typename... Ts>
+class ReinitializeAction : public Action<Ts...> {
+public:
+  ReinitializeAction(SenseairI2CSensor *parent) : parent_(parent) {}
+
+  void play(Ts... x) override { this->parent_->reinitialize(); }
+
 protected:
   SenseairI2CSensor *parent_;
 };

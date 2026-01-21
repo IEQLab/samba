@@ -43,6 +43,9 @@ BackgroundCalibrationAction = senseair_i2c_ns.class_(
 ABCGetPeriodAction = senseair_i2c_ns.class_(
     "ABCGetPeriodAction", automation.Action
 )
+ReinitializeAction = senseair_i2c_ns.class_(
+    "ReinitializeAction", automation.Action
+)
 
 
 def validate_abc_interval(value):
@@ -150,5 +153,20 @@ async def background_calibration_action_to_code(config, action_id, template_arg,
 )
 async def abc_get_period_action_to_code(config, action_id, template_arg, args):
     """Register ABC get period action."""
+    paren = await cg.get_variable(config[CONF_ID])
+    return cg.new_Pvariable(action_id, template_arg, paren)
+
+
+@automation.register_action(
+    "senseair_i2c.reinitialize",
+    ReinitializeAction,
+    cv.Schema(
+        {
+            cv.Required(CONF_ID): cv.use_id(SenseairI2CSensor),
+        }
+    ),
+)
+async def reinitialize_action_to_code(config, action_id, template_arg, args):
+    """Register reinitialize action for recovery from setup failures."""
     paren = await cg.get_variable(config[CONF_ID])
     return cg.new_Pvariable(action_id, template_arg, paren)
