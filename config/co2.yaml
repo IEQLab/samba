@@ -94,3 +94,14 @@ interval:
             }
             id(k30_error_count) = 0;
           }
+
+# Manually trigger ABC
+button:
+  - platform: template
+    name: "CO2 ABC Calibration"
+    id: co2_abc_calibration
+    entity_category: "config"
+    icon: mdi:molecule-co2
+    on_press:
+      - senseair_i2c.background_calibration:
+          id: k30_co2
