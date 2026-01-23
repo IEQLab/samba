@@ -517,28 +517,37 @@ void SenseairI2CSensor::attempt_measurement_() {
 
 uint16_t SenseairI2CSensor::get_calibration_address_() const {
   // Calibration command address varies by sensor model/memory map
-  // From TDE4700.pdf section 10.2 and section 8 memory maps
-  
+  // From TDE4700.pdf section 10.2 and page 29:
+  // - K30 with memory map <=0x27: 0x67
+  // - K50 with memory map <=8: 0x67
+  // - K50/K33-ICB with memory map >8: 0x32
+  // - K33 BLG/ELG (memory map ~0x5D): 0x42
+
   if (!this->diagnostic_data_.valid) {
     // Default to K30 address if diagnostics not available
-    ESP_LOGW(TAG, "Using default calibration address 0x67 (K30)");
+    ESP_LOGW(TAG, "Diagnostics not available - defaulting to K30 address 0x67");
     return 0x0067;
   }
-  
+
   uint8_t map_id = this->diagnostic_data_.memory_map_id;
-  
-  // K50 with memory map > 8, K33-ICB: use 0x32
-  if (map_id > 0x08) {
-    ESP_LOGD(TAG, "Using calibration address 0x32 (memory map 0x%02X)", map_id);
-    return 0x0032;
+  ESP_LOGI(TAG, "Selecting calibration address for memory map 0x%02X", map_id);
+
+  // K33 BLG/ELG sensors (memory map >= 0x5D)
+  if (map_id >= 0x5D) {
+    ESP_LOGI(TAG, "Using calibration address 0x42 (K33 BLG/ELG)");
+    return 0x0042;
   }
-  
-  // K33 BLG/ELG: use 0x42
-  // Note: Could refine detection based on sensor type ID if needed
-  
-  // K30, K50 with map <= 8: use 0x67
-  ESP_LOGD(TAG, "Using calibration address 0x67 (memory map 0x%02X)", map_id);
-  return 0x0067;
+
+  // K30 sensors have memory map <= 0x27 per TDE4700 Table 12
+  // K30 always uses address 0x67 for calibration
+  if (map_id <= 0x27) {
+    ESP_LOGI(TAG, "Using calibration address 0x67 (K30)");
+    return 0x0067;
+  }
+
+  // K50/K33-ICB with memory map > 0x27 but < 0x5D: use 0x32
+  ESP_LOGI(TAG, "Using calibration address 0x32 (K50/K33-ICB)");
+  return 0x0032;
 }
 
 void SenseairI2CSensor::background_calibration() {
