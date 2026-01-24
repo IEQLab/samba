@@ -28,7 +28,7 @@ update:
   - platform: http_request
     id: fw_update
     name: "Firmware"
-    source: https://github.com/IEQLab/samba/raw/main/firmware.json
+    source: https://github.com/IEQLab/samba/raw/main/firmware/manifest.json
     update_interval: 12h
 
 # Enable HTTP Request component for OTA and Influx
@@ -49,8 +49,8 @@ safe_mode:
           id: samba_led
           effect: slow_pulse
       - ota.http_request.flash:
-          md5_url: https://github.com/IEQLab/samba/raw/main/restore/firmware_recovery.md5
-          url: https://github.com/IEQLab/samba/raw/main/restore/firmware_recovery.bin
+          md5_url: https://github.com/IEQLab/samba/raw/main/firmware/firmware_recovery.md5
+          url: https://github.com/IEQLab/samba/raw/main/firmware/firmware_recovery.bin
 
 # Store jitter delay as a global variable
 globals:
