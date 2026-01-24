@@ -60,5 +60,7 @@ secrets.yaml
 # External component build files
 components/*/__pycache__
 
-# R scripts for determinig calibration coefficients
-calibration/
+# Firmware bump helper
+helper_bump.sh
+
+
