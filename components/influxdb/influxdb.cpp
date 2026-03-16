@@ -178,31 +178,37 @@ void InfluxDB::collect_sensors_() {
   for (auto *sensor : App.get_sensors()) {
     if (sensor == nullptr) continue;
     
-    const std::string &obj_id = sensor->get_object_id();
-    
+    char obj_id_buf[128];
+    sensor->get_object_id_to(obj_id_buf);
+    std::string obj_id(obj_id_buf);
+
     if (this->has_sensor_mapping_(obj_id)) {
       this->sensors_.push_back(sensor);
-      ESP_LOGD(TAG, "Added sensor: %s", obj_id.c_str());
+      ESP_LOGD(TAG, "Added sensor: %s", obj_id_buf);
     } else {
-      ESP_LOGVV(TAG, "No mapping for sensor: %s", obj_id.c_str());
+      ESP_LOGVV(TAG, "No mapping for sensor: %s", obj_id_buf);
     }
   }
-  
+
   // Collect text sensors
   for (auto *text_sensor : App.get_text_sensors()) {
     if (text_sensor == nullptr) continue;
-    const std::string &obj_id = text_sensor->get_object_id();
+    char obj_id_buf[128];
+    text_sensor->get_object_id_to(obj_id_buf);
+    std::string obj_id(obj_id_buf);
     if (this->has_sensor_mapping_(obj_id)) {
       this->text_sensors_.push_back(text_sensor);
-      ESP_LOGD(TAG, "Added text sensor: %s", obj_id.c_str());
+      ESP_LOGD(TAG, "Added text sensor: %s", obj_id_buf);
     }
   }
-  
+
 #ifdef USE_BINARY_SENSOR
   // Collect binary sensors with state tracking
   for (auto *binary_sensor : App.get_binary_sensors()) {
     if (binary_sensor == nullptr) continue;
-    const std::string &obj_id = binary_sensor->get_object_id();
+    char obj_id_buf[128];
+    binary_sensor->get_object_id_to(obj_id_buf);
+    std::string obj_id(obj_id_buf);
     if (this->has_sensor_mapping_(obj_id)) {
       this->binary_sensor_states_[obj_id] = binary_sensor->state;
       binary_sensor->add_on_state_callback([this, obj_id](bool state) {
@@ -296,7 +302,9 @@ void InfluxDB::publish_internal_(const std::unordered_set<std::string> *filter) 
   // Build payload efficiently - apply filter if provided
   for (auto *sensor : this->sensors_) {
     if (!std::isnan(sensor->state)) {
-      const std::string &sensor_id = sensor->get_object_id();
+      char sensor_id_buf[128];
+      sensor->get_object_id_to(sensor_id_buf);
+      std::string sensor_id(sensor_id_buf);
       
       // Skip if filter is active and sensor not in filter
       if (filter != nullptr && filter->find(sensor_id) == filter->end()) {
@@ -310,7 +318,9 @@ void InfluxDB::publish_internal_(const std::unordered_set<std::string> *filter) 
   
   for (auto *text_sensor : this->text_sensors_) {
     if (!text_sensor->state.empty()) {
-      const std::string &sensor_id = text_sensor->get_object_id();
+      char sensor_id_buf[128];
+      text_sensor->get_object_id_to(sensor_id_buf);
+      std::string sensor_id(sensor_id_buf);
       
       // Skip if filter is active and sensor not in filter
       if (filter != nullptr && filter->find(sensor_id) == filter->end()) {
