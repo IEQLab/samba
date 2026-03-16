@@ -47,7 +47,7 @@ globals:
   - id: calibration_co2_b
     type: double
     restore_value: yes
-    initial_value: '20.0'
+    initial_value: '10.0'
 
   # Illuminance calibration
   - id: calibration_lux_m
@@ -60,24 +60,28 @@ globals:
     initial_value: '0.0'
 
   # Air temperature calibration
-  - id: calibration_ta_m
+  - id: calibration_ta_m1
     type: double
     restore_value: yes
-    initial_value: '1.42'
+    initial_value: '0.364'
+  - id: calibration_ta_m2
+    type: double
+    restore_value: yes
+    initial_value: '0.82'
   - id: calibration_ta_b
     type: double
     restore_value: yes
-    initial_value: '-17.5'
+    initial_value: '-6.25'
 
   # RH calibration
   - id: calibration_rh_m
     type: double
     restore_value: yes
-    initial_value: '0.70'
+    initial_value: '1.0'
   - id: calibration_rh_b
     type: double
     restore_value: yes
-    initial_value: '22.0'
+    initial_value: '0.0'
 
   # Globe temperature calibration
   - id: calibration_tg_m
@@ -87,7 +91,7 @@ globals:
   - id: calibration_tg_b
     type: double
     restore_value: yes
-    initial_value: '-12.5'
+    initial_value: '-12.6'
 
   # Air speed 1 calibration (power function)
   - id: calibration_as1_a
