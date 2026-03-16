@@ -24,7 +24,7 @@ sensor:
             send_first_at: 10
     temperature:
       id: pms_temp
-      internal: true
+      internal: false
     humidity:
       id: pms_rh
       internal: true

@@ -125,7 +125,8 @@ script:
                 transition_length: 250ms
           else:
             - component.update: sys_uptime
-            - logger.log: 
+            - component.update: samba_temperature
+            - logger.log:
                 format: "Warming up SAMBA device"
                 level: INFO
                 tag: "samba"
