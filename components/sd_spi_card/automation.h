@@ -22,7 +22,7 @@ public:
   TEMPLATABLE_VALUE(std::string, path)
     TEMPLATABLE_VALUE(std::string, content)
     
-    void play(Ts... x) override {
+    void play(const Ts &...x) override {
       auto path_str = this->path_.value(x...);
       auto content_str = this->content_.value(x...);
       
@@ -51,7 +51,7 @@ public:
   TEMPLATABLE_VALUE(std::string, path)
     TEMPLATABLE_VALUE(std::string, content)
     
-    void play(Ts... x) override {
+    void play(const Ts &...x) override {
       auto path_str = this->path_.value(x...);
       auto content_str = this->content_.value(x...);
       
@@ -77,7 +77,7 @@ class SyncAction : public Action<Ts...> {
 public:
   explicit SyncAction(SdSpiCard *parent) : parent_(parent) {}
   
-  void play(Ts... x) override {
+  void play(const Ts &...x) override {
     this->parent_->sync();
   }
   
@@ -93,7 +93,7 @@ public:
   TEMPLATABLE_VALUE(std::string, path)
     TEMPLATABLE_VALUE(std::string, content)
     
-    void play(Ts... x) override {
+    void play(const Ts &...x) override {
       auto path_str = this->path_.value(x...);
       auto content_str = this->content_.value(x...);
       
@@ -119,7 +119,7 @@ class MountAction : public Action<Ts...> {
 public:
   explicit MountAction(SdSpiCard *parent) : parent_(parent) {}
   
-  void play(Ts... x) override {
+  void play(const Ts &...x) override {
     if (!this->parent_->mount()) {
       ESP_LOGW("sd_spi_card.action", "Failed to mount SD card");
     }

@@ -12,7 +12,15 @@ esp32:
   framework:
     type: esp-idf
     sdkconfig_options:
-      CONFIG_FATFS_LFN_STACK: "y"
+      CONFIG_FATFS_LFN_NONE: "n"
+      CONFIG_FATFS_LFN_HEAP: "y"
+      CONFIG_FATFS_MAX_LFN: "255"
+    advanced:
+      include_builtin_idf_components: ["fatfs"]
+      disable_vfs_support_termios: false
+      disable_vfs_support_select: false
+      disable_vfs_support_dir: false
+      minimum_chip_revision: "3.1"
 
 # Define initialisation code
 # https://esphome.io/components/esphome/#on_boot
@@ -43,7 +51,7 @@ esphome:
               "Calibrations:\n"
               "CO2:  y = ppm*%.4fx + %.4f\n"
               "Lux:  y = lux*%.4fx + %.4f\n"
-              "Ta:   y = ta*%.4fx + %.4f\n"
+              "Ta:   y = ta*%.4fx + pms*%.4fx + %.4f\n"
               "RH:   y = rh*%.4fx + %.4f\n"
               "Tg:   y = tg*%.4fx + %.4f\n"
               "AS1:  y = %.6f * V^%.6f + %.4f * V * ta; d0 = %.3f, d1 = %.3f\n"
@@ -58,7 +66,7 @@ esphome:
               id(updates_enable) ? "true" : "false",
               id(calibration_co2_m), id(calibration_co2_b),
               id(calibration_lux_m), id(calibration_lux_b),
-              id(calibration_ta_m), id(calibration_ta_b),
+              id(calibration_ta_m1), id(calibration_ta_m2), id(calibration_ta_b),
               id(calibration_rh_m), id(calibration_rh_b),
               id(calibration_tg_m), id(calibration_tg_b),
               id(calibration_as1_a), id(calibration_as1_b), id(calibration_as1_c), id(calibration_as1_d0), id(calibration_as1_d1),
