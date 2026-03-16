@@ -1,6 +1,8 @@
 #include "sd_spi_card.h"
 #include "esphome/core/log.h"
 #include <cstdio>
+#include <cerrno>
+#include <cstring>
 #include <sys/stat.h>
 #include <unistd.h>
 #include "ff.h"  // For FATFS type detection
@@ -308,7 +310,7 @@ WriteResult SdSpiCard::create_file(const std::string &path,
   std::string full_path = mount_point_ + path;
   FILE *f = fopen(full_path.c_str(), "w");
   if (!f) {
-    ESP_LOGE(TAG, "Failed to create file: %s", full_path.c_str());
+    ESP_LOGE(TAG, "Failed to create file: %s (errno %d: %s)", full_path.c_str(), errno, strerror(errno));
     failed_writes_++;
     return WriteResult::FILE_ERROR;
   }
@@ -356,7 +358,7 @@ WriteResult SdSpiCard::append_file(const std::string &path,
   }
   
   if (!f) {
-    ESP_LOGE(TAG, "Failed to open file for appending: %s", path.c_str());
+    ESP_LOGE(TAG, "Failed to open file for appending: %s (errno %d: %s)", path.c_str(), errno, strerror(errno));
     failed_writes_++;
     return WriteResult::FILE_ERROR;
   }
