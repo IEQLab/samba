@@ -48,9 +48,9 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
-      return (id(calibration_ta_m1) * id(sht_temperature).state)
-           + (id(calibration_ta_m2) * id(pms_temp).state)
-           + id(calibration_ta_b);
+      return id(calibration_ta_b)
+           + (id(calibration_ta_m1) * id(sht_temperature).state)
+           + (id(calibration_ta_m2) * (id(sht_temperature).state - id(pms_temp).state));
 
 # Define humidity measurements
 # RH is corrected by computing vapour pressure at the raw SHT temperature,
@@ -70,7 +70,7 @@ sensor:
       float rh_raw      = id(sht_humidity).state;
       float t_corrected = id(calibration_ta_b)
                         + id(calibration_ta_m1) * t_raw
-                        + id(calibration_ta_m2) * id(pms_temp).state;
+                        + id(calibration_ta_m2) * (t_raw - id(pms_temp).state);
       float es_raw      = 6.1078f * expf(17.625f * t_raw       / (243.04f + t_raw));
       float es_cor      = 6.1078f * expf(17.625f * t_corrected / (243.04f + t_corrected));
       float rh_corrected = 100.0f * (rh_raw / 100.0f) * es_raw / es_cor;
