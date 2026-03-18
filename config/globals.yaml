@@ -47,13 +47,13 @@ globals:
   - id: calibration_co2_b
     type: double
     restore_value: yes
-    initial_value: '10.0'
+    initial_value: '20.0'
 
   # Illuminance calibration
   - id: calibration_lux_m
     type: double
     restore_value: yes
-    initial_value: '7.5'
+    initial_value: '7.55'
   - id: calibration_lux_b
     type: double
     restore_value: yes
@@ -63,15 +63,15 @@ globals:
   - id: calibration_ta_m1
     type: double
     restore_value: yes
-    initial_value: '0.364'
+    initial_value: '1.545'
   - id: calibration_ta_m2
     type: double
     restore_value: yes
-    initial_value: '0.82'
+    initial_value: '-1.280'
   - id: calibration_ta_b
     type: double
     restore_value: yes
-    initial_value: '-6.25'
+    initial_value: '-17.79'
 
   # RH calibration
   - id: calibration_rh_m
@@ -87,55 +87,55 @@ globals:
   - id: calibration_tg_m
     type: double
     restore_value: yes
-    initial_value: '1.37'
+    initial_value: '1.475'
   - id: calibration_tg_b
     type: double
     restore_value: yes
-    initial_value: '-12.6'
+    initial_value: '-16.03'
 
   # Air speed 1 calibration (power function)
   - id: calibration_as1_a
     type: double
     restore_value: yes
-    initial_value: '1.208214'
+    initial_value: '1.876'
   - id: calibration_as1_b
     type: double
     restore_value: yes
-    initial_value: '1.299113'
+    initial_value: '2.881'
   - id: calibration_as1_c
     type: double
     restore_value: yes
-    initial_value: '-0.0003'
+    initial_value: '0.00416'
   - id: calibration_as1_d0
     type: double
     restore_value: yes
-    initial_value: '2.857'
+    initial_value: '2.543'
   - id: calibration_as1_d1
     type: double
     restore_value: yes
-    initial_value: '-0.067'
+    initial_value: '-0.057'
 
   # Air speed 2 calibration
   - id: calibration_as2_a
     type: double
     restore_value: yes
-    initial_value: '1.298747'
+    initial_value: '2.225'
   - id: calibration_as2_b
     type: double
     restore_value: yes
-    initial_value: '2.275216'
+    initial_value: '3.208'
   - id: calibration_as2_c
     type: double
     restore_value: yes
-    initial_value: '0.0018'
+    initial_value: '0.00483'
   - id: calibration_as2_d0
     type: double
     restore_value: yes
-    initial_value: '2.515'
+    initial_value: '2.583'
   - id: calibration_as2_d1
     type: double
     restore_value: yes
-    initial_value: '-0.049'
+    initial_value: '-0.055'
 
 # Define flash write interval
 # https://esphome.io/components/esphome.html#preferences-component
