@@ -40,40 +40,6 @@ esphome:
         - delay: 200ms
         - ds1307.read_time:
         
-        # Print useful diagnostics
-        - lambda: |-
-            char msg[768];
-        
-            snprintf(
-              msg, sizeof(msg),
-              "Building: %s, Level: %s, Zone: %s, Time: %s\n"
-              "Influx: %s, SD Card: %s, Updates: %s\n"
-              "Calibrations:\n"
-              "CO2:  y = ppm*%.2fx + %.1f\n"
-              "Lux:  y = lux*%.2fx + %.1f\n"
-              "Ta:   y = ta*%.2fx + %.2f\n"
-              "RH:   y = rh*%.2fx + %.2f\n"
-              "Tg:   y = tg*%.2fx + %.2f\n"
-              "AS1:  y = %.3f * V^%.3f; d0 = %.2f, d1 = %.2f\n"
-              "AS2:  y = %.3f * V^%.3f; d0 = %.2f, d1 = %.2f",
-              id(building_tag).c_str(),
-              id(level_tag).c_str(),
-              id(zone_tag).c_str(),
-              ESPTime::from_epoch_utc(id(ds1307_time).now().timestamp)
-                .strftime("%Y-%m-%dT%H:%M:%S+00:00").c_str(),
-              id(influx_enable) ? "true" : "false",
-              id(sd_enable) ? "true" : "false",
-              id(updates_enable) ? "true" : "false",
-              id(calibration_co2_m), id(calibration_co2_b),
-              id(calibration_lux_m), id(calibration_lux_b),
-              id(calibration_ta_m1), id(calibration_ta_b),
-              id(calibration_rh_m), id(calibration_rh_b),
-              id(calibration_tg_m), id(calibration_tg_b),
-              id(calibration_as1_a), id(calibration_as1_b), id(calibration_as1_d0), id(calibration_as1_d1),
-              id(calibration_as2_a), id(calibration_as2_b), id(calibration_as2_d0), id(calibration_as2_d1)
-            );
-        
-            ESP_LOGI("samba", "%s", msg);
 
 
 # Configure i2c bus
