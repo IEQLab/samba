@@ -49,13 +49,13 @@ esphome:
               "Building: %s, Level: %s, Zone: %s, Time: %s\n"
               "Influx: %s, SD Card: %s, Updates: %s\n"
               "Calibrations:\n"
-              "CO2:  y = ppm*%.4fx + %.4f\n"
-              "Lux:  y = lux*%.4fx + %.4f\n"
-              "Ta:   y = ta*%.4fx + pms*%.4fx + %.4f\n"
-              "RH:   y = rh*%.4fx + %.4f\n"
-              "Tg:   y = tg*%.4fx + %.4f\n"
-              "AS1:  y = %.6f * V^%.6f + %.4f * V * ta; d0 = %.3f, d1 = %.3f\n"
-              "AS2:  y = %.6f * V^%.6f + %.4f * V * ta; d0 = %.3f, d1 = %.3f",
+              "CO2:  y = ppm*%.2fx + %.1f\n"
+              "Lux:  y = lux*%.2fx + %.1f\n"
+              "Ta:   y = ta*%.2fx + %.2f\n"
+              "RH:   y = rh*%.2fx + %.2f\n"
+              "Tg:   y = tg*%.2fx + %.2f\n"
+              "AS1:  y = %.3f * V^%.3f; d0 = %.2f, d1 = %.2f\n"
+              "AS2:  y = %.3f * V^%.3f; d0 = %.2f, d1 = %.2f",
               id(building_tag).c_str(),
               id(level_tag).c_str(),
               id(zone_tag).c_str(),
@@ -66,11 +66,11 @@ esphome:
               id(updates_enable) ? "true" : "false",
               id(calibration_co2_m), id(calibration_co2_b),
               id(calibration_lux_m), id(calibration_lux_b),
-              id(calibration_ta_m1), id(calibration_ta_m2), id(calibration_ta_b),
+              id(calibration_ta_m1), id(calibration_ta_b),
               id(calibration_rh_m), id(calibration_rh_b),
               id(calibration_tg_m), id(calibration_tg_b),
-              id(calibration_as1_a), id(calibration_as1_b), id(calibration_as1_c), id(calibration_as1_d0), id(calibration_as1_d1),
-              id(calibration_as2_a), id(calibration_as2_b), id(calibration_as2_c), id(calibration_as2_d0), id(calibration_as2_d1)
+              id(calibration_as1_a), id(calibration_as1_b), id(calibration_as1_d0), id(calibration_as1_d1),
+              id(calibration_as2_a), id(calibration_as2_b), id(calibration_as2_d0), id(calibration_as2_d1)
             );
         
             ESP_LOGI("samba", "%s", msg);
@@ -78,10 +78,6 @@ esphome:
 
 # Configure i2c bus
 # https://esphome.io/components/i2c
-# NOTE: Remote ADC (ADS1115) may experience I2C timeouts due to slow rise times
-# caused by 590Ω series resistors (R2, R3, R8, R9) on differential I2C lines.
-# Hardware fix: Replace R2, R3, R8, R9 with 22-47Ω resistors.
-# Optional: Replace R4, R5 pull-ups from 5.1kΩ to 2.2kΩ for faster rise times.
 i2c:
   - id: bus_a
     scl: GPIO25
