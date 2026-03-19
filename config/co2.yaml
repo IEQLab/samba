@@ -23,7 +23,7 @@ sensor:
           max_value: 10000
           ignore_out_of_range: true
       - median:
-          window_size: 10
+          window_size: 6
           send_every: 2
           send_first_at: 1
 
