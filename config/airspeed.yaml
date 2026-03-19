@@ -23,8 +23,7 @@ sensor:
             float temp = id(samba_temperature).state;
             float floor = id(calibration_as1_d0) + id(calibration_as1_d1) * temp;
             float v_above_floor = std::max(x - floor, 0.01f);
-            return id(calibration_as1_a) * pow(v_above_floor, id(calibration_as1_b))
-                    + id(calibration_as1_c) * x * temp;
+            return id(calibration_as1_a) * pow(v_above_floor, id(calibration_as1_b));
       - clamp:
           min_value: 0.02
           max_value: 1.0
@@ -48,8 +47,7 @@ sensor:
             float temp = id(samba_temperature).state;
             float floor = id(calibration_as2_d0) + id(calibration_as2_d1) * temp;
             float v_above_floor = std::max(x - floor, 0.01f);
-            return id(calibration_as2_a) * pow(v_above_floor, id(calibration_as2_b))
-                    + id(calibration_as2_c) * x * temp;
+            return id(calibration_as2_a) * pow(v_above_floor, id(calibration_as2_b));
       - clamp:
           min_value: 0.02
           max_value: 1.0
