@@ -348,9 +348,14 @@ void SoundLevelMeterSensorEq::process(std::vector<float> &buffer) {
     local_sum += buffer[i] * buffer[i];
     this->count_++;
     if (this->count_ == this->update_samples_) {
-      float dB = 10 * log10((sum_ + local_sum) / count_);
-      dB = this->adjust_dB(dB);
-      this->defer_publish_state(dB);
+      float value = (sum_ + local_sum) / count_;
+      if (value <= 0) {
+        this->defer_publish_state(NAN);
+      } else {
+        float dB = 10 * log10(value);
+        dB = this->adjust_dB(dB);
+        this->defer_publish_state(dB);
+      }
       this->sum_ = 0;
       this->count_ = 0;
       local_sum = 0;
@@ -382,9 +387,13 @@ void SoundLevelMeterSensorMax::process(std::vector<float> &buffer) {
     }
     this->count_max_++;
     if (this->count_max_ == this->update_samples_) {
-      float dB = 10 * log10(this->max_);
-      dB = this->adjust_dB(dB);
-      this->defer_publish_state(dB);
+      if (this->max_ <= 0) {
+        this->defer_publish_state(NAN);
+      } else {
+        float dB = 10 * log10(this->max_);
+        dB = this->adjust_dB(dB);
+        this->defer_publish_state(dB);
+      }
       this->max_ = std::numeric_limits<float>::min();
       this->count_max_ = 0;
     }
@@ -416,9 +425,13 @@ void SoundLevelMeterSensorMin::process(std::vector<float> &buffer) {
     }
     this->count_min_++;
     if (this->count_min_ == this->update_samples_) {
-      float dB = 10 * log10(this->min_);
-      dB = this->adjust_dB(dB);
-      this->defer_publish_state(dB);
+      if (this->min_ <= 0) {
+        this->defer_publish_state(NAN);
+      } else {
+        float dB = 10 * log10(this->min_);
+        dB = this->adjust_dB(dB);
+        this->defer_publish_state(dB);
+      }
       this->min_ = std::numeric_limits<float>::max();
       this->count_min_ = 0;
     }
@@ -440,9 +453,13 @@ void SoundLevelMeterSensorPeak::process(std::vector<float> &buffer) {
     this->peak_ = std::max(this->peak_, abs(buffer[i]));
     this->count_++;
     if (this->count_ == this->update_samples_) {
-      float dB = 20 * log10(this->peak_);
-      dB = this->adjust_dB(dB, false);
-      this->defer_publish_state(dB);
+      if (this->peak_ <= 0) {
+        this->defer_publish_state(NAN);
+      } else {
+        float dB = 20 * log10(this->peak_);
+        dB = this->adjust_dB(dB, false);
+        this->defer_publish_state(dB);
+      }
       this->peak_ = 0.f;
       this->count_ = 0;
     }
