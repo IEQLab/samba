@@ -1,15 +1,15 @@
 {
   "name": "SAMBA Indoor Environmental Monitor",
-  "version": "1.99.94",
+  "version": "1.99.95",
   "home_assistant_domain": "esphome",
   "builds": [
     {
       "chipFamily": "ESP32",
       "ota": {
-        "md5": "6e67a7a15ce481eaae1b1a05a6421998",
-        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.94.bin",
-        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.94",
-        "summary": "Error handling for I2C devices"
+        "md5": "4fa3744ec7e7281320845fae7bdf3c6d",
+        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.95.bin",
+        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.95",
+        "summary": "Final test firmware"
       }
     }
   ]
