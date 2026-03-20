@@ -138,6 +138,7 @@ async def to_code(config):
             cv.Required(CONF_SENSOR_IDS): cv.ensure_list(cv.string),
         }
     ),
+    synchronous=True,
 )
 async def influxdb_publish_sensors_to_code(config, action_id, template_arg, args):
     parent = await cg.get_variable(config[CONF_ID])

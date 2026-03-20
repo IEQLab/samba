@@ -135,6 +135,7 @@ async def to_code(config):
             cv.Required(CONF_ID): cv.use_id(SenseairI2CSensor),
         }
     ),
+    synchronous=True,
 )
 async def background_calibration_action_to_code(config, action_id, template_arg, args):
     """Register background calibration action."""
@@ -150,6 +151,7 @@ async def background_calibration_action_to_code(config, action_id, template_arg,
             cv.Required(CONF_ID): cv.use_id(SenseairI2CSensor),
         }
     ),
+    synchronous=True,
 )
 async def abc_get_period_action_to_code(config, action_id, template_arg, args):
     """Register ABC get period action."""
@@ -165,6 +167,7 @@ async def abc_get_period_action_to_code(config, action_id, template_arg, args):
             cv.Required(CONF_ID): cv.use_id(SenseairI2CSensor),
         }
     ),
+    synchronous=True,
 )
 async def reinitialize_action_to_code(config, action_id, template_arg, args):
     """Register reinitialize action for recovery from setup failures."""

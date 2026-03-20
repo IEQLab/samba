@@ -4,7 +4,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation, core
 from esphome.automation import maybe_simple_id
-from esphome.components import sensor, microphone
+from esphome.components import sensor, microphone, ota
 from esphome.components.esp32 import add_idf_component
 from esphome.const import (
     CONF_ID,
@@ -179,7 +179,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_DSP_FILTERS, default=[]): [CONFIG_DSP_FILTER_SCHEMA],
             cv.Optional(CONF_SENSORS, default=[]): [CONFIG_SENSOR_SCHEMA],
             cv.Optional(CONF_USE_ESP_DSP, default=False): cv.All(
-                cv.boolean, cv.only_with_esp_idf
+                cv.boolean
             ),
         }
     ).extend(cv.COMPONENT_SCHEMA),
@@ -249,12 +249,16 @@ async def to_code(config):
     for sc in config[CONF_SENSORS]:
         await add_sensor(sc, var)
 
+    ota.request_ota_state_listeners()
+
 
 @automation.register_action(
-    "sound_level_meter.start", StartAction, SOUND_LEVEL_METER_ACTION_SCHEMA
+    "sound_level_meter.start", StartAction, SOUND_LEVEL_METER_ACTION_SCHEMA,
+    synchronous=True,
 )
 @automation.register_action(
-    "sound_level_meter.stop", StopAction, SOUND_LEVEL_METER_ACTION_SCHEMA
+    "sound_level_meter.stop", StopAction, SOUND_LEVEL_METER_ACTION_SCHEMA,
+    synchronous=True,
 )
 async def switch_toggle_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])

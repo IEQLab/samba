@@ -151,7 +151,7 @@ public:
     sensor_ids_.push_back(sensor_id);
   }
   
-  void play(Ts... x) override {
+  void play(const Ts &...x) override {
     parent_->publish_sensors(sensor_ids_);
   }
   

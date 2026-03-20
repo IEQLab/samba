@@ -118,7 +118,7 @@ class BackgroundCalibrationAction : public Action<Ts...> {
 public:
   BackgroundCalibrationAction(SenseairI2CSensor *parent) : parent_(parent) {}
   
-  void play(Ts... x) override { this->parent_->background_calibration(); }
+  void play(const Ts &...x) override { this->parent_->background_calibration(); }
   
 protected:
   SenseairI2CSensor *parent_;
@@ -132,7 +132,7 @@ public:
   
   TEMPLATABLE_VALUE(uint16_t, target_ppm)
   
-  void play(Ts... x) override { 
+  void play(const Ts &...x) override { 
     auto ppm = this->target_ppm_.value(x...);
     this->parent_->background_calibration_with_ppm(ppm);
   }
@@ -147,7 +147,7 @@ class ABCGetPeriodAction : public Action<Ts...> {
 public:
   ABCGetPeriodAction(SenseairI2CSensor *parent) : parent_(parent) {}
 
-  void play(Ts... x) override { this->parent_->abc_get_period(); }
+  void play(const Ts &...x) override { this->parent_->abc_get_period(); }
 
 protected:
   SenseairI2CSensor *parent_;
@@ -159,7 +159,7 @@ class ReinitializeAction : public Action<Ts...> {
 public:
   ReinitializeAction(SenseairI2CSensor *parent) : parent_(parent) {}
 
-  void play(Ts... x) override { this->parent_->reinitialize(); }
+  void play(const Ts &...x) override { this->parent_->reinitialize(); }
 
 protected:
   SenseairI2CSensor *parent_;

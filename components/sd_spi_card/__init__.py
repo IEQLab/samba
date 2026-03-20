@@ -75,6 +75,7 @@ async def to_code(config):
             cv.Required(CONF_CONTENT): cv.templatable(cv.string),
         }
     ),
+    synchronous=True,
 )
 async def append_file_action_to_code(config, action_id, template_arg, args):
     parent = await cg.get_variable(config[CONF_ID])
@@ -100,6 +101,7 @@ async def append_file_action_to_code(config, action_id, template_arg, args):
             cv.Required(CONF_CONTENT): cv.templatable(cv.string),
         }
     ),
+    synchronous=True,
 )
 async def write_file_action_to_code(config, action_id, template_arg, args):
     parent = await cg.get_variable(config[CONF_ID])
@@ -123,6 +125,7 @@ async def write_file_action_to_code(config, action_id, template_arg, args):
             cv.GenerateID(): cv.use_id(SdSpiCard),
         }
     ),
+    synchronous=True,
 )
 async def sync_action_to_code(config, action_id, template_arg, args):
     parent = await cg.get_variable(config[CONF_ID])
@@ -141,6 +144,7 @@ async def sync_action_to_code(config, action_id, template_arg, args):
             cv.Optional(CONF_CONTENT, default=""): cv.templatable(cv.string),
         }
     ),
+    synchronous=True,
 )
 async def create_file_action_to_code(config, action_id, template_arg, args):
     parent = await cg.get_variable(config[CONF_ID])
@@ -164,6 +168,7 @@ async def create_file_action_to_code(config, action_id, template_arg, args):
             cv.GenerateID(): cv.use_id(SdSpiCard),
         }
     ),
+    synchronous=True,
 )
 async def mount_action_to_code(config, action_id, template_arg, args):
     parent = await cg.get_variable(config[CONF_ID])
