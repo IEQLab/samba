@@ -35,3 +35,4 @@ sensor:
     filters:
       - lambda: |-
           return ((id(calibration_lux_m) * id(opt_lux).state) + id(calibration_lux_b));
+      - filter_out: nan

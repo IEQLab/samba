@@ -24,7 +24,7 @@ sensor:
             send_first_at: 10
     temperature:
       id: pms_temp
-      internal: false
+      internal: true
     humidity:
       id: pms_rh
       internal: true
@@ -46,9 +46,10 @@ sensor:
     unit_of_measurement: "µg/m3"
     icon: mdi:molecule
     lambda: |-
-    
+
       float pm = id(pms_pm25).state;
       float rh = id(pms_rh).state;
+      if (isnan(pm) || isnan(rh)) return NAN;
       
       if (pm < 30.0) {
         return (0.524 * pm - 0.0862 * rh + 5.75);

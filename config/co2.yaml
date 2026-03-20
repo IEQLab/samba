@@ -39,6 +39,7 @@ sensor:
     filters:
       - lambda: |-
           return ((id(calibration_co2_m) * id(k30_co2).state) + id(calibration_co2_b));
+      - filter_out: nan
 
 
 # Error counter for initialisation failure recovery
