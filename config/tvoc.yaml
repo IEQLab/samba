@@ -22,6 +22,9 @@ sensor:
             window_size: 8
             send_every: 2
             send_first_at: 1
+        - clamp:
+            max_value: 500
+            ignore_out_of_range: false
     nox:
       id: sgp_nox
       internal: true
