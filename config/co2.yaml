@@ -19,9 +19,9 @@ sensor:
     filters:
       - filter_out: nan
       - clamp:
-          min_value: 380
+          min_value: 395
           max_value: 10000
-          ignore_out_of_range: true
+          ignore_out_of_range: false
       - median:
           window_size: 6
           send_every: 2
