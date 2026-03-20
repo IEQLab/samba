@@ -47,7 +47,7 @@ safe_mode:
       - logger.log: "Restoring SAMBA due to an unknown error"
       - light.turn_on:
           id: samba_led
-          effect: slow_pulse
+          effect: pulse_slow
       - ota.http_request.flash:
           md5_url: https://github.com/IEQLab/samba/raw/main/firmware/firmware_recovery.md5
           url: https://github.com/IEQLab/samba/raw/main/firmware/firmware_recovery.bin
