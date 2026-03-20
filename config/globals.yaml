@@ -128,4 +128,4 @@ globals:
 # Define flash write interval
 # https://esphome.io/components/esphome.html#preferences-component
 preferences:
-  flash_write_interval: 1min
+  flash_write_interval: 10min
