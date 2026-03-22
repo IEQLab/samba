@@ -127,7 +127,7 @@ SAMBA devices are shipped pre-calibrated with deployment firmware. Follow these 
    | **Measurements** | Live sensor readings for verification |
    | **Firmware** | Buttons to flash production or test firmware |
 
-5. **Set location tags.** Enter the building name, level, and zone for this deployment. These are used as InfluxDB tags for all uploaded measurements.
+5. **Set location tags.** Enter the building name, level, and zone for this deployment. These are used as InfluxDB tags for all uploaded measurements. We recommend using lower case and avoiding special characters e.g. `building_name`.
 6. **Adjust settings.** Enable or disable InfluxDB uploads, SD card logging, and automatic firmware updates as needed.
 7. **Flash production firmware.** Click **"Flash production firmware"** to download and install the latest firmware from this repository. The SAMBA will reboot and begin sampling automatically. The LED will blink green during the warm-up period and then turn off once it enters the normal sampling routine.
 
