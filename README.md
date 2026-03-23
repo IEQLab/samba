@@ -117,7 +117,7 @@ SAMBA devices are shipped pre-calibrated with deployment firmware. Follow these 
 1. **Power on** the SAMBA. The status LED will strobe red, green, and blue to indicate it is in setup mode.
 2. **Connect to the hotspot.** Using a phone or laptop, join the `samba_connect` WiFi network and open the [captive portal](https://esphome.io/components/captive_portal.html) at [http://192.168.4.1](http://192.168.4.1).
 3. **Enter WiFi credentials.** Select the target 2.4 GHz network from the list and enter the password. The SAMBA will connect and the LED will pulse blue.
-4. **Open the web server.** Navigate to the SAMBA's IP address on the local network (e.g. `http://192.168.1.XXX`) in a browser. The web server displays the following configuration groups:
+4. **Open the web server.** Navigate to the SAMBA's IP address on the local network (e.g. `http://192.168.1.XXX`) in a browser. If you don't know the device's IP address, use a network scanning app such as Network Analyzer (free on [iPhone](https://apps.apple.com/us/app/network-analyzer-net-tools/id562315041) and [Android](https://play.google.com/store/apps/details?id=net.techet.netanalyzerlite.an&hl=en_AU)) to scan your local network — the SAMBA will appear as an Espressif device. The web server displays the following configuration groups:
 
    | Group | What to configure |
    |:-----:|:-----------------:|
