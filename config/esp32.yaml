@@ -9,6 +9,7 @@ esp32:
   variant: esp32
 #  board: esp32dev
   flash_size: 16MB
+  cpu_frequency: 240MHZ
   framework:
     type: esp-idf
     sdkconfig_options:
@@ -49,7 +50,7 @@ i2c:
     scl: GPIO25
     sda: GPIO26
     scan: false
-    frequency: 50kHz
+    frequency: 100kHz
     timeout: 13ms
 
 # Configure UART bus
