@@ -12,7 +12,7 @@ esphome:
   min_version: "2026.3.0"
   project:
     name: "IEQLab.SAMBA"
-    version: "1.99.96"
+    version: "1.99.97"
 
 # Set logging levels
 # https://esphome.io/components/logger

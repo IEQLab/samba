@@ -38,6 +38,11 @@ components/             # Custom external ESPHome components (C++ and Python)
   senseair_i2c/         # K30/K33 CO2 sensor over I2C
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
+infra/                  # AWS CDK project for downsampling Lambdas and S3 archive
+  infra/infra_stack.py  # CDK stack definition
+  lambdas/hourly/       # Hourly aggregation + S3 archive Lambda
+  lambdas/daily/        # Daily compliance computation Lambda
+  lambdas/shared/       # Shared deps layer (influxdb-client, pyarrow) and utilities
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
 helper_bump.sh          # Version bump and release helper script
@@ -232,3 +237,38 @@ class MyComponent : public Component {
 ### Secrets
 
 All credentials are in `secrets.yaml` (gitignored) and referenced via `!secret` in substitutions. Never hardcode credentials.
+
+## InfluxDB Architecture
+
+### Consolidated Measurement Schema
+
+The firmware groups all sensor data into 2 InfluxDB measurements instead of 14 separate ones:
+
+- **`ieq`** — all IEQ sensor fields: `air_temp`, `globe_temp`, `rel_humidity`, `air_speed`, `rad_temp`, `co2`, `pm25`, `tvoc`, `nox`, `illuminance`, `la_eq`, `la_90`, `la_10`
+- **`device_status`** — diagnostic fields: `wifi`, `uptime`
+
+Tags on both: `building`, `level`, `zone`, `device` (MAC address). Field names are defined in `config/influx.yaml` under `field_names`. The C++ grouping logic is in `components/influxdb/influxdb.cpp` (`build_grouped_payload_()`).
+
+### Bucket Strategy
+
+| Bucket | Retention | Resolution | Purpose |
+|--------|-----------|------------|---------|
+| `raw` | 90 days | 5-min (as-is) | Real-time dashboards, troubleshooting |
+| `hourly` | 2 years | Hourly mean/min/max/count | Trend analysis, most Grafana panels |
+| `daily` | Indefinite | Daily compliance percentages | NABERS/Green Star, WELL/RESET reports |
+
+### Downsampling Infrastructure (`infra/`)
+
+AWS CDK stack (`SambaDownsamplingStack`) deployed to `us-east-1` with:
+
+- **Hourly Lambda** (`samba-hourly-aggregation`): Runs at :05 past each hour. Queries `raw` bucket, computes per-field aggregates (mean/min/max/count) grouped by zone, writes to `hourly` as `ieq_hourly` measurement. Also archives raw data to S3 as Parquet files.
+- **Daily Lambda** (`samba-daily-compliance`): Runs at 00:15 UTC. Computes compliance percentages against WELL, RESET, acoustic, and lighting thresholds, writes to `daily` as `compliance` measurement.
+- **S3 archive** (`samba-archive-{account_id}`): Hive-partitioned Parquet files (`ieq/year=YYYY/month=MM/day=DD/HH.parquet`), Glacier transition after 90 days.
+- **InfluxDB credentials** stored in AWS SSM Parameter Store (`/samba/influx/{host,org,token}`).
+
+CDK commands (from `infra/` directory):
+```bash
+source .venv/bin/activate
+JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION=1 cdk synth   # preview
+JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION=1 cdk deploy  # deploy
+```

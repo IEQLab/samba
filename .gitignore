@@ -63,4 +63,7 @@ components/*/__pycache__
 # Firmware bump helper
 helper_bump.sh
 
+# AWS CDK infrastructure (private)
+infra/
+
 
