@@ -19,8 +19,26 @@ influxdb:
   timestamp_unit: "s"
   update_interval: never
 
-  # Define Influx measurements for sensors
+  # Define Influx measurements for sensors (grouped into 2 measurements)
   sensor_names:
+    air_temperature: "ieq"
+    relative_humidity: "ieq"
+    globe_temperature: "ieq"
+    radiant_temperature: "ieq"
+    air_speed: "ieq"
+    carbon_dioxide: "ieq"
+    pm2_5: "ieq"
+    tvoc: "ieq"
+    nox_index: "ieq"
+    illuminance: "ieq"
+    laeq: "ieq"
+    la90: "ieq"
+    la10: "ieq"
+    wifi_signal: "device_status"
+    device_uptime: "device_status"
+
+  # Define Influx field keys (required — sensors sharing a measurement need unique field names)
+  field_names:
     air_temperature: "air_temp"
     relative_humidity: "rel_humidity"
     globe_temperature: "globe_temp"
@@ -34,13 +52,8 @@ influxdb:
     laeq: "la_eq"
     la90: "la_90"
     la10: "la_10"
-#    la05: "la_05"
     wifi_signal: "wifi"
     device_uptime: "uptime"
-
-#  # Define Influx field keys (defaults to 'value')
-#  field_names:
-#    air_temp: "celsius"
 
   # Define global tags applied to all measurements
   global_tags:

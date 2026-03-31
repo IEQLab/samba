@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <map>
 #include <string>
 #include <list>
@@ -23,12 +24,20 @@
 namespace esphome {
 namespace influxdb {
 
+struct MeasurementGroup {
+  std::string measurement;   // raw measurement name (unescaped)
+  std::string first_sensor;  // first sensor_id in group (for tag generation)
+  std::string fields;        // accumulated "field1=v1,field2=v2,..."
+  bool has_data{false};
+};
+
 class InfluxDB : public Component {
 public:
   // --- Constants ---
   static constexpr uint32_t DEFAULT_UPDATE_INTERVAL_MS = 60000;
   static constexpr uint32_t UPDATE_INTERVAL_NEVER = UINT32_MAX;
   static constexpr int MAX_RETRY_ATTEMPTS = 2;
+  static constexpr size_t MAX_MEASUREMENT_GROUPS = 4;
   static constexpr size_t BASE_LINE_SIZE = 64;
   static constexpr size_t MIN_BUFFER_SIZE = 256;
   static constexpr uint32_t BASE_BACKOFF_MS = 500;
@@ -118,6 +127,8 @@ protected:
   
   // --- Helper methods ---
   bool validate_required_config_();
+  void validate_field_uniqueness_();
+  void validate_tag_consistency_();
   void collect_sensors_();
   void build_url_();
   void setup_headers_();

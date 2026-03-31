@@ -34,12 +34,14 @@ void InfluxDB::setup() {
   this->build_url_();
   this->setup_headers_();
   this->collect_sensors_();
-  
+  this->validate_field_uniqueness_();
+  this->validate_tag_consistency_();
+
   if (this->send_mac_) {
     this->mac_address_ = get_mac_address();
     ESP_LOGD(TAG, "MAC address: %s", this->mac_address_.c_str());
   }
-  
+
   ESP_LOGI(TAG, "InfluxDB setup complete");
 }
 
@@ -58,6 +60,41 @@ bool InfluxDB::validate_required_config_() {
     }
   }
   return true;
+}
+
+void InfluxDB::validate_field_uniqueness_() {
+  // Check that no two sensors in the same measurement share a field name
+  // Uses simple nested loop — only runs once at setup with ~15 sensors
+  for (auto it1 = this->sensor_measurements_.begin(); it1 != this->sensor_measurements_.end(); ++it1) {
+    for (auto it2 = std::next(it1); it2 != this->sensor_measurements_.end(); ++it2) {
+      if (it1->second != it2->second) continue;  // different measurements
+      std::string f1 = this->get_field_name_(it1->first);
+      std::string f2 = this->get_field_name_(it2->first);
+      if (f1 == f2) {
+        ESP_LOGW(TAG, "Duplicate field '%s' in measurement '%s' (sensors '%s' and '%s') — one will overwrite the other!",
+                 f1.c_str(), it1->second.c_str(), it1->first.c_str(), it2->first.c_str());
+      }
+    }
+  }
+}
+
+void InfluxDB::validate_tag_consistency_() {
+  // Warn if sensors in the same measurement group have different per-sensor tags
+  for (auto it1 = this->sensor_measurements_.begin(); it1 != this->sensor_measurements_.end(); ++it1) {
+    auto tags1 = this->static_tags_.find(it1->first);
+    for (auto it2 = std::next(it1); it2 != this->sensor_measurements_.end(); ++it2) {
+      if (it1->second != it2->second) continue;
+      auto tags2 = this->static_tags_.find(it2->first);
+      bool t1_has = (tags1 != this->static_tags_.end() && !tags1->second.empty());
+      bool t2_has = (tags2 != this->static_tags_.end() && !tags2->second.empty());
+      if (t1_has != t2_has || (t1_has && t2_has && tags1->second != tags2->second)) {
+        ESP_LOGW(TAG, "Sensors '%s' and '%s' share measurement '%s' but have different per-sensor tags — "
+                      "grouped line will use tags from the first sensor only",
+                 it1->first.c_str(), it2->first.c_str(), it1->second.c_str());
+        return;  // one warning is enough
+      }
+    }
+  }
 }
 
 // --- ESP-IDF HTTP POST with full compliance ---
@@ -250,19 +287,14 @@ bool InfluxDB::should_publish_() const {
 }
 
 size_t InfluxDB::estimate_payload_size_() const {
-  size_t estimated_size = 0;
-  
-  // Calculate based on actual sensor count
-  estimated_size += this->sensors_.size() * BASE_LINE_SIZE;
-  estimated_size += this->text_sensors_.size() * BASE_LINE_SIZE;
+  // With grouped output, we have ~2 lines instead of ~15
+  // Each line: measurement + tags (~150 bytes) + all fields (~200 bytes) + timestamp
+  size_t sensor_count = this->sensors_.size() + this->text_sensors_.size();
 #ifdef USE_BINARY_SENSOR
-  estimated_size += this->binary_sensor_states_.size() * BASE_LINE_SIZE;
+  sensor_count += this->binary_sensor_states_.size();
 #endif
-  
-  // Add overhead for tags
-  size_t tag_overhead = this->global_tags_.size() * 32;  // rough estimate per tag
-  estimated_size += tag_overhead * (this->sensors_.size() + this->text_sensors_.size());
-  
+  // Estimate: ~20 bytes per field, ~150 bytes overhead per group, assume 2 groups
+  size_t estimated_size = (sensor_count * 20) + (MAX_MEASUREMENT_GROUPS * 150);
   return std::max(estimated_size, MIN_BUFFER_SIZE);
 }
 
@@ -282,90 +314,118 @@ void InfluxDB::publish_sensors(const std::vector<std::string> &sensor_ids) {
 
 void InfluxDB::publish_internal_(const std::unordered_set<std::string> *filter) {
   if (this->is_failed() || this->publish_in_progress_) {
-    ESP_LOGW(TAG, "Cannot publish: component %s", 
+    ESP_LOGW(TAG, "Cannot publish: component %s",
              this->is_failed() ? "has failed" : "publish already in progress");
     return;
   }
-  
-  // Check if WiFi is connected
+
   if (!wifi::global_wifi_component->is_connected()) {
     ESP_LOGD(TAG, "Cannot publish: WiFi not connected");
     return;
   }
-  
-  // Optimized payload building with better size estimation
-  const size_t estimated_size = this->estimate_payload_size_();
-  std::string body;
-  body.reserve(estimated_size);
-  size_t data_points = 0;
-  
-  // Build payload efficiently - apply filter if provided
+
+  // --- Phase 1: Group fields by measurement ---
+  std::array<MeasurementGroup, MAX_MEASUREMENT_GROUPS> groups{};
+  size_t group_count = 0;
+  size_t field_count = 0;
+
+  // Find existing group or create a new one (linear search over <=4 slots)
+  auto find_or_create_group = [&](const std::string &measurement,
+                                  const std::string &sensor_id) -> MeasurementGroup * {
+    for (size_t i = 0; i < group_count; i++) {
+      if (groups[i].measurement == measurement)
+        return &groups[i];
+    }
+    if (group_count >= MAX_MEASUREMENT_GROUPS) {
+      ESP_LOGW(TAG, "Too many measurement groups (max %zu), dropping data", MAX_MEASUREMENT_GROUPS);
+      return nullptr;
+    }
+    auto &g = groups[group_count++];
+    g.measurement = measurement;
+    g.first_sensor = sensor_id;
+    g.has_data = true;
+    return &g;
+  };
+
+  // Append a field value to its measurement group
+  auto append_field = [&](const std::string &sensor_id, const std::string &value, bool is_string) {
+    auto it = this->sensor_measurements_.find(sensor_id);
+    const std::string &measurement = (it != this->sensor_measurements_.end()) ? it->second : sensor_id;
+    auto *group = find_or_create_group(measurement, sensor_id);
+    if (group == nullptr)
+      return;
+    if (!group->fields.empty())
+      group->fields += ",";
+    group->fields += this->build_fields_(sensor_id, value, is_string);
+    field_count++;
+  };
+
+  // Collect numeric sensors
   for (auto *sensor : this->sensors_) {
-    if (!std::isnan(sensor->state)) {
-      char sensor_id_buf[128];
-      sensor->get_object_id_to(sensor_id_buf);
-      std::string sensor_id(sensor_id_buf);
-      
-      // Skip if filter is active and sensor not in filter
-      if (filter != nullptr && filter->find(sensor_id) == filter->end()) {
-        continue;
-      }
-      
-      body += this->build_line_protocol_line_(sensor_id, to_string(sensor->state));
-      data_points++;
-    }
+    if (std::isnan(sensor->state))
+      continue;
+    char buf[128];
+    sensor->get_object_id_to(buf);
+    std::string sensor_id(buf);
+    if (filter != nullptr && filter->find(sensor_id) == filter->end())
+      continue;
+    append_field(sensor_id, to_string(sensor->state), false);
   }
-  
+
+  // Collect text sensors
   for (auto *text_sensor : this->text_sensors_) {
-    if (!text_sensor->state.empty()) {
-      char sensor_id_buf[128];
-      text_sensor->get_object_id_to(sensor_id_buf);
-      std::string sensor_id(sensor_id_buf);
-      
-      // Skip if filter is active and sensor not in filter
-      if (filter != nullptr && filter->find(sensor_id) == filter->end()) {
-        continue;
-      }
-      
-      body += this->build_line_protocol_line_(sensor_id, text_sensor->state, true);
-      data_points++;
-    }
+    if (text_sensor->state.empty())
+      continue;
+    char buf[128];
+    text_sensor->get_object_id_to(buf);
+    std::string sensor_id(buf);
+    if (filter != nullptr && filter->find(sensor_id) == filter->end())
+      continue;
+    append_field(sensor_id, text_sensor->state, true);
   }
-  
+
 #ifdef USE_BINARY_SENSOR
   for (const auto &[sensor_id, state] : this->binary_sensor_states_) {
-    // Skip if filter is active and sensor not in filter
-    if (filter != nullptr && filter->find(sensor_id) == filter->end()) {
+    if (filter != nullptr && filter->find(sensor_id) == filter->end())
       continue;
-    }
-    
-    body += this->build_line_protocol_line_(sensor_id, std::to_string(state ? 1 : 0));
-    data_points++;
+    append_field(sensor_id, std::to_string(state ? 1 : 0), false);
   }
 #endif
-  
-  if (data_points == 0) {
+
+  if (field_count == 0) {
     ESP_LOGD(TAG, "No valid sensor data to publish");
     return;
   }
-  
-  // Shrink buffer to actual size
+
+  // --- Phase 2: Build line protocol payload (one line per group) ---
+  std::string timestamp = this->build_timestamp_();
+  std::string body;
+  body.reserve(this->estimate_payload_size_());
+
+  for (size_t i = 0; i < group_count; i++) {
+    auto &g = groups[i];
+    body += this->escape_influx_key_(g.measurement);
+    body += this->build_tags_(g.first_sensor);
+    body += " ";
+    body += g.fields;
+    body += timestamp;
+    body += "\n";
+  }
+
   body.shrink_to_fit();
-  
   this->publish_in_progress_ = true;
-  
+
   if (filter != nullptr) {
-    ESP_LOGI(TAG, "Publishing %zu filtered data points to InfluxDB", data_points);
+    ESP_LOGI(TAG, "Publishing %zu data points (%zu fields) to InfluxDB", group_count, field_count);
   } else {
     this->last_publish_ = millis();
-    ESP_LOGI(TAG, "Publishing %zu data points to InfluxDB", data_points);
+    ESP_LOGI(TAG, "Publishing %zu data points (%zu fields) to InfluxDB", group_count, field_count);
   }
   ESP_LOGVV(TAG, "Request body length: %u bytes", (unsigned) body.size());
-  
-  
+
   // One-shot IDF client (verify SSL if URL is https)
   const bool verify_ssl = this->url_.rfind("https://", 0) == 0;
-  
+
   // Retry logic with exponential backoff
   int attempts = 0;
   bool ok = false;
@@ -378,16 +438,16 @@ void InfluxDB::publish_internal_(const std::unordered_set<std::string> *filter) 
       delay(backoff);
     }
   } while (!ok && ++attempts <= MAX_RETRY_ATTEMPTS);
-  
+
   // Free the request body's capacity immediately
   std::string().swap(body);
-  
+
   if (!ok) {
     ESP_LOGW(TAG, "InfluxDB POST failed after %d attempts", MAX_RETRY_ATTEMPTS + 1);
   } else {
     ESP_LOGD(TAG, "Successfully published to InfluxDB");
   }
-  
+
   this->publish_in_progress_ = false;
 }
 
