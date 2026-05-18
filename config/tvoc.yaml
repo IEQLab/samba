@@ -3,6 +3,11 @@
 # https://esphome.io/components/sensor/sgp4x.html
 # written by Thomas Parkinson, May 2024
 
+# apply PR for baseline fix
+external_components:
+  - source: github://pr#15667
+    components: [sgp4x]
+    refresh: 1h
 
 # Define sensor
 sensor:
