@@ -5,7 +5,7 @@ Compile firmware, copy binary, generate manifest, and optionally tag, push, and 
 ## Usage
 
 ```
-/bump <VERSION> "<SUMMARY>" [--tag] [--no-compile] [--dry-run]
+/bump <VERSION> "<SUMMARY>" [--tag] [--draft-release] [--no-compile] [--dry-run]
 ```
 
 ## Arguments
