@@ -50,7 +50,7 @@ i2c:
     scl: GPIO25
     sda: GPIO26
     scan: false
-    frequency: 100kHz
+    frequency: 50kHz
     timeout: 13ms
 
 # Configure UART bus
