@@ -72,8 +72,8 @@ All sensor calibrations use persistent global variables (stored in flash, modifi
 
 | Bus | Pins | Speed | Devices |
 |-----|------|-------|---------|
-| I2C Bus A | GPIO25 (SDA), GPIO26 (SCL) | 50kHz | RTC, SHT4x, K30, OPT3001, ADS1115 |
-| UART PM | GPIO16 (TX), GPIO17 (RX) | 9600 baud | PMS5003 |
+| I2C Bus A | GPIO25 (SCL), GPIO26 (SDA) | 50kHz | RTC, SHT4x, K30, OPT3001, ADS1115 |
+| UART PM | GPIO16 (RX), GPIO17 (TX) | 9600 baud | PMS5003 |
 | SPI SD | GPIO18/23/19/5 | — | SD card |
 | I2S Audio | GPIO32/33/13 | 48kHz | ICS-43434 microphone |
 | LED | GPIO27 | — | WS2812 RGB |
