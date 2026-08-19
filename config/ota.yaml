@@ -48,9 +48,6 @@ safe_mode:
       - light.turn_on:
           id: samba_led
           effect: pulse_slow
-      - ota.http_request.flash:
-          md5_url: https://github.com/IEQLab/samba/raw/main/firmware/firmware_recovery.md5
-          url: https://github.com/IEQLab/samba/raw/main/firmware/firmware_recovery.bin
 
 # Store jitter delay as a global variable
 globals:

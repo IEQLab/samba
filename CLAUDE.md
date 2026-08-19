@@ -34,13 +34,14 @@ config/                 # Modular YAML configs (one per function/sensor)
   adc.yaml              # ADS1115 analog-to-digital converter
   spl.yaml              # ICS-43434 I2S microphone with DSP (LAeq, LA90, LA10)
 components/             # Custom external ESPHome components (C++ and Python)
+  copy/                 # Vendored core `copy` sensor + null-source guard (see Gotchas)
   sd_spi_card/          # SPI SD card read/write (FAT32, mount at /sd)
   senseair_i2c/         # K30/K33 CO2 sensor over I2C
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
-helper_bump.sh          # Version bump and release helper script
+.claude/skills/bump.md   # /bump skill: version bump and release procedure
 pcb/                    # Hardware PCB design files
 ```
 
@@ -106,15 +107,17 @@ esphome run samba.yaml --device <IP_ADDRESS>
 
 ### Version Bump and Release
 
-```bash
-# Bump version, compile, and prepare firmware binary
-./helper_bump.sh <version> "Release notes"
+Use the `/bump` skill (`.claude/skills/bump.md`):
 
-# With git tag
-./helper_bump.sh <version> "Release notes" --tag
+```
+/bump <version> "<summary>" [--tag] [--no-compile] [--dry-run]
 ```
 
 This compiles the firmware, copies the binary to `firmware/samba_v<version>.bin`, generates an MD5 hash, and updates `manifest.json` for OTA.
+
+**`manifest.json` on `main` is the fleet OTA trigger** — devices poll it every 12h and apply
+updates Mondays at 04:00 UTC. Always validate a build on a physical unit before the commit
+that updates `manifest.json` lands on `main`.
 
 ### OTA Updates
 
@@ -216,6 +219,28 @@ class MyComponent : public Component {
    ```bash
    rm .esphome/build/samba/sdkconfig.samba .esphome/build/samba/sdkconfig.samba.esphomeinternal
    ```
+
+### Safe mode is a trap (vendored `copy` component)
+
+Entering safe mode used to **permanently brick** a unit. `safe_mode` calls `App.setup()` from
+inside `should_enter_safe_mode()` and then returns early from the generated `setup()`. The
+`copy` platform registers its component *before* awaiting `cg.get_variable(source_id)`, so when
+the source belongs to a late-processed component (`sound_level_meter`), the `set_source()` call
+is emitted *after* that early return. `spl_laeq` / `spl_la90` / `spl_la10` were therefore set up
+with `source_ == nullptr`, panicking (`LoadProhibited`, `EXCVADDR 0x1c`) before `clean_rtc()`
+— which deliberately saves *without* syncing — ever reached flash. The boot counter stayed at
+10, so every subsequent boot re-entered safe mode and crashed again. Unrecoverable without USB.
+
+`components/copy/` vendors the core sensor platform with a null guard. Still needed as of
+ESPHome 2026.7.4; drop it once fixed upstream (cf. PR #16269, which fixed only the sibling
+`looping_components_.init()` case). Verify with:
+
+```bash
+grep -n "register_component_(spl_laeq,\|spl_laeq->set_source(\|should_enter_safe_mode" \
+  .esphome/build/samba/src/main.cpp
+```
+
+If `set_source` still sorts after `should_enter_safe_mode`, the guard is load-bearing.
 
 ### SD Card
 

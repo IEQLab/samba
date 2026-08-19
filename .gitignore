@@ -58,7 +58,7 @@ rsconnect/
 secrets.yaml
 
 # External component build files
-components/*/__pycache__
+components/**/__pycache__
 
 # Firmware bump helper
 helper_bump.sh

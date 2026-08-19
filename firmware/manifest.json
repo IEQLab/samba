@@ -1,15 +1,15 @@
 {
   "name": "SAMBA Indoor Environmental Monitor",
-  "version": "1.99.97",
+  "version": "1.99.98",
   "home_assistant_domain": "esphome",
   "builds": [
     {
       "chipFamily": "ESP32",
       "ota": {
-        "md5": "1b0206a2536d19863f68edd9a02d91ca",
-        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.97.bin",
-        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.97",
-        "summary": "Consolidated InfluxDB architecture"
+        "md5": "1868ef800625a3d4a438b014a60e494a",
+        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.98.bin",
+        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.98",
+        "summary": "Fix unrecoverable boot loop when entering safe mode"
       }
     }
   ]

@@ -9,10 +9,10 @@ esphome:
   friendly_name: "SAMBA"
   comment: "Low-cost monitoring of indoor environments - developed by the IEQ Lab"
   name_add_mac_suffix: true
-  min_version: "2026.3.0"
+  min_version: "2026.5.0"
   project:
     name: "IEQLab.SAMBA"
-    version: "1.99.97"
+    version: "1.99.98"
 
 # Set logging levels
 # https://esphome.io/components/logger
@@ -38,6 +38,7 @@ logger:
     sgp4x: ERROR
     sensor: NONE
     sound_level_meter: ERROR
+    sntp: INFO
     wire.cpp: NONE
 
 # Import configuration files
