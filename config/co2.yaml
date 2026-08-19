@@ -13,9 +13,9 @@ sensor:
     internal: true
     update_interval: 30s
     abc_interval: 180h
-    read_delay_ms: 40
+    read_delay_ms: 80
     retry_delay_ms: 160
-    max_retries: 5
+    max_retries: 10
     filters:
       - filter_out: nan
       - clamp:
