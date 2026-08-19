@@ -38,6 +38,37 @@ VERSION must match `^[0-9]+(\.[0-9]+)*$`. Reject otherwise.
 esphome compile samba.yaml
 ```
 
+### 2b. Gate: no half-wired components in safe mode (BLOCKING)
+
+`safe_mode` calls `App.setup()` and `on_safe_mode` from inside `should_enter_safe_mode()`, then
+the generated `setup()` returns early. Anything registered before that early return but wired
+after it is set up with a null pointer and crashes on **every** boot, needing a USB reflash.
+Whether it happens depends on codegen order, so it can reappear silently from an unrelated
+config change — most often an action in `on_safe_mode` that references another component by id.
+
+**If this check reports anything, stop and fix it. Do not cut a release.**
+
+```bash
+python3 - <<'EOF'
+import re, sys
+L = open('.esphome/build/samba/src/main.cpp').read().split('\n')
+cut = next(i for i, l in enumerate(L, 1) if 'should_enter_safe_mode' in l)
+reg = {m.group(1): i for i, l in enumerate(L, 1)
+       if (m := re.search(r'App\.register_component_\((\w+),', l))}
+bad = [(v, reg[v], i) for i, l in enumerate(L, 1)
+       if (m := re.search(r'(\w+)->set_(parent|source|uart_parent|http_request|request_parent)\b', l))
+       and (v := m.group(1)) in reg and reg[v] < cut < i]
+print(f"safe-mode early return at line {cut}")
+if bad:
+    for v, r, w in bad:
+        print(f"  HALF-WIRED: {v} registered {r}, wired {w}")
+    sys.exit(1)
+print("  OK: no half-wired components")
+EOF
+```
+
+See the "Never reference an id from `on_safe_mode`" section of CLAUDE.md for the mechanism.
+
 ### 3. Copy binary and compute MD5
 
 - Source: `.esphome/build/samba/build/firmware.ota.bin`

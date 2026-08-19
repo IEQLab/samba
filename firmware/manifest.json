@@ -6,7 +6,7 @@
     {
       "chipFamily": "ESP32",
       "ota": {
-        "md5": "ff556bfa0df04fe46e4c2326975d9796",
+        "md5": "0bb5859ed3498dca5303d250a944fc92",
         "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.98.bin",
         "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.98",
         "summary": "Fix unrecoverable boot loop when entering safe mode; revert I2C to 50kHz"

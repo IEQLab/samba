@@ -44,10 +44,12 @@ http_request:
 safe_mode:
   on_safe_mode:
     then:
+      # Actions here must not reference another component by id. Doing so makes
+      # safe_mode's own codegen wait on that id, which pushes the early return in
+      # setup() into the middle of the component block - components then get set up
+      # before their pointers are assigned and the device crashes on every boot.
+      # logger.log is safe because it waits on nothing.
       - logger.log: "Restoring SAMBA due to an unknown error"
-      - light.turn_on:
-          id: samba_led
-          effect: pulse_slow
 
 # Store jitter delay as a global variable
 globals:

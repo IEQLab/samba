@@ -34,7 +34,6 @@ config/                 # Modular YAML configs (one per function/sensor)
   adc.yaml              # ADS1115 analog-to-digital converter
   spl.yaml              # ICS-43434 I2S microphone with DSP (LAeq, LA90, LA10)
 components/             # Custom external ESPHome components (C++ and Python)
-  copy/                 # Vendored core `copy` sensor + null-source guard (see Gotchas)
   sd_spi_card/          # SPI SD card read/write (FAT32, mount at /sd)
   senseair_i2c/         # K30/K33 CO2 sensor over I2C
   influxdb/             # InfluxDB v2 HTTP upload with tags
@@ -220,27 +219,56 @@ class MyComponent : public Component {
    rm .esphome/build/samba/sdkconfig.samba .esphome/build/samba/sdkconfig.samba.esphomeinternal
    ```
 
-### Safe mode is a trap (vendored `copy` component)
+### Never reference an id from `on_safe_mode`
 
-Entering safe mode used to **permanently brick** a unit. `safe_mode` calls `App.setup()` from
-inside `should_enter_safe_mode()` and then returns early from the generated `setup()`. The
-`copy` platform registers its component *before* awaiting `cg.get_variable(source_id)`, so when
-the source belongs to a late-processed component (`sound_level_meter`), the `set_source()` call
-is emitted *after* that early return. `spl_laeq` / `spl_la90` / `spl_la10` were therefore set up
-with `source_ == nullptr`, panicking (`LoadProhibited`, `EXCVADDR 0x1c`) before `clean_rtc()`
-— which deliberately saves *without* syncing — ever reached flash. The boot counter stayed at
-10, so every subsequent boot re-entered safe mode and crashed again. Unrecoverable without USB.
+Entering safe mode used to **permanently brick** a unit, and the cause was in our own config.
 
-`components/copy/` vendors the core sensor platform with a null guard. Still needed as of
-ESPHome 2026.7.4; drop it once fixed upstream (cf. PR #16269, which fixed only the sibling
-`looping_components_.init()` case). Verify with:
+`safe_mode` calls `App.setup()` and the `on_safe_mode` actions from inside
+`should_enter_safe_mode()`, then the generated `setup()` returns early. Anything registered
+before that early return but *wired* after it is set up with a null pointer.
 
-```bash
-grep -n "register_component_(spl_laeq,\|spl_laeq->set_source(\|should_enter_safe_mode" \
-  .esphome/build/samba/src/main.cpp
+Whether the split happens depends on codegen order. ESPHome's scheduler runs a coroutine to its
+next `await` then re-queues it at `priority - 1`. `safe_mode` starts at `CoroPriority.APPLICATION`
+(50) and ordinary components at 0, so **normally the early return is emitted before any component
+and nothing splits**. The bug needs `safe_mode`'s own codegen to wait on something. Ours did:
+
+```yaml
+on_safe_mode:
+  then:
+    - light.turn_on:
+        id: samba_led      # waits on cg.get_variable(samba_led)
 ```
 
-If `set_source` still sorts after `should_enter_safe_mode`, the guard is load-bearing.
+That dropped `safe_mode` below priority 0, so the early return drifted into the middle of the
+component block. Five components ended up half-wired; `pmsx003` wrote to a null UART parent and
+the three SPL `copy` sensors dereferenced a null source (`LoadProhibited`, `EXCVADDR 0x1c` and
+`0x0`). Because `clean_rtc()` saves the boot counter *without* syncing, the crash always landed
+before the counter cleared, so every later boot re-entered safe mode and crashed again.
+
+Removing that one action moved the early return from line 2862 to 995 — ahead of all component
+registration — leaving **zero** half-wired components. Recovery still works, because logger,
+`captive_portal`, `wifi`, the `esphome` OTA platform and the preferences syncer all register
+before it. `logger.log` is safe; it waits on nothing.
+
+`ota.http_request.flash` can *never* work here either — `OtaHttpRequestComponent::set_parent()`
+always runs after the early return.
+
+`/bump` gates on this, so a regression fails the build instead of bricking devices. To check by
+hand, confirm no component registers before the early return but is wired after it:
+
+```bash
+esphome compile samba.yaml
+python3 - <<'EOF'
+import re
+L=open('.esphome/build/samba/src/main.cpp').read().split('\n')
+cut=next(i for i,l in enumerate(L,1) if 'should_enter_safe_mode' in l)
+reg={m.group(1):i for i,l in enumerate(L,1) if (m:=re.search(r'App\.register_component_\((\w+),',l))}
+bad=[(v,reg[v],i) for i,l in enumerate(L,1)
+     if (m:=re.search(r'(\w+)->set_(parent|source|uart_parent|http_request|request_parent)\b',l))
+     and (v:=m.group(1)) in reg and reg[v]<cut<i]
+print(f"early return at line {cut}; half-wired: {bad or 'none'}")
+EOF
+```
 
 ### SD Card
 
