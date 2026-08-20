@@ -8,7 +8,7 @@
 light:
   - platform: esp32_rmt_led_strip
     id: samba_led
-    rgb_order: GRB
+    channel_colors: GRB
     pin: GPIO27
     num_leds: 1
     rmt_symbols: 64
