@@ -3,12 +3,6 @@
 # https://esphome.io/components/sensor/sgp4x.html
 # written by Thomas Parkinson, May 2024
 
-# apply PR for baseline fix
-external_components:
-  - source: github://pr#15667
-    components: [sgp4x]
-    refresh: 1h
-
 # Define sensor
 sensor:
   - platform: sgp4x
@@ -16,7 +10,7 @@ sensor:
     compensation:
       temperature_source: sht_temperature
       humidity_source: sht_humidity
-    voc:
+    voc_index:
       id: sgp_voc
       internal: true
       algorithm_tuning:
@@ -30,7 +24,7 @@ sensor:
         - clamp:
             max_value: 500
             ignore_out_of_range: false
-    nox:
+    nox_index:
       id: sgp_nox
       internal: true
       filters:
