@@ -7,6 +7,7 @@
 #include <string>
 #include <list>
 #include <cstring>  // for strcasecmp
+#include <cinttypes>
 
 #include "esp_http_client.h"
 #include "esp_crt_bundle.h"
@@ -433,7 +434,7 @@ void InfluxDB::publish_internal_(const std::unordered_set<std::string> *filter) 
     ok = this->post_raw_idf_(this->url_, body, this->headers_, verify_ssl);
     if (!ok && attempts < MAX_RETRY_ATTEMPTS) {
       uint32_t backoff = BASE_BACKOFF_MS + (esp_random() % BACKOFF_RANGE_MS);
-      ESP_LOGW(TAG, "POST failed, retrying in %u ms (attempt %d/%d)",
+      ESP_LOGW(TAG, "POST failed, retrying in %" PRIu32 " ms (attempt %d/%d)",
                backoff, attempts + 1, MAX_RETRY_ATTEMPTS);
       delay(backoff);
     }

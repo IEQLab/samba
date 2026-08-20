@@ -4,6 +4,7 @@
 
 #include "senseair_i2c.h"
 #include "esphome/core/log.h"
+#include <cinttypes>
 
 namespace esphome {
 namespace senseair_i2c {
@@ -100,7 +101,7 @@ void SenseairI2CSensor::setup_read_meter_control_() {
     bool abc_should_enable = (this->abc_interval_ > 0);
     bool abc_is_enabled = !(this->setup_data_[1] & ABC_ENABLE_MASK);  // Bit 1=0 means enabled
     
-    ESP_LOGI(TAG, "ABC Status - Current: %s, Requested: %s (%u hours)",
+    ESP_LOGI(TAG, "ABC Status - Current: %s, Requested: %s (%" PRIu32 " hours)",
              abc_is_enabled ? "ENABLED" : "DISABLED",
              abc_should_enable ? "ENABLED" : "DISABLED",
              this->abc_interval_ / 3600);
@@ -208,15 +209,15 @@ void SenseairI2CSensor::setup_write_abc_interval_() {
   
   // Validate ABC interval range (16-bit register max)
   if (abc_hours == 0) {
-    ESP_LOGW(TAG, "ABC interval too short (%us), minimum is 1 hour. Using 1 hour.", this->abc_interval_);
+    ESP_LOGW(TAG, "ABC interval too short (%" PRIu32 "s), minimum is 1 hour. Using 1 hour.", this->abc_interval_);
     abc_hours = 1;
   } else if (abc_hours > ABC_INTERVAL_MAX_HOURS) {
-    ESP_LOGW(TAG, "ABC interval too large (%u hours), maximum is %u hours. Using maximum.", 
+    ESP_LOGW(TAG, "ABC interval too large (%" PRIu32 " hours), maximum is %" PRIu32 " hours. Using maximum.", 
              abc_hours, ABC_INTERVAL_MAX_HOURS);
     abc_hours = ABC_INTERVAL_MAX_HOURS;
   }
   
-  ESP_LOGI(TAG, "Setting ABC period to %u hours", abc_hours);
+  ESP_LOGI(TAG, "Setting ABC period to %" PRIu32 " hours", abc_hours);
   
   // Write to EEPROM address 0x40 (ABC Period register - 2 bytes)
   // Format per TDE4700 Table 16: 2 bytes unsigned word, MS byte at LOWER address (big-endian)
@@ -374,7 +375,7 @@ void SenseairI2CSensor::read_diagnostics_() {
                     (static_cast<uint32_t>(serial_response[2]) << 16) |
                     (static_cast<uint32_t>(serial_response[3]) << 8) |
                     static_cast<uint32_t>(serial_response[4]);
-                  ESP_LOGI(TAG, "Serial number: %08X", this->diagnostic_data_.serial_number);
+                  ESP_LOGI(TAG, "Serial number: %08" PRIX32, this->diagnostic_data_.serial_number);
                 }
                 
                 // Diagnostics complete

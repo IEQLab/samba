@@ -74,7 +74,7 @@ script:
                 id(fw_jitter_ms) = esp_random() % (10 * 60 * 1000);
             - logger.log:
                 format: "Update available; jitter = %u ms"
-                args: ['id(fw_jitter_ms)']
+                args: ['(unsigned) id(fw_jitter_ms)']
                 level: INFO
                 tag: "samba"
             # yield to scheduler for the jitter duration
