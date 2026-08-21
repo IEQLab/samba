@@ -1,0 +1,134 @@
+# SAMBA v2 FIRMWARE
+# expose InfluxDB tags as editable Home Assistant entities
+# written by Thomas Parkinson, Aug 2026
+
+
+# Editable tag fields (mirror the persistent globals set by the setup firmware)
+# https://esphome.io/components/text/template.html
+# NOTE: max_length must stay <= max_restore_data_length on the backing global
+#       (config/globals.yaml), or the value is silently dropped instead of saved.
+text:
+  - platform: template
+    name: "Building"
+    id: text_building
+    icon: mdi:office-building
+    entity_category: "config"
+    mode: text
+    min_length: 1
+    max_length: 24
+    pattern: "^[A-Za-z0-9_-]+$"
+    update_interval: 60s
+    lambda: |-
+      return id(building_tag);
+    set_action:
+      - script.execute:
+          id: tag_set
+          key: "building"
+          raw: !lambda 'return x;'
+
+  - platform: template
+    name: "Level"
+    id: text_level
+    icon: mdi:elevator-passenger-outline
+    entity_category: "config"
+    mode: text
+    min_length: 1
+    max_length: 24
+    pattern: "^[A-Za-z0-9_-]+$"
+    update_interval: 60s
+    lambda: |-
+      return id(level_tag);
+    set_action:
+      - script.execute:
+          id: tag_set
+          key: "level"
+          raw: !lambda 'return x;'
+
+  - platform: template
+    name: "Zone"
+    id: text_zone
+    icon: mdi:floor-plan
+    entity_category: "config"
+    mode: text
+    min_length: 1
+    max_length: 24
+    pattern: "^[A-Za-z0-9_-]+$"
+    update_interval: 60s
+    lambda: |-
+      return id(zone_tag);
+    set_action:
+      - script.execute:
+          id: tag_set
+          key: "zone"
+          raw: !lambda 'return x;'
+
+script:
+  # Sanitise, store and echo back a tag value.
+  # The `pattern` above is advertised to Home Assistant but ESPHome itself only
+  # validates length (text_call.cpp), so anything reaching us over the API or the
+  # setup firmware's web server is scrubbed here rather than trusted.
+  - id: tag_set
+    mode: queued
+    max_runs: 3
+    parameters:
+      key: string
+      raw: string
+    then:
+      - lambda: |-
+          // Keep [A-Za-z0-9_-]; collapse any run of other characters to a single
+          // underscore; trim leading/trailing underscores; cap at 24 characters.
+          std::string out;
+          out.reserve(raw.size());
+          bool pending_us = false;
+          for (char c : raw) {
+            bool keep = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
+                        (c >= 'a' && c <= 'z') || c == '-' || c == '_';
+            if (keep) {
+              out += c;
+              pending_us = false;
+            } else if (!pending_us && !out.empty()) {
+              out += '_';
+              pending_us = true;
+            }
+          }
+          if (out.size() > 24)
+            out.resize(24);
+          while (!out.empty() && out.back() == '_')
+            out.pop_back();
+
+          // Nothing usable left — put the stored value back so the UI reverts.
+          if (out.empty()) {
+            ESP_LOGW("samba", "Rejected tag %s: '%s' has no usable characters", key.c_str(), raw.c_str());
+            if (key == "building") id(text_building).publish_state(id(building_tag));
+            else if (key == "level") id(text_level).publish_state(id(level_tag));
+            else id(text_zone).publish_state(id(zone_tag));
+            return;
+          }
+
+          if (out != raw)
+            ESP_LOGW("samba", "Sanitised tag %s: '%s' -> '%s'", key.c_str(), raw.c_str(), out.c_str());
+
+          if (key == "building") {
+            id(building_tag) = out;
+            id(text_building).publish_state(out);
+          } else if (key == "level") {
+            id(level_tag) = out;
+            id(text_level).publish_state(out);
+          } else {
+            id(zone_tag) = out;
+            id(text_zone).publish_state(out);
+          }
+      - script.execute: tags_save
+
+  # Flush tags to flash now rather than waiting out flash_write_interval (10 min).
+  # The globals component only stages a changed value from its loop(), so wait for
+  # that to happen before syncing. mode: restart debounces a burst of tag edits
+  # into a single NVS write; sync() skips keys whose stored bytes are unchanged.
+  - id: tags_save
+    mode: restart
+    then:
+      - delay: 2s
+      - lambda: |-
+          global_preferences->sync();
+          ESP_LOGI("samba", "Tags saved to flash: building=%s level=%s zone=%s",
+                   id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str());

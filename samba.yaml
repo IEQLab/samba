@@ -61,6 +61,7 @@ packages:
   - !include config/sd.yaml
   - !include config/spl.yaml
   - !include config/substitutions.yaml
+  - !include config/tags.yaml
   - !include config/tair.yaml
   - !include config/tglobe.yaml
   - !include config/tvoc.yaml
