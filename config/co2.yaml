@@ -38,8 +38,12 @@ sensor:
     icon: mdi:molecule-co2
     filters:
       - lambda: |-
+          // A failed K30 read publishes NaN, which k30_co2's own filters drop, so its filtered
+          // .state keeps the last good value. Check the raw value so a dead sensor yields NaN
+          // here: Home Assistant shows unknown, the SD row records nan, and the InfluxDB
+          // upload leaves the field out (and warns) instead of repeating a stale reading.
+          if (std::isnan(id(k30_co2).get_raw_state())) return NAN;
           return ((id(calibration_co2_m) * id(k30_co2).state) + id(calibration_co2_b));
-      - filter_out: nan
 
 
 # Error counter for initialisation failure recovery
@@ -54,8 +58,9 @@ interval:
   - interval: 30s
     then:
       - lambda: |-
-          // Check if CO2 sensor is returning valid data
-          if (std::isnan(id(k30_co2).state)) {
+          // Check if CO2 sensor is returning valid data. The raw value is NaN after a failed
+          // read; the filtered .state never is, because filter_out drops the NaN.
+          if (std::isnan(id(k30_co2).get_raw_state())) {
             id(k30_error_count)++;
             if (id(k30_error_count) == 1) {
 

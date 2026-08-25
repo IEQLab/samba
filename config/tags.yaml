@@ -129,6 +129,19 @@ script:
     then:
       - delay: 2s
       - lambda: |-
-          global_preferences->sync();
+          if (!global_preferences->sync()) {
+            ESP_LOGE("samba", "Failed to save tags to flash; they will revert on power cycle");
+            return;
+          }
           ESP_LOGI("samba", "Tags saved to flash: building=%s level=%s zone=%s",
                    id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str());
+      # The SD file header records the tags at creation, so start a new file. Same guard as
+      # rtc.yaml: only with a valid clock, otherwise the filename is garbage; on_time_sync
+      # picks it up later because sd_logfile is cleared here.
+      - lambda: 'id(sd_logfile) = false;'
+      - if:
+          condition:
+            time.has_time:
+              id: ds1307_time
+          then:
+            - script.execute: sd_create

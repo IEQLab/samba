@@ -295,7 +295,7 @@ The firmware groups all sensor data into 2 InfluxDB measurements instead of 14 s
 - **`ieq`** — all IEQ sensor fields: `air_temp`, `globe_temp`, `rel_humidity`, `air_speed`, `rad_temp`, `co2`, `pm25`, `tvoc`, `nox`, `illuminance`, `la_eq`, `la_90`, `la_10`
 - **`device_status`** — diagnostic fields: `wifi`, `uptime`
 
-Tags on both: `building`, `level`, `zone`, `device` (MAC address). Field names are defined in `config/influx.yaml` under `field_names`. The C++ grouping logic is in `components/influxdb/influxdb.cpp` (`build_grouped_payload_()`).
+Tags on both: `building`, `level`, `zone`, `device` (MAC address). Sensors, their measurement and field names are listed in `config/influx.yaml` under `sensors` (keyed by ESPHome id). The C++ grouping logic is in `components/influxdb/influxdb.cpp` (`build_body_()`).
 
 ### Bucket Strategy
 

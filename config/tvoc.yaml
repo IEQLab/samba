@@ -6,6 +6,7 @@
 # Define sensor
 sensor:
   - platform: sgp4x
+    id: sgp41
     update_interval: 30s
     compensation:
       temperature_source: sht_temperature
@@ -44,6 +45,10 @@ sensor:
     unit_of_measurement: "ppb"
     icon: mdi:radiator
     lambda: |-
+      // sgp4x publishes nothing after a failed read (sgp_voc keeps its last value) but flags
+      // a warning until the next good read. Report NaN so a dead sensor shows as unknown in
+      // Home Assistant, nan on the SD card, and is left out of the InfluxDB upload.
+      if (id(sgp41).status_has_warning()) return NAN;
       return (log(501.0 - id(sgp_voc).state) - 6.24) * (-381.97);
     
 # Define NOx measurements
@@ -55,6 +60,7 @@ sensor:
     device_class: aqi
     icon: mdi:radiator
     lambda: |-
+      if (id(sgp41).status_has_warning()) return NAN;
       return id(sgp_nox).state;
 
 
@@ -70,8 +76,9 @@ interval:
   - interval: 30s
     then:
       - lambda: |-
-          // Check if VOC sensor is returning valid data
-          if (std::isnan(id(sgp_voc).state)) {
+          // Check if VOC sensor is returning valid data: no value yet (boot), or the last
+          // read failed (sgp4x keeps the old value but flags a warning)
+          if (std::isnan(id(sgp_voc).state) || id(sgp41).status_has_warning()) {
 
             // Skip error counting during 100s warmup period
             if (millis() < 100000) {

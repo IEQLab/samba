@@ -38,6 +38,7 @@ http_request:
     verify_ssl: true
     timeout: 8s
     watchdog_timeout: 10s
+    buffer_size_tx: 1024   # request line + headers incl. the InfluxDB token exceed the 512 default
 
 # Explicitly enable safe mode
 # https://esphome.io/components/safe_mode

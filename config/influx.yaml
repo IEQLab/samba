@@ -19,41 +19,25 @@ influxdb:
   timestamp_unit: "s"
   update_interval: never
 
-  # Define Influx measurements for sensors (grouped into 2 measurements)
-  sensor_names:
-    air_temperature: "ieq"
-    relative_humidity: "ieq"
-    globe_temperature: "ieq"
-    radiant_temperature: "ieq"
-    air_speed: "ieq"
-    carbon_dioxide: "ieq"
-    pm2_5: "ieq"
-    tvoc: "ieq"
-    nox_index: "ieq"
-    illuminance: "ieq"
-    laeq: "ieq"
-    la90: "ieq"
-    la10: "ieq"
-    wifi_signal: "device_status"
-    device_uptime: "device_status"
-
-  # Define Influx field keys (required — sensors sharing a measurement need unique field names)
-  field_names:
-    air_temperature: "air_temp"
-    relative_humidity: "rel_humidity"
-    globe_temperature: "globe_temp"
-    radiant_temperature: "rad_temp"
-    air_speed: "air_speed"
-    carbon_dioxide: "co2"
-    pm2_5: "pm25"
-    tvoc: "tvoc"
-    nox_index: "nox"
-    illuminance: "illuminance"
-    laeq: "la_eq"
-    la90: "la_90"
-    la10: "la_10"
-    wifi_signal: "wifi"
-    device_uptime: "uptime"
+  # Sensors to upload, keyed by ESPHome id and grouped into measurements by `measurement`.
+  # A sensor is only included when it has produced a value since the previous upload, so a
+  # sensor that has stopped reporting drops out of the payload instead of repeating its last value.
+  sensors:
+    - {id: samba_temperature, measurement: ieq, field: air_temp}
+    - {id: samba_humidity,    measurement: ieq, field: rel_humidity}
+    - {id: samba_globe,       measurement: ieq, field: globe_temp}
+    - {id: samba_mrt,         measurement: ieq, field: rad_temp}
+    - {id: samba_airspeed,    measurement: ieq, field: air_speed}
+    - {id: samba_co2,         measurement: ieq, field: co2}
+    - {id: samba_pm25,        measurement: ieq, field: pm25}
+    - {id: samba_tvoc,        measurement: ieq, field: tvoc}
+    - {id: samba_nox,         measurement: ieq, field: nox}
+    - {id: samba_lux,         measurement: ieq, field: illuminance}
+    - {id: samba_laeq,        measurement: ieq, field: la_eq}
+    - {id: samba_la90,        measurement: ieq, field: la_90}
+    - {id: samba_la10,        measurement: ieq, field: la_10}
+    - {id: sys_wifiperc,      measurement: device_status, field: wifi}
+    - {id: sys_uptime,        measurement: device_status, field: uptime}
 
   # Define global tags applied to all measurements
   global_tags:
@@ -61,10 +45,6 @@ influxdb:
     level: !lambda "return id(level_tag);"
     zone: !lambda "return id(zone_tag);"
 
-#  # Define measurement-specific tags
-#  sensor_tags:
-#    air_temperature:
-#      sensor_type: "sht4x"
 
 # Toggle Influx uploads
 switch:
