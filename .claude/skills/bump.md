@@ -32,6 +32,19 @@ Run these steps sequentially from the **samba project root**:
 
 VERSION must match `^[0-9]+(\.[0-9]+)*$`. Reject otherwise.
 
+### 1b. Set the project version in `samba.yaml`
+
+This must happen **before** the compile: `project.version` is baked into the binary's
+`esp_app_desc_t`, so a build made before the edit reports the previous version forever — which
+is what a device shows in Home Assistant and what the field build is identified by.
+
+```bash
+sed -i '' 's/^    version: ".*"$/    version: "<VERSION>"/' samba.yaml
+grep -n 'version:' samba.yaml | head -3   # confirm project.version, not min_version
+```
+
+Leave `min_version` alone unless the release actually requires a newer ESPHome.
+
 ### 2. Compile firmware (unless `--no-compile`)
 
 ```bash
@@ -109,42 +122,37 @@ Generate this exact JSON structure (use `jq` or write directly):
 }
 ```
 
-### 5. Update deployment firmware OTA URL
+### 5. Validate on a bench unit
 
-Update the production firmware URL and MD5 hash in `../samba_calibration/firmware/samba_deployment.yaml`. Find the `ota.http_request.flash` block under the "Flash production firmware" button and replace the `url` and `md5` values:
+Push the exact binary from step 3 — the copy under `firmware/`, not the build directory — to a
+bench unit with samba_app and confirm it comes back running the new version:
 
-```yaml
-      - ota.http_request.flash:
-          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v<VERSION>.bin
-          md5: "<MD5_HASH>"
+```bash
+samba flash ota <BENCH_IP> --bin firmware/samba_v<VERSION>.bin
+samba info <BENCH_IP>     # project version must be <VERSION>
 ```
 
-If `../samba_calibration/firmware/samba_deployment.yaml` does not exist, warn the user and skip this step.
+`samba flash ota` waits for the device to reconnect and exits 1 if its build time did not
+change. Without samba_app, `esphome upload samba.yaml --device <BENCH_IP> --file firmware/samba_v<VERSION>.bin`
+does the push without the check. If no bench unit is available, say so in the summary — do not
+skip silently. (Until 2026-08-26 this step updated the production OTA URL and MD5 in
+`samba_calibration/firmware/samba_deployment.yaml`; that firmware has been retired in favour of
+samba_app, so there is nothing to update in samba_calibration any more.)
 
 ### 6. Print summary
 
-Show the version, MD5 hash, and a `jq` summary of the manifest. Confirm whether the deployment firmware was updated.
+Show the version, MD5 hash, a `jq` summary of the manifest, and the bench validation result.
 
 ### 7. Git tag and push (only if `--tag`)
 
 In the **samba** repository:
 
 ```bash
-git add firmware/samba_v<VERSION>.bin firmware/manifest.json
+git add samba.yaml firmware/samba_v<VERSION>.bin firmware/manifest.json
 git commit -m "Release v<VERSION>: <SUMMARY>"
 git tag -a "v<VERSION>" -m "<SUMMARY>"
 git push
 git push --tags
-```
-
-If the deployment firmware was updated in step 5, also commit in the **samba_calibration** repository:
-
-```bash
-cd ../samba_calibration
-git add firmware/samba_deployment.yaml
-git commit -m "bump production firmware to v<VERSION>"
-git push
-cd ../samba
 ```
 
 Note `main` has a branch-protection rule requiring pull requests. Pushing directly succeeds

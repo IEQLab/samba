@@ -141,30 +141,17 @@ The user is responsible for managing any device running modified firmware.
 
 ### OTA Updates
 
-SAMBA devices check for firmware updates every Monday at 4 am by comparing against [`firmware/manifest.json`](https://github.com/IEQLab/samba/blob/main/firmware/manifest.json). If a new version is available, the update is applied automatically with random jitter to avoid fleet-wide simultaneous downloads. Automatic updates can be disabled via the web server toggle (see [Deployment](#deployment)).
+SAMBA devices check for firmware updates every Monday at 4 am by comparing against [`firmware/manifest.json`](https://github.com/IEQLab/samba/blob/main/firmware/manifest.json). If a new version is available, the update is applied automatically with random jitter to avoid fleet-wide simultaneous downloads. Automatic updates can be disabled with the *Automatic Updates* switch (see [Deployment](#deployment)).
 
 ### Deployment
 
-SAMBA devices are shipped pre-calibrated with deployment firmware. Follow these steps to connect a new SAMBA to your network and start sampling:
+SAMBA devices are shipped pre-calibrated, with their location tags (building, level, zone) and calibration coefficients already set by the IEQ Lab. Follow these steps to connect a new SAMBA to your network and start sampling:
 
 1. **Power on** the SAMBA. The status LED will strobe red, green, and blue to indicate it is in setup mode.
 2. **Connect to the hotspot.** Using a phone or laptop, join the `samba_connect` WiFi network and open the [captive portal](https://esphome.io/components/captive_portal.html) at [http://192.168.4.1](http://192.168.4.1).
-3. **Enter WiFi credentials.** Select the target 2.4 GHz network from the list and enter the password. The SAMBA will connect and the LED will pulse blue.
-4. **Open the web server.** Navigate to the SAMBA's IP address on the local network (e.g. `http://192.168.1.XXX`) in a browser. If you don't know the device's IP address, use a network scanning app such as Network Analyzer (free on [iPhone](https://apps.apple.com/us/app/network-analyzer-net-tools/id562315041) and [Android](https://play.google.com/store/apps/details?id=net.techet.netanalyzerlite.an&hl=en_AU)) to scan your local network — the SAMBA will appear as an Espressif device. The web server displays the following configuration groups:
+3. **Enter WiFi credentials.** Select the target 2.4 GHz network from the list and enter the password. The SAMBA will connect and begin sampling automatically. The LED will blink green during the warm-up period and then turn off once it enters the normal sampling routine.
 
-   | Group | What to configure |
-   |:-----:|:-----------------:|
-   | **Influx Tags** | Building identifier, building level, and building zone |
-   | **Device Configuration** | Toggles for InfluxDB uploads, SD card logging, and automatic updates |
-   | **Calibration Coefficients** | Pre-set during calibration — no changes needed |
-   | **Measurements** | Live sensor readings for verification |
-   | **Firmware** | Buttons to flash production or test firmware |
-
-5. **Set location tags.** Enter the building name, level, and zone for this deployment. These are used as InfluxDB tags for all uploaded measurements. We recommend using lower case and avoiding special characters e.g. `building_name`.
-6. **Adjust settings.** Enable or disable InfluxDB uploads, SD card logging, and automatic firmware updates as needed.
-7. **Flash production firmware.** Click **"Flash production firmware"** to download and install the latest firmware from this repository. The SAMBA will reboot and begin sampling automatically. The LED will blink green during the warm-up period and then turn off once it enters the normal sampling routine.
-
-The setup and calibration process is managed separately. If you need to calibrate or re-flash deployment firmware on a SAMBA, please reach out — see [Project Maintenance](#project-maintenance) below.
+There is no web interface on the device. The location tags, the *InfluxDB Upload* / *SD Card Write* / *Automatic Updates* switches and the calibration coefficients are exposed over the [ESPHome native API](https://esphome.io/components/api.html), so they can be viewed and changed from [Home Assistant](https://www.home-assistant.io/integrations/esphome/) or with the IEQ Lab's [samba_app](https://github.com/IEQLab/samba_app) laptop client (its *Identify SAMBA* button blinks the LED to pick one unit out of a batch). If you need a SAMBA recalibrated or re-tagged, please reach out — see [Project Maintenance](#project-maintenance) below.
 
 ### Project Maintenance
 
