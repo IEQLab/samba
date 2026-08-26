@@ -77,12 +77,15 @@ interval:
           // read; the filtered .state never is, because filter_out drops the NaN.
           if (std::isnan(id(k30_co2).get_raw_state())) {
             id(k30_error_count)++;
-            if (id(k30_error_count) == 1) {
-
-              // Try re-initialisation on first failure
-              ESP_LOGW("samba", "K30 CO2 sensor failure - attempting re-initialisation");
+            // Re-initialise immediately on the first failure, then retry every 10th (5min)
+            // for as long as it stays down. A single attempt used to be all it got: if that
+            // one failed the sensor sat dead until a restart cleared it, and since the restart
+            // became rate-limited to once an hour that could be a full hour of no CO2 with no
+            // recovery attempted at all. Retrying costs one I2C transaction per 5min.
+            if (id(k30_error_count) == 1 || id(k30_error_count) % 10 == 0) {
+              ESP_LOGW("samba", "K30 CO2 sensor failure %d - attempting re-initialisation",
+                       id(k30_error_count));
               id(k30_co2).reinitialize();
-
             } else {
               ESP_LOGW("samba", "K30 CO2 sensor failure %d", id(k30_error_count));
             }
