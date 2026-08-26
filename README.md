@@ -114,7 +114,10 @@ throughout so a rack of units is not distracting in an occupied office.
 | Magenta, pulsing | VOC / NOx (SGP4x) failed 4 consecutive reads | Watch — usually self-recovers |
 | Magenta, solid | VOC / NOx failed 6 or more; restart attempted after an hour | Check the sensor |
 
-The LED returns to off as soon as the sensor recovers.
+The LED is applied from a single 10-second poll of the error counters rather than from each
+sensor's error handler, so it survives the sample heartbeat and returns to off within about ten
+seconds of the sensor recovering. If two subsystems are in trouble at once, the more severe one
+shows, and the ADS1115 wins a tie.
 
 **A lit LED does not mean the device has stopped working.** A failed sensor is reported as
 `nan` and left out of the upload, while every other measurement continues to be sampled and
