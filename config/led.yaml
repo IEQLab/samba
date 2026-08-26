@@ -14,10 +14,12 @@ light:
     rmt_symbols: 64
     chipset: ws2812
 
+    # Linear: at the default 2.8, anything under ~12% brightness quantises to zero
+    gamma_correct: 1.0
+
     # Define LED effects
     effects:
-      # Used for all sensor WARNING states: a slow gentle pulse, dim enough for an
-      # occupied office. Severity is signalled by pulse-vs-solid, not by brightness.
+      # Used for all sensor WARNING states
       - pulse:
           name: "pulse_slow"
           transition_length: 2s
