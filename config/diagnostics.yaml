@@ -54,6 +54,7 @@ text_sensor:
       name: "MAC Address"
       icon: mdi:network-outline
       entity_category: "diagnostic"
+      disabled_by_default: true
 
 # System control buttons
 # https://esphome.io/components/button/restart

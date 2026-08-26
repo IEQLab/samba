@@ -9,12 +9,15 @@
 # laptop client needs a single alias table. The globals remain the only NVS copy: no
 # restore_value here, and NumberCalls outside min/max are dropped by ESPHome without
 # an error, so clients must validate against the advertised range first.
+# disabled_by_default keeps them off a Home Assistant device page (a lay user can
+# wreck a unit with them) while the native API still lists and accepts them.
 number:
   - platform: template
     name: "CO2 slope [m]"
     id: cal_co2_m
     icon: mdi:molecule-co2
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: 0
     max_value: 2
@@ -33,6 +36,7 @@ number:
     id: cal_co2_b
     icon: mdi:molecule-co2
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: -100
     max_value: 100
@@ -51,6 +55,7 @@ number:
     id: cal_lux_m
     icon: mdi:sun-wireless-outline
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: 0
     max_value: 15
@@ -69,6 +74,7 @@ number:
     id: cal_lux_b
     icon: mdi:sun-wireless-outline
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: -28
     max_value: 28
@@ -87,6 +93,7 @@ number:
     id: cal_ta_m1
     icon: mdi:thermometer
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: 1.0
     max_value: 2.0
@@ -105,6 +112,7 @@ number:
     id: cal_ta_b
     icon: mdi:thermometer
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: -30
     max_value: 0
@@ -123,6 +131,7 @@ number:
     id: cal_rh_m
     icon: mdi:water-percent
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: 0
     max_value: 1
@@ -141,6 +150,7 @@ number:
     id: cal_rh_b
     icon: mdi:water-percent
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: -28
     max_value: 28
@@ -159,6 +169,7 @@ number:
     id: cal_tg_m
     icon: mdi:thermometer
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: 0
     max_value: 2
@@ -177,6 +188,7 @@ number:
     id: cal_tg_b
     icon: mdi:thermometer
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: -25
     max_value: 0
@@ -195,6 +207,7 @@ number:
     id: cal_as1_a
     icon: mdi:weather-windy
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: 0.5
     max_value: 3.0
@@ -213,6 +226,7 @@ number:
     id: cal_as1_b
     icon: mdi:weather-windy
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: 0.5
     max_value: 4.0
@@ -231,6 +245,7 @@ number:
     id: cal_as1_d0
     icon: mdi:weather-windy
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: -1.5
     max_value: 4.0
@@ -249,6 +264,7 @@ number:
     id: cal_as1_d1
     icon: mdi:weather-windy
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: -1.0
     max_value: 1.0
@@ -267,6 +283,7 @@ number:
     id: cal_as2_a
     icon: mdi:weather-windy
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: 0.5
     max_value: 3.0
@@ -285,6 +302,7 @@ number:
     id: cal_as2_b
     icon: mdi:weather-windy
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: 0.5
     max_value: 4.0
@@ -303,6 +321,7 @@ number:
     id: cal_as2_d0
     icon: mdi:weather-windy
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: -1.5
     max_value: 4.0
@@ -321,6 +340,7 @@ number:
     id: cal_as2_d1
     icon: mdi:weather-windy
     entity_category: "config"
+    disabled_by_default: true
     mode: box
     min_value: -1.0
     max_value: 1.0
