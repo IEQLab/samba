@@ -65,7 +65,8 @@ void InfluxDB::setup() {
 
   this->headers_.reserve(2);
   this->headers_.push_back({"Content-Type", "text/plain; charset=utf-8"});
-  this->headers_.push_back({"Authorization", std::string("Token ") + this->token_});
+  this->headers_.push_back({"Authorization", ""});
+  this->update_auth_header_();
 
   if (this->send_mac_)
     get_mac_address_into_buffer(this->mac_);
@@ -79,14 +80,42 @@ void InfluxDB::setup() {
   }
 }
 
+void InfluxDB::set_token_override(const std::string &token) {
+  this->runtime_token_ = token;
+  this->update_auth_header_();
+}
+
+void InfluxDB::update_auth_header_() {
+  if (this->headers_.size() < 2)
+    return;  // before setup(); it builds the header from the current token
+  auto &value = this->headers_[1].value;
+  value = "Token ";
+  if (this->runtime_token_.empty()) {
+    value += this->token_;
+  } else {
+    value += this->runtime_token_;
+  }
+}
+
+void InfluxDB::set_status_(const char *status) {
+#ifdef USE_TEXT_SENSOR
+  if (this->status_sensor_ != nullptr)
+    this->status_sensor_->publish_state(status);
+#endif
+}
+
 void InfluxDB::dump_config() {
+  // The token itself is never logged
   ESP_LOGCONFIG(TAG,
                 "InfluxDB:\n"
                 "  URL: %s\n"
+                "  Token: %s\n"
                 "  Fields: %u in %u measurement(s)\n"
                 "  Tags: %u%s\n"
                 "  Timestamps: %s",
-                this->url_.c_str(), (unsigned) this->fields_.size(), (unsigned) this->line_count_,
+                this->url_.c_str(),
+                !this->runtime_token_.empty() ? "provisioned" : (this->token_[0] != '\0' ? "compiled-in" : "none"),
+                (unsigned) this->fields_.size(), (unsigned) this->line_count_,
                 (unsigned) this->tags_.size(), this->send_mac_ ? " + device MAC" : "",
                 this->time_source_ != nullptr ? "device clock" : "server");
   if (this->update_interval_ == UPDATE_INTERVAL_NEVER || this->update_interval_ == 0) {
@@ -105,6 +134,13 @@ void InfluxDB::publish_(const std::vector<sensor::Sensor *> *only) {
     ESP_LOGW(TAG, "Dropping unsent payload from previous publish");
     this->cancel_timeout("retry");
     this->in_flight_ = false;
+  }
+
+  if (!this->has_token()) {
+    // Fresh flags are left set: the values go out once a token is provisioned.
+    ESP_LOGW(TAG, "Not publishing: no InfluxDB token provisioned");
+    this->set_status_("no token");
+    return;
   }
 
   if (!network::is_connected()) {
@@ -229,11 +265,15 @@ void InfluxDB::send_() {
   // duration of the request, so a dead host cannot trip the watchdog and reboot the device.
   auto response = this->http_request_->post(this->url_, this->body_, this->headers_);
   if (response == nullptr) {
+    this->set_status_("connection failed");
     this->retry_or_drop_("connection failed");
     return;
   }
 
   const int status = response->status_code;
+  char status_text[16];
+  snprintf(status_text, sizeof(status_text), "HTTP %d", status);
+  this->set_status_(status_text);
   if (http_request::is_success(status)) {
     response->end();
     ESP_LOGI(TAG, "Published (HTTP %d in %" PRIu32 " ms)", status, response->duration_ms);

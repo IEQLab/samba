@@ -18,6 +18,7 @@ influxdb:
   send_mac: true
   timestamp_unit: "s"
   update_interval: never
+  status_text_sensor: influx_status
 
   # Sensors to upload, keyed by ESPHome id and grouped into measurements by `measurement`.
   # A sensor is only included when it has produced a value since the previous upload, so a
@@ -60,3 +61,93 @@ switch:
       - lambda: 'id(influx_enable) = true;'
     turn_off_action:
       - lambda: 'id(influx_enable) = false;'
+
+
+# Token provisioning over the native API (samba_app: `samba deploy` / `samba buildings`).
+# The token lives in the influx_token global (NVS, which OTA never rewrites) and takes
+# precedence over the compiled-in one, so published binaries can stop carrying a secret and
+# a building's token can be rotated without a reflash. It is written through an api action
+# rather than a text entity because a text entity's state is pushed to every connected
+# client; the action publishes nothing, and what is readable is only a fingerprint.
+# Nothing here logs the token itself.
+esphome:
+  on_boot:
+    # after the globals are restored (HARDWARE), before the influxdb component sets up
+    - priority: 600
+      then:
+        - lambda: 'id(influx).set_token_override(id(influx_token));'
+
+api:
+  actions:
+    - action: influx_set_token
+      variables:
+        token: string
+      then:
+        - lambda: |-
+            // InfluxDB tokens are base64: 88 printable ASCII characters. An empty token clears
+            // the provisioned one (the compiled-in token, if any, applies again).
+            if (token.size() > 88) {
+              ESP_LOGW("samba", "Rejected InfluxDB token: %u characters", (unsigned) token.size());
+              return;
+            }
+            for (char c : token) {
+              if (c <= ' ' || c > '~') {
+                ESP_LOGW("samba", "Rejected InfluxDB token: not printable ASCII");
+                return;
+              }
+            }
+            id(influx_token) = token;
+            id(influx).set_token_override(token);
+            id(influx_token_fp).update();
+            ESP_LOGI("samba", "InfluxDB token %s (fingerprint %s)",
+                     token.empty() ? "cleared" : "set", id(influx_token_fp).get_state().c_str());
+        - script.execute: influx_token_save
+
+text_sensor:
+  # Fingerprint of the provisioned token: FNV-1 32-bit hash as 8 hex digits, "unset" when
+  # none. Enough for a client to verify what it wrote and tell buildings apart, not enough
+  # to recover the token.
+  - platform: template
+    name: "InfluxDB Token"
+    id: influx_token_fp
+    icon: mdi:key-outline
+    entity_category: "diagnostic"
+    update_interval: 60s
+    lambda: |-
+      if (id(influx_token).empty())
+        return std::string("unset");
+      char buf[9];
+      snprintf(buf, sizeof(buf), "%08x", (unsigned) esphome::fnv1_hash(id(influx_token)));
+      return std::string(buf);
+
+  # Outcome of the last upload attempt, published by the influxdb component:
+  # "HTTP 204" is success; "HTTP 401" is a bad token; "no token" is an unprovisioned unit.
+  - platform: template
+    name: "InfluxDB Status"
+    id: influx_status
+    icon: mdi:cloud-check-outline
+    entity_category: "diagnostic"
+    update_interval: never
+
+script:
+  # Flush the token to flash now (same shape as tags_save / cal_save), then prove it with a
+  # real write: a device_status line carrying only the uptime, so the status sensor reports
+  # the outcome without waiting for the next 5-minute sample.
+  - id: influx_token_save
+    mode: restart
+    then:
+      - delay: 2s
+      - lambda: |-
+          if (!global_preferences->sync()) {
+            ESP_LOGE("samba", "Failed to save InfluxDB token to flash; it will revert on power cycle");
+            return;
+          }
+          ESP_LOGI("samba", "InfluxDB token saved to flash");
+      - if:
+          condition:
+            switch.is_on: switch_influx
+          then:
+            - component.update: sys_uptime
+            - influxdb.publish:
+                id: influx
+                sensor_ids: [sys_uptime]

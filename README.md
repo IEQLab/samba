@@ -153,6 +153,8 @@ SAMBA devices are shipped pre-calibrated, with their location tags (building, le
 
 There is no web interface on the device. The location tags, the *InfluxDB Upload* / *SD Card Write* / *Automatic Updates* switches and the calibration coefficients are exposed over the [ESPHome native API](https://esphome.io/components/api.html), so they can be viewed and changed from [Home Assistant](https://www.home-assistant.io/integrations/esphome/) or with the IEQ Lab's [samba_app](https://github.com/IEQLab/samba_app) laptop client (its *Identify SAMBA* button blinks the LED to pick one unit out of a batch). If you need a SAMBA recalibrated or re-tagged, please reach out — see [Project Maintenance](#project-maintenance) below.
 
+The InfluxDB token is provisioned over the same API rather than compiled into the firmware (see `config/influx.yaml`): it is stored on the device, survives updates, and the device only ever reports a fingerprint of it (*InfluxDB Token*) together with the result of its last upload (*InfluxDB Status*). If you build your own firmware, `influx_token` in `secrets.yaml` still works as a compiled-in token and is what the device uses until one is provisioned.
+
 ### Project Maintenance
 
 This is an active project to build an open research platform for healthy, high-performance buildings. If you're interested in using SAMBA in your project or contributing to its development, start a [Github discussion](https://github.com/IEQLab/samba/discussions) or email Tom.

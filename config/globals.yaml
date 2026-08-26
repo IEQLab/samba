@@ -39,6 +39,15 @@ globals:
     restore_value: yes
     initial_value: 'true'
 
+  # InfluxDB token provisioned over the native API (config/influx.yaml). Empty = use the
+  # compiled-in token, or skip uploads once the build no longer carries one. InfluxDB v2
+  # tokens are 88 characters; max_restore_data_length must cover that or the save is dropped.
+  - id: influx_token
+    type: std::string
+    max_restore_data_length: 88
+    restore_value: yes
+    initial_value: '""'
+
   # CO2 calibration (y = mx + b)
   - id: calibration_co2_m
     type: double

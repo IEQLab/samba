@@ -20,7 +20,7 @@ config/                 # Modular YAML configs (one per function/sensor)
   sample.yaml           # 5-minute sampling loop (sensor update + publish + SD append)
   rtc.yaml              # DS1307 RTC, SNTP sync, sample trigger, firmware check
   sd.yaml               # SD card mount/write via sd_spi_card component
-  influx.yaml           # InfluxDB v2 upload config
+  influx.yaml           # InfluxDB v2 upload config + token provisioning over the native API
   homeassistant.yaml    # Native API endpoint
   wifi.yaml             # WiFi and captive portal
   ota.yaml              # HTTP OTA updates
@@ -313,6 +313,34 @@ EOF
 ### Secrets
 
 All credentials are in `secrets.yaml` (gitignored) and referenced via `!secret` in substitutions. Never hardcode credentials.
+
+Note that `!secret` only keeps a value out of the YAML: ESPHome bakes substitutions into the
+generated C++ and therefore into the binary, and `firmware/*.bin` is committed to this public
+repo. The InfluxDB token is the one credential that no longer has to be there — see below.
+
+### InfluxDB token provisioning
+
+`config/influx.yaml` lets a token be written **at runtime** instead of compiled in:
+
+- `influx_token` (`config/globals.yaml`) is a restored global in NVS, which OTA never
+  rewrites. `max_restore_data_length: 88` covers an InfluxDB v2 token.
+- The `influx_set_token` api action stores it, hands it to the component
+  (`InfluxDB::set_token_override`), and flushes NVS. A runtime token takes precedence over
+  `influx_token` from `secrets.yaml`, which is the **fallback**: leave it set while units are
+  still being provisioned, then set it to `""` in `secrets.yaml` to ship a build with no
+  token in it. An unprovisioned unit on such a build skips uploads and reports `no token`.
+- Nothing publishes the token back. The `InfluxDB Token` text sensor carries only its
+  fingerprint (`esphome::fnv1_hash`, 8 hex digits, `unset` when empty), and `InfluxDB
+  Status` the outcome of the last upload (`HTTP 204`, `HTTP 401`, `connection failed`,
+  `no token`), published by the component (`status_text_sensor`). The action is followed by a
+  real write (a `device_status` line with only the uptime) so the status reflects the new
+  token immediately. Never log the token; `dump_config` says only provisioned / compiled-in /
+  none.
+- A text entity was rejected for this on purpose: a text entity's state goes to every
+  connected API client.
+
+The provisioning client is `samba_app` (`samba deploy`, `samba buildings`), one token per
+building.
 
 ## InfluxDB Architecture
 

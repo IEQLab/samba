@@ -1,7 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation, core
-from esphome.components import http_request, sensor, time
+from esphome.components import http_request, sensor, text_sensor, time
 from esphome.const import CONF_ID, CONF_PORT, CONF_UPDATE_INTERVAL
 
 CODEOWNERS = ["@IEQLab"]
@@ -21,6 +21,7 @@ CONF_MEASUREMENT = "measurement"
 CONF_FIELD = "field"
 CONF_GLOBAL_TAGS = "global_tags"
 CONF_SENSOR_IDS = "sensor_ids"
+CONF_STATUS_TEXT_SENSOR = "status_text_sensor"
 
 # Must match InfluxDB::MAX_MEASUREMENTS in influxdb.h
 MAX_MEASUREMENTS = 4
@@ -90,6 +91,8 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Required(CONF_HTTP_REQUEST_ID): cv.use_id(http_request.HttpRequestComponent),
         cv.Optional(CONF_TIME_ID): cv.use_id(time.RealTimeClock),
         cv.Required(CONF_HOST): cv.string_strict,
+        # May be "" when every unit gets its token at runtime via set_token_override(); an
+        # unprovisioned unit then skips uploads and reports "no token" on the status sensor.
         cv.Required(CONF_TOKEN): cv.sensitive(cv.string_strict),
         cv.Required(CONF_BUCKET): cv.string_strict,
         cv.Required(CONF_ORG): cv.string_strict,
@@ -106,6 +109,9 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_GLOBAL_TAGS, default={}): cv.Schema(
             {line_protocol_key: cv.templatable(tag_value)}
         ),
+        # Receives the outcome of every upload attempt: "HTTP 204", "HTTP 401",
+        # "connection failed", "no token".
+        cv.Optional(CONF_STATUS_TEXT_SENSOR): cv.use_id(text_sensor.TextSensor),
     }
 ).extend(cv.COMPONENT_SCHEMA)
 
@@ -117,6 +123,8 @@ async def to_code(config):
     cg.add(var.set_http_request(await cg.get_variable(config[CONF_HTTP_REQUEST_ID])))
     if (time_id := config.get(CONF_TIME_ID)) is not None:
         cg.add(var.set_time_source(await cg.get_variable(time_id)))
+    if (status_id := config.get(CONF_STATUS_TEXT_SENSOR)) is not None:
+        cg.add(var.set_status_sensor(await cg.get_variable(status_id)))
 
     cg.add(var.set_host(config[CONF_HOST]))
     cg.add(var.set_port(config[CONF_PORT]))

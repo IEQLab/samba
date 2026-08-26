@@ -11,6 +11,9 @@
 #include "esphome/components/http_request/http_request.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/time/real_time_clock.h"
+#ifdef USE_TEXT_SENSOR
+#include "esphome/components/text_sensor/text_sensor.h"
+#endif
 
 namespace esphome::influxdb {
 
@@ -42,7 +45,16 @@ class InfluxDB : public Component {
 
   void set_host(const char *host) { this->host_ = host; }
   void set_port(uint16_t port) { this->port_ = port; }
+  /// Compiled-in token; may be empty when every unit is provisioned at runtime.
   void set_token(const char *token) { this->token_ = token; }
+  /// Token provisioned at runtime (the caller keeps it, e.g. in a restored global). Takes
+  /// precedence over the compiled-in one; an empty string falls back to it. Safe before setup().
+  void set_token_override(const std::string &token);
+  bool has_token() const { return !this->runtime_token_.empty() || this->token_[0] != '\0'; }
+#ifdef USE_TEXT_SENSOR
+  /// Receives the outcome of every upload attempt ("HTTP 204", "connection failed", "no token").
+  void set_status_sensor(text_sensor::TextSensor *sensor) { this->status_sensor_ = sensor; }
+#endif
   void set_bucket(const char *bucket) { this->bucket_ = bucket; }
   void set_org(const char *org) { this->org_ = org; }
   void set_timestamp_unit(const char *unit) { this->timestamp_unit_ = unit; }
@@ -83,6 +95,9 @@ class InfluxDB : public Component {
   /// POST body_; on a transient failure schedule a retry, otherwise finish.
   void send_();
   void retry_or_drop_(const char *reason);
+  /// Rebuild the Authorization header from whichever token is current.
+  void update_auth_header_();
+  void set_status_(const char *status);
 
   static void append_escaped_(std::string &out, const char *value);
   static void append_url_encoded_(std::string &out, const char *value);
@@ -90,6 +105,7 @@ class InfluxDB : public Component {
   const char *host_{""};
   uint16_t port_{8086};
   const char *token_{""};
+  std::string runtime_token_;
   const char *bucket_{""};
   const char *org_{""};
   const char *timestamp_unit_{"s"};
@@ -100,6 +116,9 @@ class InfluxDB : public Component {
 
   http_request::HttpRequestComponent *http_request_{nullptr};
   time::RealTimeClock *time_source_{nullptr};
+#ifdef USE_TEXT_SENSOR
+  text_sensor::TextSensor *status_sensor_{nullptr};
+#endif
 
   std::vector<Field> fields_;
   std::vector<Tag> tags_;
