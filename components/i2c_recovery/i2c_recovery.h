@@ -1,9 +1,7 @@
-// Runtime I2C bus recovery for ESP-IDF
-// ESPHome only performs bus recovery once during boot, so a device left
-// mid-transaction (e.g. a clock-stretching target aborted by the 13ms
-// hardware timeout) wedges the bus until it gives up on its own. This
-// component exposes the IDF i2c_master_bus_reset() routine, which clocks
-// out a stuck target (up to 9 SCL pulses + STOP) and resets the peripheral.
+// Runtime I2C bus recovery for ESP-IDF.
+// ESPHome recovers the bus only at boot, so a target left mid-transaction wedges it until it
+// gives up. Exposes i2c_master_bus_reset(), which clocks out a stuck target and resets the
+// peripheral.
 
 #pragma once
 
