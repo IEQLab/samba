@@ -25,6 +25,9 @@ sensor:
         - clamp:
             max_value: 500
             ignore_out_of_range: false
+      on_raw_value:
+        # VOC and NOx come from the same sgp41 measurement, so one timestamp covers both.
+        - lambda: 'if (!std::isnan(x)) id(sgp_last_ok) = millis();'
     nox_index:
       id: sgp_nox
       internal: true
@@ -48,7 +51,12 @@ sensor:
       // sgp4x publishes nothing after a failed read (sgp_voc keeps its last value) but flags
       // a warning until the next good read. Report NaN so a dead sensor shows as unknown in
       // Home Assistant, nan on the SD card, and is left out of the InfluxDB upload.
-      if (id(sgp41).status_has_warning()) return NAN;
+      // status_has_warning() is set by one failed read and cleared by the next good one, so
+      // testing it threw away a whole cycle for a single transient failure. VOC and NOx move
+      // slowly and the 8-wide median carries them; report NaN only once the sensor has been
+      // silent for a full sample interval.
+      if (id(sgp_last_ok) == 0 || (millis() - id(sgp_last_ok)) > 330000)
+        return NAN;
       return (log(501.0 - id(sgp_voc).state) - 6.24) * (-381.97);
     
 # Define NOx measurements
@@ -60,12 +68,18 @@ sensor:
     device_class: aqi
     icon: mdi:radiator
     lambda: |-
-      if (id(sgp41).status_has_warning()) return NAN;
+      if (id(sgp_last_ok) == 0 || (millis() - id(sgp_last_ok)) > 330000)
+        return NAN;
       return id(sgp_nox).state;
 
 
 # Error counter for initialisation failure recovery
 globals:
+# millis() of the last successful raw read; uint32_t subtraction wraps correctly.
+  - id: sgp_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
   - id: sgp_error_count
     type: int
     restore_value: no

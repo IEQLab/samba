@@ -26,6 +26,11 @@ sensor:
           window_size: 6
           send_every: 2
           send_first_at: 1
+    on_raw_value:
+      # Timestamp every successful raw read. The filtered .state already survives a single
+      # failure, so the published value only becomes meaningless once the sensor has been
+      # silent for a whole sample interval.
+      - lambda: 'if (!std::isnan(x)) id(k30_last_ok) = millis();'
 
 # Define CO2 measurements
   - platform: template
@@ -42,12 +47,22 @@ sensor:
           // .state keeps the last good value. Check the raw value so a dead sensor yields NaN
           // here: Home Assistant shows unknown, the SD row records nan, and the InfluxDB
           // upload leaves the field out (and warns) instead of repeating a stale reading.
-          if (std::isnan(id(k30_co2).get_raw_state())) return NAN;
+          // Report NaN only once the K30 has produced no good read for a whole 5min sample
+          // interval. get_raw_state() is the single most recent read, so testing it discarded
+          // the entire cycle whenever one poll of the ten in a window happened to fail - CO2
+          // moves slowly and the 6-wide median exists precisely for that redundancy.
+          if (id(k30_last_ok) == 0 || (millis() - id(k30_last_ok)) > 330000)
+            return NAN;
           return ((id(calibration_co2_m) * id(k30_co2).state) + id(calibration_co2_b));
 
 
 # Error counter for initialisation failure recovery
 globals:
+# millis() of the last successful raw read; uint32_t subtraction wraps correctly.
+  - id: k30_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
   - id: k30_error_count
     type: int
     restore_value: no
