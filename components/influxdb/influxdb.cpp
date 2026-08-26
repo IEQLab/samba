@@ -236,7 +236,7 @@ void InfluxDB::send_() {
   const int status = response->status_code;
   if (http_request::is_success(status)) {
     response->end();
-    ESP_LOGD(TAG, "Published (HTTP %d in %" PRIu32 " ms)", status, response->duration_ms);
+    ESP_LOGI(TAG, "Published (HTTP %d in %" PRIu32 " ms)", status, response->duration_ms);
     this->in_flight_ = false;
     return;
   }
