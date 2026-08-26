@@ -106,8 +106,12 @@ interval:
               call.set_brightness(1.0);
               call.perform();
 
-              ESP_LOGE("samba", "SGP4x sensor failed - restarting device");
-              id(sys_restart).press();
+              // As with the K30: NaN propagates upstream, so a dead SGP4x costs only VOC/NOx.
+              // Restart at most hourly rather than turning one sensor into a total outage.
+              if (id(sys_uptime).state > 3600) {
+                ESP_LOGE("samba", "SGP4x sensor failed after 1h uptime - restarting to attempt recovery");
+                id(sys_restart).press();
+              }
             }
 
           } else {

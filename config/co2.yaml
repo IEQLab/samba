@@ -89,8 +89,14 @@ interval:
               call.set_brightness(1.0);
               call.perform();
 
-              ESP_LOGE("samba", "K30 re-initialisation failed - restarting device");
-              id(sys_restart).press();
+              // A dead K30 must not stop the other twelve sensors reporting: the raw read
+              // publishes NaN, so CO2 is simply absent upstream. Restart only as a last-resort
+              // recovery attempt, and at most hourly - uptime resets on restart, so this
+              // self-rate-limits without any persistent state.
+              if (id(sys_uptime).state > 3600) {
+                ESP_LOGE("samba", "K30 re-initialisation failed after 1h uptime - restarting to attempt recovery");
+                id(sys_restart).press();
+              }
             }
 
           } else {

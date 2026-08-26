@@ -76,7 +76,7 @@ binary_sensor:
     on_release:
       - light.turn_off: samba_led
 
-# Reboot after 5min of continuous errors
+# Error LED after 5min of continuous errors
   - platform: template
     id: ads_error_detected
     internal: true
@@ -90,5 +90,21 @@ binary_sensor:
           green: 0%
           blue: 0%
           brightness: 100%
+
+# Restart as a last-resort recovery, at most hourly. A dead ADS1115 costs globe temperature
+# and air speed; it must not stop the remaining sensors reporting, which is what an immediate
+# restart did - rebooting every 5min, faster than the sample cycle, so the unit published
+# nothing at all. Uptime resets on restart, so gating on it self-rate-limits with no persistent
+# state. The condition lives in the lambda rather than the action because on_press fires only
+# on the false->true edge: gating the action would skip the restart and never retry.
+  - platform: template
+    id: ads_restart_due
+    internal: true
+    lambda: |-
+      return id(ads_error_count).state >= 150 && id(sys_uptime).state > 3600;
+    on_press:
+      - logger.log:
+          level: ERROR
+          format: "ADS1115 dead after 1h uptime - restarting to attempt recovery"
       - delay: 5s
       - button.press: sys_restart
