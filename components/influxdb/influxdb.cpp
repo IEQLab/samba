@@ -279,7 +279,9 @@ void InfluxDB::append_escaped_(std::string &out, const char *value) {
     const char c = *p;
     if (static_cast<unsigned char>(c) < 0x20)
       continue;  // line protocol has no escape for control characters
-    if (c == ' ' || c == ',' || c == '=')
+    // Tag keys and values escape comma, equals and space. A backslash must be escaped as
+    // well, or a trailing one would escape the delimiter that follows the value.
+    if (c == ' ' || c == ',' || c == '=' || c == '\\')
       out += '\\';
     out += c;
   }

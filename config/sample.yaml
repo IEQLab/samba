@@ -10,6 +10,9 @@ script:
     mode: single
     then:
       - component.update: sys_uptime
+      # WiFi polls on its own 300s cycle. Refresh it here too, so it has always published
+      # since the last upload and never drops out of the device_status measurement.
+      - component.update: sys_wifi
       - if:
           condition: 
             lambda: |-

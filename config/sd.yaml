@@ -36,7 +36,7 @@ script:
             char header[256];
             snprintf(header, sizeof(header),
                      "# version: %s\n# building: %s\n# level: %s\n# zone: %s\ntime,ta,tg,rh,as,mrt,co2,lux,pm25,tvoc,nox,laeq,la90,la10\n",
-                     ESPHOME_VERSION,
+                     ESPHOME_PROJECT_VERSION,
                      id(building_tag).c_str(),
                      id(level_tag).c_str(),
                      id(zone_tag).c_str());

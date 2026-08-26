@@ -50,16 +50,20 @@ light:
 
 # Alarm indication
 globals:
+  # -1 until the arbiter has run once, so its first tick past the boot guard always applies a
+  # state. Starting at 0 would match `want` and return early, leaving the boot strobe running
+  # until the first sample turned the light off.
   - id: led_alarm
     type: int
     restore_value: no
-    initial_value: '0'
+    initial_value: '-1'
 
 interval:
   - interval: 10s
     then:
       - lambda: |-
-          // Leave the boot strobe alone; no alarm can have tripped this early anyway.
+          // Leave the boot strobe alone; no alarm can have tripped this early anyway. The
+          // first tick past this guard clears it, because led_alarm still holds -1.
           if (millis() < 120000)
             return;
 
