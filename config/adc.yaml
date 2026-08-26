@@ -65,13 +65,26 @@ sensor:
       const bool as1_stale = (now - id(ads_as1_last_ok)) > 6000;
       const bool as2_stale = (now - id(ads_as2_last_ok)) > 6000;
       const bool ntc_stale = (now - id(ads_ntc_last_ok)) > 90000;
-      static int count = 0;
-      if (as1_stale || as2_stale || ntc_stale) {
-        count++;
+      const bool stale = as1_stale || as2_stale || ntc_stale;
+
+      // Hour-scale duty cycle, used only to gate the restart. Errors on this bus arrive in
+      // waves - a loaded bus and a long lead to the remote board - and then settle, so a
+      // reboot must not react to one wave. Exponentially-weighted seconds-stale-per-hour:
+      // decaying 0.99944 per 2s tick gives a time constant of 1/0.00056 = 1786 ticks, ~59min.
+      // Steady state for a stale duty cycle d is d * 2 / (1 - 0.99944) = d * 3571, so the
+      // 1250 threshold in ads_restart_due is a sustained 35% of the hour spent stale.
+      id(ads_unhealthy) = (id(ads_unhealthy) + (stale ? 2.0f : 0.0f)) * 0.99944f;
+
+      // Consecutive-failure ticks, driving the LEDs and the soft recovery. Any successful
+      // read resets it, so a wave shorter than 3min never reaches the thresholds below.
+      // A global rather than a lambda-local static so the score is visible when diagnosing
+      // why a unit went amber.
+      if (stale) {
+        id(ads_error_ticks)++;
       } else {
-        count = 0;
+        id(ads_error_ticks) = 0;
       }
-      return count;
+      return id(ads_error_ticks);
 
 # Timestamps of the last successful read per channel (millis).
 # uint32_t subtraction wraps correctly, so the ~49.7 day millis() rollover is safe.
@@ -88,6 +101,18 @@ globals:
     type: uint32_t
     restore_value: no
     initial_value: '0'
+
+# Consecutive stale 2s ticks (LEDs, soft recovery) and the hour-scale stale duty cycle
+# (restart gate only). Neither survives a reboot: a restart is itself the recovery attempt,
+# so the evidence that justified it must not carry over and immediately justify another.
+  - id: ads_error_ticks
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ads_unhealthy
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
 
 # ADS1115 error detection
 binary_sensor:
@@ -133,11 +158,14 @@ binary_sensor:
     id: ads_restart_due
     internal: true
     lambda: |-
-      return id(ads_error_count).state >= 150 && id(sys_uptime).state > 3600;
+      return id(ads_error_count).state >= 150
+          && id(ads_unhealthy) > 1250.0f
+          && id(sys_uptime).state > 3600;
     on_press:
       - logger.log:
           level: ERROR
-          format: "ADS1115 dead after 1h uptime - restarting to attempt recovery"
+          format: "ADS1115 stale %.0f percent of the last hour and stale now - restarting to attempt recovery"
+          args: ['id(ads_unhealthy) / 35.71f']
       - delay: 5s
       - button.press: sys_restart
 
