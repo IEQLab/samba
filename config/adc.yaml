@@ -21,6 +21,8 @@ sensor:
     sample_rate: 64
     update_interval: 2s
     internal: true
+    on_value:
+      - lambda: 'id(ads_as1_last_ok) = millis();'
 
 # Air speed sensor 2
   - platform: ads1115
@@ -31,6 +33,8 @@ sensor:
     sample_rate: 64
     update_interval: 2s
     internal: true
+    on_value:
+      - lambda: 'id(ads_as2_last_ok) = millis();'
 
 # NTC thermistor
   - platform: ads1115
@@ -41,21 +45,49 @@ sensor:
     sample_rate: 16
     update_interval: 30s
     internal: true
+    on_value:
+      - lambda: 'id(ads_ntc_last_ok) = millis();'
 
 # ADS1115 error counter
+# Counts 2s ticks of continuous failure. Detect failure by staleness of the last successful
+# read per channel, not by isnan() on the sensor state: ADS1115Sensor::update() only calls
+# publish_state() when the read succeeded, so a failed read leaves .state holding its last
+# good value forever. An isnan() test could therefore only ever fire before the first
+# successful read, never on a fault that develops later - which is exactly the fault the
+# thresholds below are meant to catch. Staleness limits are 3x the channel update interval.
   - platform: template
     id: ads_error_count
     internal: true
     update_interval: 2s
     accuracy_decimals: 0
     lambda: |-
+      const uint32_t now = millis();
+      const bool as1_stale = (now - id(ads_as1_last_ok)) > 6000;
+      const bool as2_stale = (now - id(ads_as2_last_ok)) > 6000;
+      const bool ntc_stale = (now - id(ads_ntc_last_ok)) > 90000;
       static int count = 0;
-      if (isnan(id(ads_as1).state) || isnan(id(ads_as2).state) || isnan(id(ads_ntc).state)) {
+      if (as1_stale || as2_stale || ntc_stale) {
         count++;
       } else {
         count = 0;
       }
       return count;
+
+# Timestamps of the last successful read per channel (millis).
+# uint32_t subtraction wraps correctly, so the ~49.7 day millis() rollover is safe.
+globals:
+  - id: ads_as1_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: ads_as2_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: ads_ntc_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
 
 # ADS1115 error detection
 binary_sensor:
@@ -108,3 +140,30 @@ binary_sensor:
           format: "ADS1115 dead after 1h uptime - restarting to attempt recovery"
       - delay: 5s
       - button.press: sys_restart
+
+# Soft recovery: unstick a wedged I2C bus in place, before spending a reboot.
+# ESPHome clocks out a stuck target only once, during setup, so a target that aborts
+# mid-transaction (a K30 clock-stretching past the 13ms hardware timeout) can hold the bus
+# until it gives up on its own - every ADS1115 read then times out. reset_bus() drives the
+# same 9 SCL pulses + STOP and resets the peripheral FSM, at runtime. It runs from the
+# warning threshold, so most faults are cleared in place and never reach the restart above.
+#
+# This is an interval, not an on_press action on ads_error_warning, on purpose: on_press
+# fires only on the false->true edge, so a single action would attempt exactly one reset and
+# then never retry however long the fault lasted. Polling the warning state from an interval
+# keeps retrying until either the bus recovers (ads_error_count clears, warning releases) or
+# the last-resort restart takes over. The interval ticks faster than the component's
+# min_interval so that i2c_recovery itself is the rate limiter, as it would be for any other
+# caller, rather than the rate depending on this interval's period.
+interval:
+  - interval: 10s
+    then:
+      - lambda: |-
+          if (!id(ads_error_warning).state)
+            return;
+          if (id(i2c_recovery_a).reset_bus()) {
+            ESP_LOGW("adc", "ADS1115 unresponsive for %.0f x 2s - I2C bus reset performed",
+                     id(ads_error_count).state);
+          } else {
+            ESP_LOGD("adc", "ADS1115 still unresponsive - bus reset rate-limited or failed");
+          }
