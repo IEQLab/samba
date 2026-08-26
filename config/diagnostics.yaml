@@ -49,6 +49,11 @@ text_sensor:
       name: "IP Address"
       icon: mdi:ip-network-outline
       entity_category: "diagnostic"
+    mac_address:
+      id: sys_mac
+      name: "MAC Address"
+      icon: mdi:network-outline
+      entity_category: "diagnostic"
 
 # System control buttons
 # https://esphome.io/components/button/restart

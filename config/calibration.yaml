@@ -1,0 +1,391 @@
+# SAMBA v2 FIRMWARE
+# expose calibration coefficients, identify and sample-now over the native API
+# written by Thomas Parkinson, Aug 2026
+
+
+# Editable calibration coefficients (mirror the persistent globals in config/globals.yaml)
+# https://esphome.io/components/number/template.html
+# Entity names match the deployment firmware (samba_deployment.yaml) so the samba_app
+# laptop client needs a single alias table. The globals remain the only NVS copy: no
+# restore_value here, and NumberCalls outside min/max are dropped by ESPHome without
+# an error, so clients must validate against the advertised range first.
+number:
+  - platform: template
+    name: "CO2 slope [m]"
+    id: cal_co2_m
+    icon: mdi:molecule-co2
+    entity_category: "config"
+    mode: box
+    min_value: 0
+    max_value: 2
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_co2_m);
+    set_action:
+      - lambda: |-
+          id(calibration_co2_m) = x;
+          id(cal_co2_m).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "CO2 offset [b]"
+    id: cal_co2_b
+    icon: mdi:molecule-co2
+    entity_category: "config"
+    mode: box
+    min_value: -100
+    max_value: 100
+    step: 0.01
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_co2_b);
+    set_action:
+      - lambda: |-
+          id(calibration_co2_b) = x;
+          id(cal_co2_b).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Illuminance slope [m]"
+    id: cal_lux_m
+    icon: mdi:sun-wireless-outline
+    entity_category: "config"
+    mode: box
+    min_value: 0
+    max_value: 15
+    step: 0.01
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_lux_m);
+    set_action:
+      - lambda: |-
+          id(calibration_lux_m) = x;
+          id(cal_lux_m).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Illuminance offset [b]"
+    id: cal_lux_b
+    icon: mdi:sun-wireless-outline
+    entity_category: "config"
+    mode: box
+    min_value: -28
+    max_value: 28
+    step: 0.01
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_lux_b);
+    set_action:
+      - lambda: |-
+          id(calibration_lux_b) = x;
+          id(cal_lux_b).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air temperature slope [m1]"
+    id: cal_ta_m1
+    icon: mdi:thermometer
+    entity_category: "config"
+    mode: box
+    min_value: 1.0
+    max_value: 2.0
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_ta_m1);
+    set_action:
+      - lambda: |-
+          id(calibration_ta_m1) = x;
+          id(cal_ta_m1).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air temperature offset [b]"
+    id: cal_ta_b
+    icon: mdi:thermometer
+    entity_category: "config"
+    mode: box
+    min_value: -30
+    max_value: 0
+    step: 0.01
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_ta_b);
+    set_action:
+      - lambda: |-
+          id(calibration_ta_b) = x;
+          id(cal_ta_b).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Relative humidity slope [m]"
+    id: cal_rh_m
+    icon: mdi:water-percent
+    entity_category: "config"
+    mode: box
+    min_value: 0
+    max_value: 1
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_rh_m);
+    set_action:
+      - lambda: |-
+          id(calibration_rh_m) = x;
+          id(cal_rh_m).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Relative humidity offset [b]"
+    id: cal_rh_b
+    icon: mdi:water-percent
+    entity_category: "config"
+    mode: box
+    min_value: -28
+    max_value: 28
+    step: 0.01
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_rh_b);
+    set_action:
+      - lambda: |-
+          id(calibration_rh_b) = x;
+          id(cal_rh_b).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Globe temperature slope [m]"
+    id: cal_tg_m
+    icon: mdi:thermometer
+    entity_category: "config"
+    mode: box
+    min_value: 0
+    max_value: 2
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_tg_m);
+    set_action:
+      - lambda: |-
+          id(calibration_tg_m) = x;
+          id(cal_tg_m).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Globe temperature offset [b]"
+    id: cal_tg_b
+    icon: mdi:thermometer
+    entity_category: "config"
+    mode: box
+    min_value: -25
+    max_value: 0
+    step: 0.01
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_tg_b);
+    set_action:
+      - lambda: |-
+          id(calibration_tg_b) = x;
+          id(cal_tg_b).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air speed 1 [a]"
+    id: cal_as1_a
+    icon: mdi:weather-windy
+    entity_category: "config"
+    mode: box
+    min_value: 0.5
+    max_value: 3.0
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_as1_a);
+    set_action:
+      - lambda: |-
+          id(calibration_as1_a) = x;
+          id(cal_as1_a).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air speed 1 [b]"
+    id: cal_as1_b
+    icon: mdi:weather-windy
+    entity_category: "config"
+    mode: box
+    min_value: 0.5
+    max_value: 4.0
+    step: 0.01
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_as1_b);
+    set_action:
+      - lambda: |-
+          id(calibration_as1_b) = x;
+          id(cal_as1_b).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air speed 1 [d0]"
+    id: cal_as1_d0
+    icon: mdi:weather-windy
+    entity_category: "config"
+    mode: box
+    min_value: -1.5
+    max_value: 4.0
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_as1_d0);
+    set_action:
+      - lambda: |-
+          id(calibration_as1_d0) = x;
+          id(cal_as1_d0).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air speed 1 [d1]"
+    id: cal_as1_d1
+    icon: mdi:weather-windy
+    entity_category: "config"
+    mode: box
+    min_value: -1.0
+    max_value: 1.0
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_as1_d1);
+    set_action:
+      - lambda: |-
+          id(calibration_as1_d1) = x;
+          id(cal_as1_d1).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air speed 2 [a]"
+    id: cal_as2_a
+    icon: mdi:weather-windy
+    entity_category: "config"
+    mode: box
+    min_value: 0.5
+    max_value: 3.0
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_as2_a);
+    set_action:
+      - lambda: |-
+          id(calibration_as2_a) = x;
+          id(cal_as2_a).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air speed 2 [b]"
+    id: cal_as2_b
+    icon: mdi:weather-windy
+    entity_category: "config"
+    mode: box
+    min_value: 0.5
+    max_value: 4.0
+    step: 0.01
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_as2_b);
+    set_action:
+      - lambda: |-
+          id(calibration_as2_b) = x;
+          id(cal_as2_b).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air speed 2 [d0]"
+    id: cal_as2_d0
+    icon: mdi:weather-windy
+    entity_category: "config"
+    mode: box
+    min_value: -1.5
+    max_value: 4.0
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_as2_d0);
+    set_action:
+      - lambda: |-
+          id(calibration_as2_d0) = x;
+          id(cal_as2_d0).publish_state(x);
+      - script.execute: cal_save
+
+  - platform: template
+    name: "Air speed 2 [d1]"
+    id: cal_as2_d1
+    icon: mdi:weather-windy
+    entity_category: "config"
+    mode: box
+    min_value: -1.0
+    max_value: 1.0
+    step: 0.001
+    update_interval: 60s
+    lambda: |-
+      return id(calibration_as2_d1);
+    set_action:
+      - lambda: |-
+          id(calibration_as2_d1) = x;
+          id(cal_as2_d1).publish_state(x);
+      - script.execute: cal_save
+
+
+# Identify and on-demand sampling
+# https://esphome.io/components/button/template.html
+button:
+  - platform: template
+    name: "Identify SAMBA"
+    id: cal_identify
+    icon: mdi:led-on
+    device_class: identify
+    entity_category: "config"
+    on_press:
+      - script.execute: identify_blink
+
+  - platform: template
+    name: "Sample Now"
+    id: cal_sample_now
+    icon: mdi:play-circle-outline
+    on_press:
+      - script.execute: sensor_sample
+
+script:
+  # Flush coefficients to flash now rather than waiting out flash_write_interval (10 min).
+  # Same shape as tags_save (config/tags.yaml): the globals component only stages a
+  # changed value from its loop(), so wait for that before syncing. mode: restart
+  # debounces a burst of edits into a single NVS write.
+  - id: cal_save
+    mode: restart
+    then:
+      - delay: 2s
+      - lambda: |-
+          if (!global_preferences->sync()) {
+            ESP_LOGE("samba", "Failed to save calibration to flash; it will revert on power cycle");
+            return;
+          }
+          ESP_LOGI("samba",
+                   "Calibration saved to flash: CO2 %.3f/%.2f Lux %.3f/%.2f Ta %.3f/%.2f RH %.3f/%.2f Tg %.3f/%.2f "
+                   "AS1 %.3f/%.3f/%.3f/%.3f AS2 %.3f/%.3f/%.3f/%.3f",
+                   id(calibration_co2_m), id(calibration_co2_b),
+                   id(calibration_lux_m), id(calibration_lux_b),
+                   id(calibration_ta_m1), id(calibration_ta_b),
+                   id(calibration_rh_m), id(calibration_rh_b),
+                   id(calibration_tg_m), id(calibration_tg_b),
+                   id(calibration_as1_a), id(calibration_as1_b), id(calibration_as1_d0), id(calibration_as1_d1),
+                   id(calibration_as2_a), id(calibration_as2_b), id(calibration_as2_d0), id(calibration_as2_d1));
+
+  # Blink the status LED cyan for 6 s so a unit can be picked out on a bench or in a room
+  - id: identify_blink
+    mode: restart
+    then:
+      - light.turn_on:
+          id: samba_led
+          effect: strobe_id
+      - delay: 6s
+      - light.turn_off:
+          id: samba_led

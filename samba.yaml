@@ -47,6 +47,7 @@ logger:
 packages:
   - !include config/adc.yaml
   - !include config/airspeed.yaml
+  - !include config/calibration.yaml
   - !include config/co2.yaml
   - !include config/diagnostics.yaml
   - !include config/esp32.yaml
