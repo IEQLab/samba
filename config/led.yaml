@@ -14,33 +14,91 @@ light:
     rmt_symbols: 64
     chipset: ws2812
 
+    # Linear: at the default 2.8, anything under ~12% brightness quantises to zero
+    gamma_correct: 1.0
+
     # Define LED effects
     effects:
+      # Used for all sensor WARNING states
       - pulse:
           name: "pulse_slow"
           transition_length: 2s
           update_interval: 3s
-          max_brightness: 0.20
-      - pulse:
-          name: "pulse_fast"
-          transition_length: 500ms
-          update_interval: 1s
-          max_brightness: 0.20
-      - pulse:
-          name: "pulse_beat"
-          transition_length:
-            on_length: 200ms
-            off_length: 500ms
-          update_interval: 800ms
-          max_brightness: 0.20
+          max_brightness: 0.15
       - strobe:
           name: "strobe_g"
           colors:
             - state: true
-              brightness: 25%
+              brightness: 10%
               red: 0%
               green: 50%
               blue: 0%
               duration: 250ms
             - state: false
               duration: 750ms
+
+# Alarm indication
+globals:
+  - id: led_alarm
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+interval:
+  - interval: 10s
+    then:
+      - lambda: |-
+          // Leave the boot strobe alone; no alarm can have tripped this early anyway.
+          if (millis() < 120000)
+            return;
+
+          int want = 0;
+          if (id(ads_error_detected).state) {
+            want = 6;                             // amber solid
+          } else if (id(k30_error_count) >= 4) {
+            want = 5;                             // blue solid
+          } else if (id(sgp_error_count) >= 6) {
+            want = 4;                             // magenta solid
+          } else if (id(ads_error_warning).state) {
+            want = 3;                             // amber pulse
+          } else if (id(k30_error_count) >= 3) {
+            want = 2;                             // blue pulse
+          } else if (id(sgp_error_count) >= 4) {
+            want = 1;                             // magenta pulse
+          }
+
+          // Only on a change, or when the heartbeat has switched the light off underneath us
+          // (it is the only caller that publishes). Re-applying every tick would restart the
+          // pulse, because start_effect_() always stops and starts.
+          const bool clobbered = (want != 0) && !id(samba_led).remote_values.is_on();
+          if (want == id(led_alarm) && !clobbered)
+            return;
+          id(led_alarm) = want;
+
+          if (want == 0) {
+            id(samba_led).turn_off().perform();
+            return;
+          }
+
+          auto call = id(samba_led).turn_on();
+          switch (want) {
+            case 6:
+            case 3:
+              call.set_rgb(1.0f, 0.5f, 0.0f);     // amber - ADS1115 (globe temp, air speed)
+              break;
+            case 5:
+            case 2:
+              call.set_rgb(0.0f, 0.0f, 1.0f);     // blue - K30 (CO2)
+              break;
+            default:
+              call.set_rgb(1.0f, 0.0f, 1.0f);     // magenta - SGP4x (VOC, NOx)
+              break;
+          }
+          if (want >= 4) {
+            call.set_effect("none");
+            call.set_brightness(0.25f);
+          } else {
+            // The effect drives brightness itself, so setting it here would be overridden.
+            call.set_effect("pulse_slow");
+          }
+          call.perform();

@@ -21,6 +21,8 @@ sensor:
     sample_rate: 64
     update_interval: 2s
     internal: true
+    on_value:
+      - lambda: 'id(ads_as1_last_ok) = millis();'
 
 # Air speed sensor 2
   - platform: ads1115
@@ -31,6 +33,8 @@ sensor:
     sample_rate: 64
     update_interval: 2s
     internal: true
+    on_value:
+      - lambda: 'id(ads_as2_last_ok) = millis();'
 
 # NTC thermistor
   - platform: ads1115
@@ -41,23 +45,62 @@ sensor:
     sample_rate: 16
     update_interval: 30s
     internal: true
+    on_value:
+      - lambda: 'id(ads_ntc_last_ok) = millis();'
 
-# ADS1115 error counter
+# ADS1115 error counter: 2s stale ticks. Not isnan() - a failed read is never published
   - platform: template
     id: ads_error_count
     internal: true
     update_interval: 2s
     accuracy_decimals: 0
     lambda: |-
-      static int count = 0;
-      if (isnan(id(ads_as1).state) || isnan(id(ads_as2).state) || isnan(id(ads_ntc).state)) {
-        count++;
-      } else {
-        count = 0;
-      }
-      return count;
+      const uint32_t now = millis();
+      const bool as1_stale = (now - id(ads_as1_last_ok)) > 6000;
+      const bool as2_stale = (now - id(ads_as2_last_ok)) > 6000;
+      const bool ntc_stale = (now - id(ads_ntc_last_ok)) > 90000;
+      const bool stale = as1_stale || as2_stale || ntc_stale;
 
-# ADS1115 error detection
+      // Seconds stale per hour, EWMA over ~59min, gating the restart only: errors here come
+      // in waves and a reboot must not react to one. Steady state is 3571 * duty cycle, so
+      // the 1250 threshold in ads_restart_due is a sustained 35%.
+      id(ads_unhealthy) = (id(ads_unhealthy) + (stale ? 2.0f : 0.0f)) * 0.99944f;
+
+      // Consecutive-failure ticks, driving the LED and the soft recovery. Any successful read
+      // resets it. A global, not a static, so it can be read back when diagnosing a unit.
+      if (stale) {
+        id(ads_error_ticks)++;
+      } else {
+        id(ads_error_ticks) = 0;
+      }
+      return id(ads_error_ticks);
+
+# Last successful read per channel (millis; uint32_t subtraction survives rollover).
+globals:
+  - id: ads_as1_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: ads_as2_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: ads_ntc_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
+# Consecutive stale ticks and the hour-scale duty cycle
+  - id: ads_error_ticks
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ads_unhealthy
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
+
+# ADS1115 error detection. LED handled by the arbiter in led.yaml
 binary_sensor:
 # Warning after 3min of continuous errors
   - platform: template
@@ -66,45 +109,49 @@ binary_sensor:
     lambda: |-
       return id(ads_error_count).state >= 90;
     on_press:
-      - light.turn_on:
-          id: samba_led
-          effect: none
-          red: 80%
-          green: 50%
-          blue: 0%
-          brightness: 50%
+      - logger.log:
+          level: WARN
+          tag: "samba"
+          format: "ADS1115 unresponsive for 3min"
     on_release:
-      - light.turn_off: samba_led
+      - logger.log:
+          level: INFO
+          tag: "samba"
+          format: "ADS1115 recovered"
 
-# Error LED after 5min of continuous errors
+# Error after 5min of continuous errors
   - platform: template
     id: ads_error_detected
     internal: true
     lambda: |-
       return id(ads_error_count).state >= 150;
-    on_press:
-      - light.turn_on:
-          id: samba_led
-          effect: none
-          red: 100%
-          green: 0%
-          blue: 0%
-          brightness: 100%
 
-# Restart as a last-resort recovery, at most hourly. A dead ADS1115 costs globe temperature
-# and air speed; it must not stop the remaining sensors reporting, which is what an immediate
-# restart did - rebooting every 5min, faster than the sample cycle, so the unit published
-# nothing at all. Uptime resets on restart, so gating on it self-rate-limits with no persistent
-# state. The condition lives in the lambda rather than the action because on_press fires only
-# on the false->true edge: gating the action would skip the restart and never retry.
+# Restart as a last resort: 5min continuous, 35% of the hour stale, and 1h uptime
   - platform: template
     id: ads_restart_due
     internal: true
     lambda: |-
-      return id(ads_error_count).state >= 150 && id(sys_uptime).state > 3600;
+      return id(ads_error_count).state >= 150
+          && id(ads_unhealthy) > 1250.0f
+          && id(sys_uptime).state > 3600;
     on_press:
       - logger.log:
           level: ERROR
-          format: "ADS1115 dead after 1h uptime - restarting to attempt recovery"
+          format: "ADS1115 stale %.0f percent of last hour - restarting"
+          args: ['id(ads_unhealthy) / 35.71f']
       - delay: 5s
       - button.press: sys_restart
+
+# Soft recovery to unstick a wedged bus in place
+interval:
+  - interval: 10s
+    then:
+      - lambda: |-
+          if (!id(ads_error_warning).state)
+            return;
+          if (id(i2c_recovery_a).reset_bus()) {
+            ESP_LOGW("adc", "ADS1115 unresponsive for %.0f x 2s - I2C bus reset performed",
+                     id(ads_error_count).state);
+          } else {
+            ESP_LOGD("adc", "ADS1115 still unresponsive - bus reset rate-limited or failed");
+          }

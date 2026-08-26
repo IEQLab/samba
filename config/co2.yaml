@@ -26,6 +26,9 @@ sensor:
           window_size: 6
           send_every: 2
           send_first_at: 1
+    on_raw_value:
+      # Timestamp every successful raw read
+      - lambda: 'if (!std::isnan(x)) id(k30_last_ok) = millis();'
 
 # Define CO2 measurements
   - platform: template
@@ -38,16 +41,21 @@ sensor:
     icon: mdi:molecule-co2
     filters:
       - lambda: |-
-          // A failed K30 read publishes NaN, which k30_co2's own filters drop, so its filtered
-          // .state keeps the last good value. Check the raw value so a dead sensor yields NaN
-          // here: Home Assistant shows unknown, the SD row records nan, and the InfluxDB
-          // upload leaves the field out (and warns) instead of repeating a stale reading.
-          if (std::isnan(id(k30_co2).get_raw_state())) return NAN;
+          // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out
+          // of the upload. Only after a full sample interval of silence - the 6-wide median
+          // carries CO2 through a single failed poll.
+          if (id(k30_last_ok) == 0 || (millis() - id(k30_last_ok)) > 330000)
+            return NAN;
           return ((id(calibration_co2_m) * id(k30_co2).state) + id(calibration_co2_b));
 
 
 # Error counter for initialisation failure recovery
 globals:
+# millis() of the last successful raw read
+  - id: k30_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
   - id: k30_error_count
     type: int
     restore_value: no
@@ -62,37 +70,23 @@ interval:
           // read; the filtered .state never is, because filter_out drops the NaN.
           if (std::isnan(id(k30_co2).get_raw_state())) {
             id(k30_error_count)++;
-            if (id(k30_error_count) == 1) {
-
-              // Try re-initialisation on first failure
-              ESP_LOGW("samba", "K30 CO2 sensor failure - attempting re-initialisation");
+            // Re-initialise on the first failure, then every 10th (5min) while it stays down.
+            // One attempt used to be all it got, which with an hourly restart could mean an
+            // hour of no CO2 and no further recovery attempted.
+            if (id(k30_error_count) == 1 || id(k30_error_count) % 10 == 0) {
+              ESP_LOGW("samba", "K30 CO2 sensor failure %d - attempting re-initialisation",
+                       id(k30_error_count));
               id(k30_co2).reinitialize();
-
             } else {
-              ESP_LOGW("samba", "K30 CO2 sensor failure %d/4", id(k30_error_count));
+              ESP_LOGW("samba", "K30 CO2 sensor failure %d", id(k30_error_count));
             }
 
-            // Warning LED at 3 failures (cyan)
-            if (id(k30_error_count) == 3) {
-              auto call = id(samba_led).turn_on();
-              call.set_effect("none");
-              call.set_rgb(0.0, 0.8, 0.8);
-              call.set_brightness(0.5);
-              call.perform();
-            }
+            // LED handled by the arbiter in led.yaml.
 
-            // Error LED at 4 failures (blue) then restart
+            // Restart at 4 failures
             if (id(k30_error_count) >= 4) {
-              auto call = id(samba_led).turn_on();
-              call.set_effect("none");
-              call.set_rgb(0.0, 0.0, 1.0);
-              call.set_brightness(1.0);
-              call.perform();
-
-              // A dead K30 must not stop the other twelve sensors reporting: the raw read
-              // publishes NaN, so CO2 is simply absent upstream. Restart only as a last-resort
-              // recovery attempt, and at most hourly - uptime resets on restart, so this
-              // self-rate-limits without any persistent state.
+              // NaN propagates upstream, so a dead K30 costs only CO2. Restart at most hourly;
+              // uptime resets on restart, so this self-rate-limits.
               if (id(sys_uptime).state > 3600) {
                 ESP_LOGE("samba", "K30 re-initialisation failed after 1h uptime - restarting to attempt recovery");
                 id(sys_restart).press();
@@ -102,7 +96,6 @@ interval:
           } else {
             if (id(k30_error_count) > 0) {
               ESP_LOGI("samba", "K30 CO2 sensor recovered after re-initialisation");
-              id(samba_led).turn_off();
             }
             id(k30_error_count) = 0;
           }

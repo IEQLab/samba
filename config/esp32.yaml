@@ -53,6 +53,14 @@ i2c:
     frequency: 50kHz
     timeout: 13ms
 
+# I2C runtime bus recovery
+# Custom component: clears a bus wedged by an aborted clock-stretching target
+# port 0: bus_a is the only HP bus. min_interval 30s: one NTC read cycle, the shortest useful
+i2c_recovery:
+  id: i2c_recovery_a
+  port: 0
+  min_interval: 30s
+
 # Configure UART bus
 # https://esphome.io/components/uart
 uart:

@@ -25,6 +25,9 @@ sensor:
         - clamp:
             max_value: 500
             ignore_out_of_range: false
+      on_raw_value:
+        # warning flag as well as isnan(x): a NACKed request keeps firing with a frozen value
+        - lambda: 'if (!std::isnan(x) && !id(sgp41).status_has_warning()) id(sgp_last_ok) = millis();'
     nox_index:
       id: sgp_nox
       internal: true
@@ -45,10 +48,11 @@ sensor:
     unit_of_measurement: "ppb"
     icon: mdi:radiator
     lambda: |-
-      // sgp4x publishes nothing after a failed read (sgp_voc keeps its last value) but flags
-      // a warning until the next good read. Report NaN so a dead sensor shows as unknown in
-      // Home Assistant, nan on the SD card, and is left out of the InfluxDB upload.
-      if (id(sgp41).status_has_warning()) return NAN;
+      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
+      // the upload. Only after a full sample interval of silence - the 8-wide median carries
+      // VOC and NOx through a single transient failure.
+      if (id(sgp_last_ok) == 0 || (millis() - id(sgp_last_ok)) > 330000)
+        return NAN;
       return (log(501.0 - id(sgp_voc).state) - 6.24) * (-381.97);
     
 # Define NOx measurements
@@ -60,18 +64,24 @@ sensor:
     device_class: aqi
     icon: mdi:radiator
     lambda: |-
-      if (id(sgp41).status_has_warning()) return NAN;
+      if (id(sgp_last_ok) == 0 || (millis() - id(sgp_last_ok)) > 330000)
+        return NAN;
       return id(sgp_nox).state;
 
 
 # Error counter for initialisation failure recovery
 globals:
+# millis() of the last successful raw read
+  - id: sgp_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
   - id: sgp_error_count
     type: int
     restore_value: no
     initial_value: '0'
 
-# Restart after 3 consecutive failures (after 100s warmup)
+# Restart after 6 consecutive failures (after 100s warmup)
 interval:
   - interval: 30s
     then:
@@ -87,27 +97,14 @@ interval:
             }
 
             id(sgp_error_count)++;
-            ESP_LOGW("samba", "SGP4x sensor failure %d/6", id(sgp_error_count));
+            ESP_LOGW("samba", "SGP4x sensor failure %d", id(sgp_error_count));
 
-            // Warning LED at 4 failures (purple)
-            if (id(sgp_error_count) == 4) {
-              auto call = id(samba_led).turn_on();
-              call.set_effect("none");
-              call.set_rgb(0.6, 0.0, 0.8);
-              call.set_brightness(0.5);
-              call.perform();
-            }
+            // LED handled by the arbiter in led.yaml.
 
-            // Error LED at 6 failures (magenta) then restart
+            // Restart at 6 failures
             if (id(sgp_error_count) >= 6) {
-              auto call = id(samba_led).turn_on();
-              call.set_effect("none");
-              call.set_rgb(1.0, 0.0, 0.6);
-              call.set_brightness(1.0);
-              call.perform();
-
-              // As with the K30: NaN propagates upstream, so a dead SGP4x costs only VOC/NOx.
-              // Restart at most hourly rather than turning one sensor into a total outage.
+              // NaN propagates upstream, so a dead SGP4x costs only VOC/NOx. Restart at most
+              // hourly rather than turning one sensor into a total outage.
               if (id(sys_uptime).state > 3600) {
                 ESP_LOGE("samba", "SGP4x sensor failed after 1h uptime - restarting to attempt recovery");
                 id(sys_restart).press();
@@ -116,7 +113,7 @@ interval:
 
           } else {
             if (id(sgp_error_count) > 0) {
-              id(samba_led).turn_off();
+              ESP_LOGI("samba", "SGP4x sensor recovered");
             }
             id(sgp_error_count) = 0;
           }
