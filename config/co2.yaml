@@ -60,15 +60,27 @@ globals:
     type: int
     restore_value: no
     initial_value: '0'
+# Hour-scale failure duty cycle, restart gate only. Not restored: a restart is itself the
+# recovery attempt, so its own justification must not carry over.
+  - id: k30_unhealthy
+    type: float
+    restore_value: no
+    initial_value: '0.0f'
 
-# Re-initialise on first failure, restart after 4 failures (~2 mins)
+# Re-initialise on first failure; restart only on a sustained fault, at most hourly
 interval:
   - interval: 30s
     then:
       - lambda: |-
           // Check if CO2 sensor is returning valid data. The raw value is NaN after a failed
           // read; the filtered .state never is, because filter_out drops the NaN.
-          if (std::isnan(id(k30_co2).get_raw_state())) {
+          const bool failed = std::isnan(id(k30_co2).get_raw_state());
+
+          // Seconds failed per hour, EWMA over ~1h at this 30s poll: steady state is
+          // 3600 * duty cycle, so k30_unhealthy reads directly as seconds of the last hour.
+          id(k30_unhealthy) = (id(k30_unhealthy) + (failed ? 30.0f : 0.0f)) * 0.99167f;
+
+          if (failed) {
             id(k30_error_count)++;
             // Re-initialise on the first failure, then every 10th (5min) while it stays down.
             // One attempt used to be all it got, which with an hourly restart could mean an
@@ -83,14 +95,15 @@ interval:
 
             // LED handled by the arbiter in led.yaml.
 
-            // Restart at 4 failures
-            if (id(k30_error_count) >= 4) {
-              // NaN propagates upstream, so a dead K30 costs only CO2. Restart at most hourly;
-              // uptime resets on restart, so this self-rate-limits.
-              if (id(sys_uptime).state > 3600) {
-                ESP_LOGE("samba", "K30 re-initialisation failed after 1h uptime - restarting to attempt recovery");
-                id(sys_restart).press();
-              }
+            // Restart only on a sustained fault. A 12h soak measured a flaky board failing 31%
+            // of polls, and its restarts did nothing: 0.641 -> 0.644 failures/min across the 9
+            // boots either side. 2400 is 67% of the hour, so only a near-dead K30 restarts. NaN
+            // propagates upstream, so until then a dead K30 costs only CO2.
+            if (id(k30_error_count) >= 4 && id(k30_unhealthy) > 2400.0f
+                && id(sys_uptime).state > 3600) {
+              ESP_LOGE("samba", "K30 failed %.0f percent of the last hour - restarting to attempt recovery",
+                       id(k30_unhealthy) / 36.0f);
+              id(sys_restart).press();
             }
 
           } else {
