@@ -94,6 +94,36 @@ Published measurements are sent every 5 minutes to one or more of the following 
 
 **SD Card** — Local CSV logging via the `sd_spi_card` component. Files are named using the device MAC address and UTC timestamp. No network connection required.
 
+### Status LED
+
+A single RGB LED on the board reports device state. One rule covers the whole scheme:
+**colour identifies the subsystem, and pulsing versus solid identifies severity.** A slow
+pulse is a warning the device expects to recover from on its own; a steady light means it has
+escalated and will attempt a restart if the fault persists. Brightness is deliberately low
+throughout so a rack of units is not distracting in an occupied office.
+
+| LED | Meaning | What to do |
+|-----|---------|------------|
+| Green, flashing | Booting | Nothing — clears after startup |
+| White, brief flash | 5-minute sample taken and uploaded | Nothing — this is the healthy heartbeat |
+| Off | Running normally | Nothing |
+| Amber, pulsing | Globe temperature / air speed unresponsive ~3 min | Watch — often transient |
+| Amber, solid | Same, ~5 min. Bus recovery attempted; restarts if the fault persists for over a third of an hour | Check the RJ45 cable to the remote board, then reseat both ends |
+| Blue, pulsing | CO2 (K30) failed 3 consecutive reads | Watch — usually self-recovers |
+| Blue, solid | CO2 failed 4 or more; restart attempted after an hour | Check the K30; a persistent fault is often board-specific rather than the sensor |
+| Magenta, pulsing | VOC / NOx (SGP4x) failed 4 consecutive reads | Watch — usually self-recovers |
+| Magenta, solid | VOC / NOx failed 6 or more; restart attempted after an hour | Check the sensor |
+
+The LED returns to off as soon as the sensor recovers.
+
+**A lit LED does not mean the device has stopped working.** A failed sensor is reported as
+`nan` and left out of the upload, while every other measurement continues to be sampled and
+sent. Restarts are rate-limited to at most one per hour precisely so that one dead sensor
+cannot take the whole unit off the air.
+
+Amber is the one worth attention in the field: the remote board connects over an RJ45 lead,
+and a marginal cable is the most common cause of it.
+
 ### Modifying Firmware
 
 Users are free to modify the SAMBA firmware to suit their needs. We recommend familiarity with ESPHome and microcontroller programming before doing so. To get started:

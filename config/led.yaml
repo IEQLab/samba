@@ -16,11 +16,13 @@ light:
 
     # Define LED effects
     effects:
+      # Used for all sensor WARNING states: a slow gentle pulse, dim enough for an
+      # occupied office. Severity is signalled by pulse-vs-solid, not by brightness.
       - pulse:
           name: "pulse_slow"
           transition_length: 2s
           update_interval: 3s
-          max_brightness: 0.20
+          max_brightness: 0.15
       - pulse:
           name: "pulse_fast"
           transition_length: 500ms
@@ -37,7 +39,7 @@ light:
           name: "strobe_g"
           colors:
             - state: true
-              brightness: 25%
+              brightness: 10%
               red: 0%
               green: 50%
               blue: 0%

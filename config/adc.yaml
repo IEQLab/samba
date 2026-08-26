@@ -125,11 +125,10 @@ binary_sensor:
     on_press:
       - light.turn_on:
           id: samba_led
-          effect: none
-          red: 80%
+          effect: pulse_slow
+          red: 100%
           green: 50%
           blue: 0%
-          brightness: 50%
     on_release:
       - light.turn_off: samba_led
 
@@ -144,9 +143,9 @@ binary_sensor:
           id: samba_led
           effect: none
           red: 100%
-          green: 0%
+          green: 50%
           blue: 0%
-          brightness: 100%
+          brightness: 25%
 
 # Restart as a last-resort recovery, at most hourly. A dead ADS1115 costs globe temperature
 # and air speed; it must not stop the remaining sensors reporting, which is what an immediate
