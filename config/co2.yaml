@@ -84,7 +84,7 @@ interval:
               id(k30_co2).reinitialize();
 
             } else {
-              ESP_LOGW("samba", "K30 CO2 sensor failure %d/4", id(k30_error_count));
+              ESP_LOGW("samba", "K30 CO2 sensor failure %d", id(k30_error_count));
             }
 
             // Warning LED at 3 failures (cyan)

@@ -101,7 +101,7 @@ interval:
             }
 
             id(sgp_error_count)++;
-            ESP_LOGW("samba", "SGP4x sensor failure %d/6", id(sgp_error_count));
+            ESP_LOGW("samba", "SGP4x sensor failure %d", id(sgp_error_count));
 
             // Warning LED at 4 failures (purple)
             if (id(sgp_error_count) == 4) {
