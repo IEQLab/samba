@@ -1,6 +1,6 @@
 # SAMBA IEQ Monitoring System
 
-This repository contains the firmware for SAMBA v2, a low-cost indoor environmental quality (IEQ) monitor developed by the [IEQ Lab](https://www.sydney.edu.au/architecture/our-research/research-labs-and-facilities/indoor-environmental-quality-lab.html) at The University of Sydney. SAMBA runs on [ESPHome](https://esphome.io), an open-source firmware framework for ESP32 microcontrollers. The minimum supported version of ESPHome is **2026.3.0**.
+This repository contains the firmware for SAMBA v2, a low-cost indoor environmental quality (IEQ) monitor developed by the [IEQ Lab](https://www.sydney.edu.au/architecture/our-research/research-labs-and-facilities/indoor-environmental-quality-lab.html) at The University of Sydney. SAMBA runs on [ESPHome](https://esphome.io), an open-source firmware framework for ESP32 microcontrollers. The minimum supported version of ESPHome is **2026.8.1**.
 
 ### Configuration
 

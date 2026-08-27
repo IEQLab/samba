@@ -5,7 +5,7 @@
 SAMBA is an ESPHome-based firmware for indoor environmental quality (IEQ) monitoring, developed by the IEQ Lab at The University of Sydney. It runs on an ESP32 WROOM-32E (16MB flash) using the ESP-IDF framework (not Arduino). The device measures temperature, humidity, globe temperature, air speed, CO2, PM2.5, VOC/NOx, illuminance, and sound pressure level, logging data to InfluxDB, Home Assistant, and SD card.
 
 **Current version:** Check `samba.yaml` for the latest version.
-**Min ESPHome version:** 2026.3.0
+**Min ESPHome version:** 2026.8.1
 
 ## Repository Structure
 
@@ -15,6 +15,8 @@ config/                 # Modular YAML configs (one per function/sensor)
   esp32.yaml            # Board, framework (ESP-IDF), I2C, UART, SPI, sdkconfig
   substitutions.yaml    # Secrets placeholders (WiFi, OTA, InfluxDB credentials)
   globals.yaml          # Persistent calibration coefficients and enable flags
+  calibration.yaml      # Calibration coefficients as native-API number entities
+  tags.yaml             # InfluxDB building/level/zone tags as native-API text entities
   sample.yaml           # 5-minute sampling loop (sensor update + publish + SD append)
   rtc.yaml              # DS1307 RTC, SNTP sync, sample trigger, firmware check
   sd.yaml               # SD card mount/write via sd_spi_card component
@@ -38,6 +40,7 @@ components/             # Custom external ESPHome components (C++ and Python)
   senseair_i2c/         # K30/K33 CO2 sensor over I2C
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
+  i2c_recovery/         # Runtime I2C bus reset (clocks out a wedged target)
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
 .claude/skills/bump.md   # /bump skill: version bump and release procedure
@@ -62,10 +65,35 @@ All sensor calibrations use persistent global variables (stored in flash, modifi
 
 ### Error Recovery
 
-- **CO2:** Reinitialize on first failure, restart after 4 consecutive (cyan/blue LED)
-- **VOC/NOx:** Restart after 6 consecutive failures (purple/magenta LED), skip during 100s warmup
-- **ADS1115:** Warning at 3 min errors (orange LED), restart at 5 min (red LED)
-- **System:** Safe mode on boot crash, periodic SD card presence check
+A failed sensor costs only its own measurands: the raw read publishes NaN, so the field is
+absent in InfluxDB, `nan` on SD and unknown in Home Assistant, and every other sensor keeps
+reporting. A restart is the last resort, never the first response — the watchdogs used to fire
+faster than the 5min sample, so one dead sensor took the whole unit off the air.
+
+All three I2C sensors keep an hour-scale EWMA duty cycle (`k30_unhealthy`, `ads_unhealthy`,
+`sgp_unhealthy`), each reading directly as **seconds failed per hour** at steady state
+(`3571 x duty`). Divide by `35.71` for a percentage. Only the K30 and ADS1115 escalate to a
+restart, and both also require `sys_uptime > 3600`, which self-rate-limits to one attempt an hour.
+
+- **CO2 (K30):** re-initialise on the first failure, then every 10th (5min) while it stays
+  down. Restart only at `k30_error_count >= 4` **and** `k30_unhealthy > 2400` (67% of the hour),
+  so a flaky sensor rides it out and only a near-dead one reboots.
+- **VOC/NOx (SGP4x):** **never restarts the device** — see `config/tvoc.yaml`. `sgp4x` only
+  `mark_failed()`s in `setup()` and the self test; every runtime read failure is
+  `status_set_warning()` and the component clears it itself on the next good read. A reboot would
+  also discard the `learning_time_offset_hours: 720` gas baseline. Error counting skips the first
+  100s warmup. `sgp_unhealthy` is diagnostic only.
+- **ADS1115:** soft recovery first — `i2c_recovery_a.reset_bus()` clocks out a stuck target at
+  the warning threshold (90 ticks / 3min), rate-limited to 30s apart and capped at three attempts
+  per episode. Restart needs all three of `ads_error_count >= 150` (5min), `ads_unhealthy > 1250`
+  (35% of the hour) and uptime over an hour. The counter measures per-channel **staleness** of the
+  last successful read, not `isnan()` — a failed ADS1115 read leaves `.state` at its last good value.
+- **System:** safe mode on boot crash, periodic SD card presence check.
+
+The status LED is driven from one arbiter in `config/led.yaml` polling these counters every 10s,
+so an alarm survives the 5min sample heartbeat. Colour identifies the subsystem — **amber**
+ADS1115, **blue** K30, **magenta** SGP4x — and pulsing versus solid identifies severity. Cyan and
+purple are retired. See the Status LED table in README.md.
 
 ### Hardware Pinout
 
@@ -81,7 +109,7 @@ All sensor calibrations use persistent global variables (stored in flash, modifi
 
 ### Prerequisites
 
-- ESPHome 2026.3.0+ installed
+- ESPHome 2026.8.1+ installed
 - `secrets.yaml` with WiFi, OTA, and InfluxDB credentials
 - USB-C cable for initial flash
 
