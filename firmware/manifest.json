@@ -1,15 +1,15 @@
 {
   "name": "SAMBA Indoor Environmental Monitor",
-  "version": "1.99.98",
+  "version": "1.99.99",
   "home_assistant_domain": "esphome",
   "builds": [
     {
       "chipFamily": "ESP32",
       "ota": {
-        "md5": "45335328830c0a1708436c12abd052db",
-        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.98.bin",
-        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.98",
-        "summary": "Fix unrecoverable boot loop when entering safe mode; revert I2C to 50kHz"
+        "md5": "8d9356725174bbff9655deaa6a2743ca",
+        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v1.99.99.bin",
+        "release_url": "https://github.com/IEQLab/samba/releases/tag/v1.99.99",
+        "summary": "Keep a unit reporting when one sensor dies; recover the I2C bus in place; set calibration and tags over the native API"
       }
     }
   ]
