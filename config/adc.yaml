@@ -100,6 +100,12 @@ globals:
     restore_value: no
     initial_value: '0.0f'
 
+# Bus resets performed in the current error episode, cleared when the warning releases
+  - id: ads_reset_attempts
+    type: int
+    restore_value: no
+    initial_value: '0'
+
 # ADS1115 error detection. LED handled by the arbiter in led.yaml
 binary_sensor:
 # Warning after 3min of continuous errors
@@ -114,6 +120,7 @@ binary_sensor:
           tag: "samba"
           format: "ADS1115 unresponsive for 3min"
     on_release:
+      - lambda: 'id(ads_reset_attempts) = 0;'
       - logger.log:
           level: INFO
           tag: "samba"
@@ -142,16 +149,26 @@ binary_sensor:
       - delay: 5s
       - button.press: sys_restart
 
-# Soft recovery to unstick a wedged bus in place
+# Soft recovery to unstick a wedged bus in place, three attempts per episode
 interval:
   - interval: 10s
     then:
       - lambda: |-
           if (!id(ads_error_warning).state)
             return;
+
+          // A reset that genuinely unwedges a bus works on the first attempt. The Aug 2026
+          // soak fired 92 with no measurable effect, 56 of them into a single 27min episode
+          // that then recovered on its own schedule. Kept because a wedged bus is real and
+          // the reset is cheap, but capped: three attempts is a clean test of the premise,
+          // where an unbounded retry every 30s only produces noise.
+          if (id(ads_reset_attempts) >= 3)
+            return;
+
           if (id(i2c_recovery_a).reset_bus()) {
-            ESP_LOGW("adc", "ADS1115 unresponsive for %.0f x 2s - I2C bus reset performed",
-                     id(ads_error_count).state);
+            id(ads_reset_attempts)++;
+            ESP_LOGW("adc", "ADS1115 unresponsive for %.0f x 2s - I2C bus reset %d of 3",
+                     id(ads_error_count).state, id(ads_reset_attempts));
           } else {
             ESP_LOGD("adc", "ADS1115 still unresponsive - bus reset rate-limited or failed");
           }
