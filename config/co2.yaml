@@ -77,7 +77,7 @@ interval:
           const bool failed = std::isnan(id(k30_co2).get_raw_state());
 
           // Seconds failed per hour, EWMA over ~1h at this 30s poll: steady state is
-          // 3600 * duty cycle, so k30_unhealthy reads directly as seconds of the last hour.
+          // 3571 * duty cycle, so k30_unhealthy reads directly as seconds of the last hour.
           id(k30_unhealthy) = (id(k30_unhealthy) + (failed ? 30.0f : 0.0f)) * 0.99167f;
 
           if (failed) {
@@ -102,7 +102,7 @@ interval:
             if (id(k30_error_count) >= 4 && id(k30_unhealthy) > 2400.0f
                 && id(sys_uptime).state > 3600) {
               ESP_LOGE("samba", "K30 failed %.0f percent of the last hour - restarting to attempt recovery",
-                       id(k30_unhealthy) / 36.0f);
+                       id(k30_unhealthy) / 35.71f);
               id(sys_restart).press();
             }
 
