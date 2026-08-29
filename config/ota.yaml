@@ -7,6 +7,10 @@
 # https://esphome.io/components/ota.html
 ota:
   - platform: esphome
+    id: ota_esphome
+    # Compiled-in fallback; a password provisioned over the native API takes precedence (see
+    # the provisioning block below). Keep `password:` present even when it is "" so ESPHome
+    # compiles the auth path, which set_auth_password() needs.
     password: "${ota_password}"
     on_begin:
       then:
@@ -52,6 +56,63 @@ safe_mode:
       # logger.log is safe because it waits on nothing.
       - logger.log: "Restoring SAMBA due to an unknown error"
 
+# OTA password provisioning over the native API (samba_app: `samba deploy`), the same shape as
+# the InfluxDB token in config/influx.yaml: the password lives in the ota_password global (NVS,
+# which OTA never rewrites) and takes precedence over the compiled-in one, so published
+# binaries can stop carrying a secret. One password per building. Nothing here logs it.
+# Safe mode never reaches on_boot, so a crash-looping unit serves the esphome OTA platform
+# with the compiled-in password only - and with none once secrets.yaml has ota_password "".
+esphome:
+  on_boot:
+    # after the globals are restored (HARDWARE); set_auth_password only stores the string
+    - priority: 600
+      then:
+        - lambda: |-
+            if (!id(ota_password).empty())
+              id(ota_esphome).set_auth_password(id(ota_password));
+
+api:
+  actions:
+    - action: ota_set_password
+      variables:
+        password: string
+      then:
+        - lambda: |-
+            // An empty password clears the provisioned one (the compiled-in password, if any,
+            // applies again).
+            if (password.size() > 64) {
+              ESP_LOGW("samba", "Rejected OTA password: %u characters", (unsigned) password.size());
+              return;
+            }
+            for (char c : password) {
+              if (c <= ' ' || c > '~') {
+                ESP_LOGW("samba", "Rejected OTA password: not printable ASCII");
+                return;
+              }
+            }
+            id(ota_password) = password;
+            id(ota_esphome).set_auth_password(password.empty() ? std::string("${ota_password}") : password);
+            id(ota_password_fp).update();
+            ESP_LOGI("samba", "OTA password %s (fingerprint %s)",
+                     password.empty() ? "cleared" : "set", id(ota_password_fp).get_state().c_str());
+        - script.execute: ota_password_save
+
+text_sensor:
+  # Fingerprint of the provisioned OTA password, as for the InfluxDB token: FNV-1 32-bit hash
+  # as 8 hex digits, "unset" when none.
+  - platform: template
+    name: "OTA Password"
+    id: ota_password_fp
+    icon: mdi:key-outline
+    entity_category: "diagnostic"
+    update_interval: 60s
+    lambda: |-
+      if (id(ota_password).empty())
+        return std::string("unset");
+      char buf[9];
+      snprintf(buf, sizeof(buf), "%08x", (unsigned) esphome::fnv1_hash(id(ota_password)));
+      return std::string(buf);
+
 # Store jitter delay as a global variable
 globals:
   - id: fw_jitter_ms
@@ -61,6 +122,18 @@ globals:
 
 # Define script to scatter firmware update checks
 script:
+  # Flush the OTA password to flash now (same shape as influx_token_save).
+  - id: ota_password_save
+    mode: restart
+    then:
+      - delay: 2s
+      - lambda: |-
+          if (!global_preferences->sync()) {
+            ESP_LOGE("samba", "Failed to save OTA password to flash; it will revert on power cycle");
+            return;
+          }
+          ESP_LOGI("samba", "OTA password saved to flash");
+
   - id: fw_check
     mode: queued
     then:

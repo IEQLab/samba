@@ -7,6 +7,14 @@
 # Enable Home Assistant API
 api:
   reboot_timeout: 0s
+  # Noise encryption with the key provisioned at runtime rather than compiled in, so the
+  # published binary carries no key. Until a key is set the device accepts a Noise handshake
+  # with the all-zeros PSK (and plaintext, which ESPHome removes after 2027.2.0) and lets the
+  # client set one (NoiseEncryptionSetKeyRequest; `samba deploy` does this before it sends
+  # anything else). The key is kept in NVS, which OTA never rewrites; from then on the device
+  # is Noise-only with that key, and only the client or a factory reset can replace it.
+  # One key per building - the same key Home Assistant or any local client connects with.
+  encryption: {}
   on_client_connected:
     - lambda: |-
         char msg[768];

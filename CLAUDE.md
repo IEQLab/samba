@@ -21,9 +21,9 @@ config/                 # Modular YAML configs (one per function/sensor)
   rtc.yaml              # DS1307 RTC, SNTP sync, sample trigger, firmware check
   sd.yaml               # SD card mount/write via sd_spi_card component
   influx.yaml           # InfluxDB v2 upload config + token provisioning over the native API
-  homeassistant.yaml    # Native API endpoint
+  homeassistant.yaml    # Native API endpoint (Noise encryption, key provisioned at runtime)
   wifi.yaml             # WiFi and captive portal
-  ota.yaml              # HTTP OTA updates
+  ota.yaml              # HTTP OTA updates + esphome OTA password provisioning
   led.yaml              # WS2812 RGB LED effects
   diagnostics.yaml      # WiFi signal, uptime, restart buttons
   tair.yaml             # SHT4x temperature/RH (linear cal + vapour pressure correction)
@@ -316,31 +316,54 @@ All credentials are in `secrets.yaml` (gitignored) and referenced via `!secret` 
 
 Note that `!secret` only keeps a value out of the YAML: ESPHome bakes substitutions into the
 generated C++ and therefore into the binary, and `firmware/*.bin` is committed to this public
-repo. The InfluxDB token is the one credential that no longer has to be there — see below.
+repo. No credential has to be there any more: the WiFi password never was (captive portal),
+and the three below are provisioned at runtime — see next section.
 
-### InfluxDB token provisioning
+### Credential provisioning
 
-`config/influx.yaml` lets a token be written **at runtime** instead of compiled in:
+Three credentials are written **at runtime** over the native API instead of compiled in. Each
+is **one per building**, held by the provisioning client `samba_app` (`samba deploy`,
+`samba buildings`), and kept on the device in NVS, which OTA never rewrites. Order matters:
+`samba deploy` sets the API key first so everything after it travels encrypted.
 
-- `influx_token` (`config/globals.yaml`) is a restored global in NVS, which OTA never
-  rewrites. `max_restore_data_length: 88` covers an InfluxDB v2 token.
-- The `influx_set_token` api action stores it, hands it to the component
-  (`InfluxDB::set_token_override`), and flushes NVS. A runtime token takes precedence over
-  `influx_token` from `secrets.yaml`, which is the **fallback**: leave it set while units are
-  still being provisioned, then set it to `""` in `secrets.yaml` to ship a build with no
-  token in it. An unprovisioned unit on such a build skips uploads and reports `no token`.
-- Nothing publishes the token back. The `InfluxDB Token` text sensor carries only its
-  fingerprint (`esphome::fnv1_hash`, 8 hex digits, `unset` when empty), and `InfluxDB
-  Status` the outcome of the last upload (`HTTP 204`, `HTTP 401`, `connection failed`,
-  `no token`), published by the component (`status_text_sensor`). The action is followed by a
-  real write (a `device_status` line with only the uptime) so the status reflects the new
-  token immediately. Never log the token; `dump_config` says only provisioned / compiled-in /
-  none.
-- A text entity was rejected for this on purpose: a text entity's state goes to every
-  connected API client.
+1. **Native API key** (`config/homeassistant.yaml`, `encryption: {}`). ESPHome's own
+   mechanism: with no `key:` in YAML the device boots unkeyed, accepts a Noise handshake with
+   the all-zeros PSK (or plaintext, removed upstream after 2027.2.0), and lets the client set
+   a key with `NoiseEncryptionSetKeyRequest` (`aioesphomeapi.noise_encryption_set_key`). The
+   key is saved to NVS, clients are disconnected, and the device is Noise-only from then on.
+   A new key sent over an authenticated connection replaces it; an empty one clears it. There
+   is no compiled-in fallback and nothing to publish: `dump_config` reports `Noise encryption:
+   YES/NO`. This is the key Home Assistant or any local client uses.
+2. **InfluxDB token** (`config/influx.yaml`). `influx_token` (`config/globals.yaml`,
+   `max_restore_data_length: 88`) is set by the `influx_set_token` api action, which hands it
+   to the component (`InfluxDB::set_token_override`) and flushes NVS. A runtime token takes
+   precedence over `influx_token` from `secrets.yaml`, which is the **fallback**: leave it set
+   while units are still being provisioned, then set it to `""` to ship a build with no
+   token in it. An unprovisioned unit on such a build skips uploads and reports `no token`.
+   The `InfluxDB Token` text sensor carries only a fingerprint (`esphome::fnv1_hash`, 8 hex
+   digits, `unset` when empty) and `InfluxDB Status` the outcome of the last upload (`HTTP
+   204`, `HTTP 401`, `connection failed`, `no token`), published by the component
+   (`status_text_sensor`). The action is followed by a real write (a `device_status` line
+   with only the uptime) so the status reflects the new token immediately. Never log the
+   token; `dump_config` says only provisioned / compiled-in / none.
+3. **`esphome` OTA password** (`config/ota.yaml`). Same shape: `ota_password` global
+   (`max_restore_data_length: 64`), `ota_set_password` action calling
+   `set_auth_password()` on `ota_esphome`, `on_boot` (priority 600) re-applies it, `OTA
+   Password` text sensor is the fingerprint. `ota_password` in `secrets.yaml` is the
+   fallback exactly as for the token; keep `password:` present in YAML even as `""`, which
+   is what makes ESPHome compile the auth path. **Safe mode never reaches `on_boot`** (the
+   trigger registers after the early return), so a crash-looping unit serves OTA with the
+   compiled-in password only — and with none once the fallback is `""`. This is accepted:
+   it exists only on a unit that is already broken, it is the sole recovery route there,
+   and the alternative is the shared secret this removes.
 
-The provisioning client is `samba_app` (`samba deploy`, `samba buildings`), one token per
-building.
+Nothing publishes a credential back. A text entity was rejected for this on purpose: a text
+entity's state goes to every connected API client.
+
+Field units without LAN access stay on the fallbacks (and unkeyed) until a tech is on site;
+none of the three transitions changes their behaviour until then. Revoke the old InfluxDB
+token only once every unit reports a fingerprint — it is in every published `.bin` in git
+history, so removing it from the next build is not what closes the hole.
 
 ## InfluxDB Architecture
 

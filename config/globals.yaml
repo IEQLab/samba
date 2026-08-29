@@ -48,6 +48,14 @@ globals:
     restore_value: yes
     initial_value: '""'
 
+  # Password for the `esphome` OTA platform, provisioned over the native API (config/ota.yaml).
+  # Empty = use the compiled-in password, or none once the build no longer carries one.
+  - id: ota_password
+    type: std::string
+    max_restore_data_length: 64
+    restore_value: yes
+    initial_value: '""'
+
   # CO2 calibration (y = mx + b)
   - id: calibration_co2_m
     type: double
