@@ -20,8 +20,8 @@ namespace esphome::influxdb {
 /// only included in an upload when it has produced a filtered value since it was last uploaded,
 /// so a sensor that stops reporting drops out of the payload instead of re-sending its last
 /// value forever. Uploads go through the http_request component (which owns the socket
-/// timeout and task-watchdog handling); transient failures are retried from the scheduler
-/// without blocking the main loop.
+/// timeout and task-watchdog handling); transient failures are retried from the scheduler after
+/// a backoff, though each attempt itself blocks the loop for up to the http_request timeout.
 class InfluxDB : public Component {
  public:
   // Must match MAX_MEASUREMENTS in __init__.py

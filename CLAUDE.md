@@ -40,7 +40,6 @@ components/             # Custom external ESPHome components (C++ and Python)
   senseair_i2c/         # K30/K33 CO2 sensor over I2C
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
-  i2c_recovery/         # Runtime I2C bus reset (clocks out a wedged target)
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
 .claude/skills/bump.md   # /bump skill: version bump and release procedure
@@ -72,7 +71,7 @@ faster than the 5min sample, so one dead sensor took the whole unit off the air.
 
 All three I2C sensors keep an hour-scale EWMA duty cycle (`k30_unhealthy`, `ads_unhealthy`,
 `sgp_unhealthy`), each reading directly as **seconds failed per hour** at steady state
-(`3571 x duty`). Divide by `35.71` for a percentage. Only the K30 and ADS1115 escalate to a
+(`3600 x duty`). Divide by `36` for a percentage. Only the K30 and ADS1115 escalate to a
 restart, and both also require `sys_uptime > 3600`, which self-rate-limits to one attempt an hour.
 
 - **CO2 (K30):** re-initialise on the first failure, then every 10th (5min) while it stays
@@ -82,12 +81,12 @@ restart, and both also require `sys_uptime > 3600`, which self-rate-limits to on
   `mark_failed()`s in `setup()` and the self test; every runtime read failure is
   `status_set_warning()` and the component clears it itself on the next good read. A reboot would
   also discard the `learning_time_offset_hours: 720` gas baseline. Error counting skips the first
-  100s warmup. `sgp_unhealthy` is diagnostic only.
-- **ADS1115:** soft recovery first — `i2c_recovery_a.reset_bus()` clocks out a stuck target at
-  the warning threshold (90 ticks / 3min), rate-limited to 30s apart and capped at three attempts
-  per episode. Restart needs all three of `ads_error_count >= 150` (5min), `ads_unhealthy > 1250`
+  150s warmup. `sgp_unhealthy` is diagnostic only.
+- **ADS1115:** restart needs all three of `ads_error_count >= 150` (5min), `ads_unhealthy > 1250`
   (35% of the hour) and uptime over an hour. The counter measures per-channel **staleness** of the
   last successful read, not `isnan()` — a failed ADS1115 read leaves `.state` at its last good value.
+  There is no runtime bus reset: the ESP-IDF I2C driver already clears the bus and resets the
+  peripheral after a timeout, before the next transaction (`i2c_master.c`, `s_i2c_hw_fsm_reset`).
 - **System:** safe mode on boot crash, periodic SD card presence check.
 
 The status LED is driven from one arbiter in `config/led.yaml` polling these counters every 10s,

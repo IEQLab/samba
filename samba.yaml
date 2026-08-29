@@ -24,7 +24,6 @@ logger:
     esp-idf: INFO
     http_request: ERROR
     i2c: INFO
-    i2c_recovery: INFO
     influxdb: INFO
     light: NONE
     main: WARN

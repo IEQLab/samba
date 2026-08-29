@@ -98,9 +98,10 @@ Published measurements are sent every 5 minutes to one or more of the following 
 
 A single RGB LED on the board reports device state. One rule covers the whole scheme:
 **colour identifies the subsystem, and pulsing versus solid identifies severity.** A slow
-pulse is a warning the device expects to recover from on its own; a steady light means it has
-escalated and will attempt a restart if the fault persists. Brightness is deliberately low
-throughout so a rack of units is not distracting in an occupied office.
+pulse is a warning the device expects to recover from on its own; a steady light means the fault
+is sustained. Only the ADS1115 and K30 escalate to a restart, and only after an hour of uptime.
+Brightness is deliberately low throughout so a rack of units is not distracting in an occupied
+office.
 
 | LED | Meaning | What to do |
 |-----|---------|------------|
@@ -108,11 +109,11 @@ throughout so a rack of units is not distracting in an occupied office.
 | White, brief flash | 5-minute sample taken and uploaded | Nothing — this is the healthy heartbeat |
 | Off | Running normally | Nothing |
 | Amber, pulsing | Globe temperature / air speed unresponsive ~3 min | Watch — often transient |
-| Amber, solid | Same, ~5 min. Bus recovery attempted; restarts if the fault persists for over a third of an hour | Check the RJ45 cable to the remote board, then reseat both ends |
+| Amber, solid | Same, ~5 min. Restarts once the fault has covered 35% of the last hour (about 25 min continuous) | Check the RJ45 cable to the remote board, then reseat both ends |
 | Blue, pulsing | CO2 (K30) failed 3 consecutive reads | Watch — usually self-recovers |
-| Blue, solid | CO2 failed 4 or more; restart attempted after an hour | Check the K30; a persistent fault is often board-specific rather than the sensor |
+| Blue, solid | CO2 failed 4 or more; restarts once it has failed 67% of the last hour (about 65 min of near-total failure) | Check the K30; a persistent fault is often board-specific rather than the sensor |
 | Magenta, pulsing | VOC / NOx (SGP4x) failed 4 consecutive reads | Watch — usually self-recovers |
-| Magenta, solid | VOC / NOx failed 6 or more; restart attempted after an hour | Check the sensor |
+| Magenta, solid | VOC / NOx failed 6 or more. Never restarts: the sensor keeps retrying itself, and a reboot would discard its month-long baseline | Check the sensor |
 
 The LED is applied from a single 10-second poll of the error counters rather than from each
 sensor's error handler, so it survives the sample heartbeat and returns to off within about ten

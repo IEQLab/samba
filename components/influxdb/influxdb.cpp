@@ -70,8 +70,8 @@ void InfluxDB::setup() {
   if (this->send_mac_)
     get_mac_address_into_buffer(this->mac_);
 
-  // Reserve the payload buffer once. Its capacity is kept between uploads, so steady-state
-  // publishes do not touch the heap. Generous bound: tag values are unknown until runtime.
+  // Reserve the payload buffer once. Its capacity is kept between uploads, so body_ never
+  // reallocates. Generous bound: tag values are unknown until runtime.
   this->body_.reserve(128 + this->line_count_ * (64 + this->tags_.size() * 64) + this->fields_.size() * 40);
 
   if (this->update_interval_ != UPDATE_INTERVAL_NEVER && this->update_interval_ > 0) {
@@ -150,8 +150,8 @@ size_t InfluxDB::build_body_(const std::vector<sensor::Sensor *> *only) {
       if (f.line != line || !selected(f.sensor))
         continue;
       // A sensor with nothing new, or with NaN/inf, is left out of the line: InfluxDB rejects
-      // both, and re-sending its previous value would fabricate data. Warn every time so a
-      // dead sensor is visible in the log as well as by its missing field.
+      // NaN/inf, and re-sending a stale value would fabricate data. Warn every time so a dead
+      // sensor is visible in the log as well as by its missing field.
       if (!f.fresh) {
         ESP_LOGW(TAG, "Skipping %s: no new value since last upload", f.sensor->get_name().c_str());
         continue;
@@ -165,7 +165,7 @@ size_t InfluxDB::build_body_(const std::vector<sensor::Sensor *> *only) {
         this->body_ += ',';
       this->body_ += f.field;
       this->body_ += '=';
-      char value[32];
+      char value[48];
       snprintf(value, sizeof(value), "%f", f.sensor->state);
       this->body_ += value;
     }

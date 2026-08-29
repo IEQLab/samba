@@ -87,41 +87,37 @@ globals:
     restore_value: no
     initial_value: '0.0f'
 
-# Track failures and report a sustained fault. No restart - see the lambda (after 100s warmup)
+# Track failures and report a sustained fault. No restart - see the lambda (after 150s warmup)
 interval:
   - interval: 30s
     then:
       - lambda: |-
-          // Check if VOC sensor is returning valid data: no value yet (boot), or the last
-          // read failed (sgp4x keeps the old value but flags a warning)
+          // No value yet, or the last poll failed: a failed request leaves the old index in
+          // place and a failed read withholds it, but both set the warning.
           const bool failed = std::isnan(id(sgp_voc).state) || id(sgp41).status_has_warning();
 
-          // Skip error counting during 100s warmup period
-          if (millis() < 100000) {
+          // Skip error counting during warmup: sgp4x publishes nothing for its first 90
+          // samples, and the first 30s update slot after that can land past 120s.
+          if (millis() < 150000) {
             ESP_LOGD("samba", "SGP4x sensor warming up - skipping error check");
             return;
           }
 
-          // Seconds failed per hour, EWMA over ~1h at this 30s poll: steady state is
-          // 3571 * duty cycle, so sgp_unhealthy reads directly as seconds of the last hour.
-          // Nothing gates on it; it exists so the three I2C sensors report failure the same
-          // way and a flaky unit can be read off without guessing which one is at fault.
-          id(sgp_unhealthy) = (id(sgp_unhealthy) + (failed ? 30.0f : 0.0f)) * 0.99167f;
+          // Seconds failed per hour: EWMA with a one-hour time constant at this 30s poll, so
+          // steady state is 3600 * duty cycle. Nothing gates on it; it keeps the three I2C
+          // sensors directly comparable.
+          id(sgp_unhealthy) = (id(sgp_unhealthy) + (failed ? 30.0f : 0.0f)) * 0.9916667f;
 
           if (failed) {
             id(sgp_error_count)++;
 
-            // No restart, deliberately. sgp4x only mark_failed()s in setup() and the self
-            // test; every runtime read failure is status_set_warning(), and the component
-            // keeps polling and clears the warning itself once the sensor answers. There is
-            // nothing a reboot fixes that the next poll is not already retrying. It would
-            // also discard the gas index algorithm's learned baseline, which
-            // learning_time_offset_hours: 720 takes a month to rebuild - the reboot would
-            // damage the data it was meant to protect. NaN propagates upstream, so until it
-            // recovers a dead SGP4x costs only VOC/NOx.
+            // No restart, deliberately: sgp4x only mark_failed()s in setup() and the self test,
+            // every runtime failure is a warning it clears itself on the next good read, and a
+            // reboot would discard the gas baseline that learning_time_offset_hours: 720 takes
+            // a month to rebuild. NaN propagates upstream, so a dead SGP4x costs only VOC/NOx.
             if (id(sgp_error_count) == 6) {
               ESP_LOGE("samba", "SGP4x failed 6 consecutive polls, %.0f percent of the last hour",
-                       id(sgp_unhealthy) / 35.71f);
+                       id(sgp_unhealthy) / 36.0f);
             } else {
               ESP_LOGW("samba", "SGP4x sensor failure %d", id(sgp_error_count));
             }
