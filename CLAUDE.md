@@ -64,10 +64,37 @@ All sensor calibrations use persistent global variables (stored in flash, modifi
 
 ### Error Recovery
 
-A failed sensor costs only its own measurands: the raw read publishes NaN, so the field is
-absent in InfluxDB, `nan` on SD and unknown in Home Assistant, and every other sensor keeps
-reporting. A restart is the last resort, never the first response — the watchdogs used to fire
-faster than the 5min sample, so one dead sensor took the whole unit off the air.
+A failed sensor costs only its own measurands: the field is absent in InfluxDB, `nan` on SD
+and unknown in Home Assistant, and every other sensor keeps reporting. A restart is the last
+resort, never the first response — the watchdogs used to fire faster than the 5min sample, so
+one dead sensor took the whole unit off the air.
+
+**Dropout is a staleness guard, not a NaN check, and every sensor needs one.** Most ESPHome
+sensor components publish *nothing* on a failed read (sht4x, pmsx003, ads1115) or publish NaN
+that an upstream `filter_out: nan` then swallows (opt3001), so `.state` freezes at its last
+good value and the template lambda recomputes that same value forever. `influxdb`'s `fresh`
+flag cannot save you here: `sample.yaml` calls `publish_state()` on every template sensor each
+cycle, which re-arms it. So each sensor stamps `<x>_last_ok = millis()` from `on_raw_value`,
+and its template lambda returns `NAN` when that stamp is older than **330000 ms** — one 5min
+sample interval plus margin. Thresholds are uniform on purpose; the poll rates do the work
+(11 consecutive failures for SHT4x/NTC/OPT3001, 165 for the 2s air-speed channels).
+
+Guards live in the file that owns the sensor: `sht_last_ok` (tair), `opt_last_ok`
+(illuminance), `pms_last_ok` (pm25), `k30_last_ok` (co2), `sgp_last_ok` (tvoc), and the three
+`ads_*_last_ok` (adc, consumed by tglobe and airspeed).
+
+**`clamp` filters cannot express a dropout, and NaN silently defeats `std::min`/`std::max`.**
+`ClampFilter` maps NaN to `min_value` when `ignore_out_of_range: false`, and drops the publish
+— freezing the state — when it is `true`. Neither preserves NaN. Likewise `std::min(100.0f,
+NAN)` returns `100.0f`, because every comparison against NaN is false; this shipped as RH
+reporting a confident 100% from a sensor that had never read. **Always return NaN before
+clamping**, then `std::min`/`std::max` are safe because their operands are known finite. This
+is the one place to prefer a lambda over a filter.
+
+**Watch for cascades when adding a guard.** `airspeed.yaml` reads `samba_temperature.state`
+for its sensor floor, so NaN-ing temperature would have taken air speed with it — and the
+final `clamp` would have reported that NaN as a confident 0.02 m/s. It falls back to a nominal
+22 °C instead. MRT genuinely needs Ta, so that cascade is left in place.
 
 All three I2C sensors keep an hour-scale EWMA duty cycle (`k30_unhealthy`, `ads_unhealthy`,
 `sgp_unhealthy`), each reading directly as **seconds failed per hour** at steady state
@@ -88,6 +115,13 @@ restart, and both also require `sys_uptime > 3600`, which self-rate-limits to on
   There is no runtime bus reset: the ESP-IDF I2C driver already clears the bus and resets the
   peripheral after a timeout, before the next transaction (`i2c_master.c`, `s_i2c_hw_fsm_reset`).
 - **System:** safe mode on boot crash, periodic SD card presence check.
+
+Two non-sensor traps in the same family. `http_request` raises the task WDT once for a whole
+request, then runs `esp_http_client_open` and the body write with no feed between them, so
+`watchdog_timeout` must exceed **twice** `timeout` (DNS is not bounded by `timeout` at all);
+ESPHome forces `CONFIG_ESP_TASK_WDT_PANIC`, so an overrun reboots. And a bare `millis() < N`
+boot guard re-engages for N ms at the 49.7-day rollover — latch it behind a bool global
+(`led_armed`, `sgp_warmed`). Differences of `millis()` are rollover-safe and need no latch.
 
 The status LED is driven from one arbiter in `config/led.yaml` polling these counters every 10s,
 so an alarm survives the 5min sample heartbeat. Colour identifies the subsystem — **amber**
@@ -300,6 +334,10 @@ EOF
 ### SD Card
 
 - Mount point is `/sd` (hardcoded in sd_spi_card.h)
+- The `create_file` action swallows its `WriteResult`, so YAML cannot see a failure — gate
+  `sd_logfile` on `sd0.file_exists()` instead. `create_file` is idempotent (it returns
+  `SUCCESS` without truncating an existing file), so `sd_create` is safe to re-run, and
+  `on_mount` re-runs it for a card inserted after the first time sync
 - Filenames use MAC address + UTC timestamp from DS1307
 - `sd_logfile` global flag prevents duplicate file creation per boot
 - `script.execute` is async — code after it runs before the script completes
@@ -308,6 +346,14 @@ EOF
 
 - `ESP_LOGCONFIG` (used in `dump_config`) outputs at CONFIG level — set component log level to DEBUG to see it
 - Component-specific log levels are set in `samba.yaml` under `logger.logs`
+
+### Time zones
+
+Neither `time` platform may rely on the default `timezone`. It resolves to the **build
+machine's** zone, and `RealTimeClock::apply_timezone_` writes a process-global, so whichever
+platform sets up last wins for every `on_time` in the config. Both `ds1307_time` and
+`sntp_time` pin `Etc/GMT` explicitly. `utcnow()` is unaffected either way; the local-time
+`on_time` triggers — the Monday 04:00 OTA window, the Sunday 04:00 RTC write — are not.
 
 ### Secrets
 
