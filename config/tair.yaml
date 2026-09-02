@@ -65,9 +65,15 @@ sensor:
     lambda: |-
       float t_raw       = id(sht_temperature).state;
       float rh_raw      = id(sht_humidity).state;
+      // Must precede the clamp below. Every comparison against NaN is false, so
+      // std::min(100.0f, NAN) returns 100.0f and a sensor that never read would report a
+      // confident 100% RH instead of dropping out.
+      if (std::isnan(t_raw) || std::isnan(rh_raw))
+        return NAN;
       float t_corrected = id(calibration_ta_b)
                         + id(calibration_ta_m1) * t_raw;
       float es_raw      = 6.1078f * expf(17.625f * t_raw       / (243.04f + t_raw));
       float es_cor      = 6.1078f * expf(17.625f * t_corrected / (243.04f + t_corrected));
       float rh_corrected = 100.0f * (rh_raw / 100.0f) * es_raw / es_cor;
+      // Safe now: both operands are known finite.
       return std::max(0.0f, std::min(100.0f, rh_corrected));
