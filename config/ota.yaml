@@ -37,7 +37,12 @@ http_request:
     id: http_client
     verify_ssl: true
     timeout: 8s
-    watchdog_timeout: 10s
+    # Must exceed the worst-case blocking span, not one operation. http_request raises the WDT
+    # once for the whole request, then runs esp_http_client_open (DNS, TCP, TLS, headers) and
+    # the body write with no feed between them - two 8s socket timeouts back to back, and DNS
+    # is not bounded by `timeout` at all. ESPHome forces CONFIG_ESP_TASK_WDT_PANIC, so an
+    # overrun is a reboot, not a log line.
+    watchdog_timeout: 30s
     buffer_size_tx: 1024   # request line + headers incl. the InfluxDB token exceed the 512 default
 
 # Explicitly enable safe mode
