@@ -125,6 +125,13 @@ shows, and the ADS1115 wins a tie.
 sent. Restarts are rate-limited to at most one per hour precisely so that one dead sensor
 cannot take the whole unit off the air.
 
+Every sensor drops out the same way: each stamps the time of its last successful read, and a
+measurand goes `nan` once that stamp is more than 5.5 minutes old — one sample interval plus
+margin. A single failed read never costs a reading, because the sensors poll far faster than
+they are sampled; it takes eleven consecutive failures for temperature, humidity, globe or
+illuminance, and 165 for air speed. What this does *not* catch is a sensor that keeps
+answering with a stuck value.
+
 Amber is the one worth attention in the field: the remote board connects over an RJ45 lead,
 and a marginal cable is the most common cause of it.
 
@@ -148,8 +155,8 @@ SAMBA devices check for firmware updates every Monday at 4 am by comparing again
 
 SAMBA devices are shipped pre-calibrated, with their location tags (building, level, zone) and calibration coefficients already set by the IEQ Lab. Follow these steps to connect a new SAMBA to your network and start sampling:
 
-1. **Power on** the SAMBA. The status LED will strobe red, green, and blue to indicate it is in setup mode.
-2. **Connect to the hotspot.** Using a phone or laptop, join the `samba_connect` WiFi network and open the [captive portal](https://esphome.io/components/captive_portal.html) at [http://192.168.4.1](http://192.168.4.1).
+1. **Power on** the SAMBA. The status LED blinks green while it boots. This firmware has no separate setup colour, so a unit still waiting for a network looks the same as one that is sampling.
+2. **Connect to the hotspot.** Using a phone or laptop, join the SAMBA's own open WiFi network — it is named after the device, `samba-xxxxxx`, where `xxxxxx` is the last three bytes of its MAC address — and open the [captive portal](https://esphome.io/components/captive_portal.html) at [http://192.168.4.1](http://192.168.4.1). There is no password on the hotspot.
 3. **Enter WiFi credentials.** Select the target 2.4 GHz network from the list and enter the password. The SAMBA will connect and begin sampling automatically. The LED will blink green during the warm-up period and then turn off once it enters the normal sampling routine.
 
 There is no web interface on the device. The location tags, the *InfluxDB Upload* / *SD Card Write* / *Automatic Updates* switches and the calibration coefficients are exposed over the [ESPHome native API](https://esphome.io/components/api.html), so they can be viewed and changed from [Home Assistant](https://www.home-assistant.io/integrations/esphome/) or with the IEQ Lab's [samba_app](https://github.com/IEQLab/samba_app) laptop client (its *Identify SAMBA* button blinks the LED to pick one unit out of a batch). If you need a SAMBA recalibrated or re-tagged, please reach out — see [Project Maintenance](#project-maintenance) below.
