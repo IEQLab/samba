@@ -56,9 +56,9 @@ sensor:
     device_class: temperature
     unit_of_measurement: "°C"
     icon: mdi:thermometer
-    filters:
-      - filter_out: nan
     lambda: |-
+      // No filter_out: nan here. It would swallow the NaN this lambda returns, freezing MRT at
+      // its last good value and republishing that every sample - the dropout must survive.
       if (isnan(id(samba_globe).state) || isnan(id(samba_airspeed).state) || isnan(id(samba_temperature).state))
         return NAN;
       return pow(pow(id(samba_globe).state + 273.15, 4) +
