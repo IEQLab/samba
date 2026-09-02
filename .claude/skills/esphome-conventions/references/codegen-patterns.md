@@ -125,6 +125,24 @@ Use `build_automation()` with a `Trigger<Ts...>` subclass only when the
 forwarder needs mutable state beyond a single `Automation*` pointer (edge
 detection, timing logic).
 
+### Sizing registration lists — `cg.slot_counter()`
+
+When a component registers listeners or child entities, the count is known at
+codegen time. Use `cg.slot_counter()` to pass it through as a compile-time
+define, so the C++ side can reserve exactly once instead of growing a vector.
+
+```python
+SLOTS = cg.slot_counter("my_component_listeners")
+
+async def to_code(config):
+    ...
+    for conf in config.get(CONF_ON_STATE, []):
+        SLOTS.increment()
+```
+
+The counter resolves after all components have run, so it is safe to increment
+from any `to_code()`.
+
 ### Actions
 
 ```cpp
