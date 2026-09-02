@@ -51,28 +51,35 @@ sensor:
       float rh = id(pms_rh).state;
       if (isnan(pm) || isnan(rh)) return NAN;
       
+      float corrected;
+
       if (pm < 30.0) {
-        return (0.524 * pm - 0.0862 * rh + 5.75);
+        corrected = (0.524 * pm - 0.0862 * rh + 5.75);
       }
-      
+
       else if (pm < 50.0) {
         float alpha = pm / 20.0 - 1.5;
-        return (0.786 * alpha + 0.524 * (1.0 - alpha)) * pm - 0.0862 * rh + 5.75;
+        corrected = (0.786 * alpha + 0.524 * (1.0 - alpha)) * pm - 0.0862 * rh + 5.75;
       }
-      
+
       else if (pm < 210.0) {
-        return (0.786 * pm - 0.0862 * rh + 5.75);
+        corrected = (0.786 * pm - 0.0862 * rh + 5.75);
       }
-      
+
       else if (pm < 260.0) {
         float alpha = pm / 50.0 - 4.2;
-        return (0.69 * alpha + 0.786 * (1.0 - alpha)) * pm
+        corrected = (0.69 * alpha + 0.786 * (1.0 - alpha)) * pm
                - 0.0862 * rh * (1.0 - alpha)
                + 2.966 * alpha
                + 5.75 * (1.0 - alpha)
                + 8.84e-4 * pm * pm * alpha;
       }
-      
+
       else {
-        return 2.966 + 0.69 * pm + 8.84e-4 * pm * pm;
+        corrected = 2.966 + 0.69 * pm + 8.84e-4 * pm * pm;
       }
+
+      // The RH term drives the model negative at low PM and high RH: -2.9 at pm=0, rh=100.
+      // A clamp filter cannot do this - it maps NaN to min_value and would undo the dropout
+      // above - but std::max is safe here because every path to this point is finite.
+      return std::max(0.0f, corrected);
