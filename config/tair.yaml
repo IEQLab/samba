@@ -13,6 +13,11 @@ sensor:
     temperature:
       id: sht_temperature
       internal: true
+      on_raw_value:
+        # Timestamp every successful raw read. sht4x publishes both words only after a fully
+        # successful transaction and publishes nothing at all on failure, so one stamp covers
+        # the pair and .state would otherwise freeze at its last good value forever.
+        - lambda: 'if (!std::isnan(x)) id(sht_last_ok) = millis();'
       filters:
         - filter_out: nan
         - clamp:
@@ -48,6 +53,11 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
+      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
+      // the upload. Only after a full sample interval of silence - the 30s poll and 10-wide
+      // median carry temperature through ten consecutive failed reads.
+      if (id(sht_last_ok) == 0 || (millis() - id(sht_last_ok)) > 330000)
+        return NAN;
       return id(calibration_ta_b)
            + (id(calibration_ta_m1) * id(sht_temperature).state);
 
@@ -63,6 +73,8 @@ sensor:
     unit_of_measurement: "%"
     icon: mdi:water-percent
     lambda: |-
+      if (id(sht_last_ok) == 0 || (millis() - id(sht_last_ok)) > 330000)
+        return NAN;
       float t_raw       = id(sht_temperature).state;
       float rh_raw      = id(sht_humidity).state;
       // Must precede the clamp below. Every comparison against NaN is false, so
@@ -77,3 +89,11 @@ sensor:
       float rh_corrected = 100.0f * (rh_raw / 100.0f) * es_raw / es_cor;
       // Safe now: both operands are known finite.
       return std::max(0.0f, std::min(100.0f, rh_corrected));
+
+
+# millis() of the last successful raw read
+globals:
+  - id: sht_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
