@@ -80,6 +80,11 @@ globals:
     type: int
     restore_value: no
     initial_value: '0'
+# Latches the warmup guard below, so the 49.7-day millis() rollover cannot re-engage it.
+  - id: sgp_warmed
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 # Hour-scale failure duty cycle. Diagnostic only - nothing gates on it - but it keeps the
 # SGP4x directly comparable with k30_unhealthy and ads_unhealthy.
   - id: sgp_unhealthy
@@ -97,10 +102,14 @@ interval:
           const bool failed = std::isnan(id(sgp_voc).state) || id(sgp41).status_has_warning();
 
           // Skip error counting during warmup: sgp4x publishes nothing for its first 90
-          // samples, and the first 30s update slot after that can land past 120s.
-          if (millis() < 150000) {
-            ESP_LOGD("samba", "SGP4x sensor warming up - skipping error check");
-            return;
+          // samples, and the first 30s update slot after that can land past 120s. Latching,
+          // because a bare millis() < N re-engages for 150s at the 49.7-day rollover.
+          if (!id(sgp_warmed)) {
+            if (millis() < 150000) {
+              ESP_LOGD("samba", "SGP4x sensor warming up - skipping error check");
+              return;
+            }
+            id(sgp_warmed) = true;
           }
 
           // Seconds failed per hour: EWMA with a one-hour time constant at this 30s poll, so

@@ -57,15 +57,24 @@ globals:
     type: int
     restore_value: no
     initial_value: '-1'
+# Latches the boot guard below, so the 49.7-day millis() rollover cannot re-engage it.
+  - id: led_armed
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
 interval:
   - interval: 10s
     then:
       - lambda: |-
           // Leave the boot strobe alone; no alarm can have tripped this early anyway. The
-          // first tick past this guard clears it, because led_alarm still holds -1.
-          if (millis() < 120000)
-            return;
+          // first tick past this guard clears it, because led_alarm still holds -1. Latching,
+          // because a bare millis() < N re-engages for two minutes at the 49.7-day rollover.
+          if (!id(led_armed)) {
+            if (millis() < 120000)
+              return;
+            id(led_armed) = true;
+          }
 
           int want = 0;
           if (id(ads_error_detected).state) {
