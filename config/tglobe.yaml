@@ -45,6 +45,11 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
+      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
+      // the upload. The NTC channel polls every 30s, so this needs eleven consecutive failed
+      // reads; ads_ntc_last_ok is stamped in adc.yaml.
+      if (id(ads_ntc_last_ok) == 0 || (millis() - id(ads_ntc_last_ok)) > 330000)
+        return NAN;
       return ((id(calibration_tg_m) * id(ntc_temperature).state) + id(calibration_tg_b));
 
 # Define mean radiant temperature measurements
