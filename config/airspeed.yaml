@@ -73,4 +73,16 @@ sensor:
     unit_of_measurement: "m/s"
     icon: mdi:weather-windy
     lambda: |-
+      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
+      // the upload. Per channel, so one dead anemometer leaves the other reporting rather
+      // than letting max() pick whichever frozen value happens to be higher.
+      const uint32_t now = millis();
+      const bool as1_stale = id(ads_as1_last_ok) == 0 || (now - id(ads_as1_last_ok)) > 330000;
+      const bool as2_stale = id(ads_as2_last_ok) == 0 || (now - id(ads_as2_last_ok)) > 330000;
+      if (as1_stale && as2_stale)
+        return NAN;
+      if (as1_stale)
+        return id(as_2).state;
+      if (as2_stale)
+        return id(as_1).state;
       return max(id(as_1).state, id(as_2).state);
