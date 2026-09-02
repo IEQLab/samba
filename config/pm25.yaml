@@ -12,6 +12,10 @@ sensor:
     pm_2_5:
       id: pms_pm25
       internal: true
+      on_raw_value:
+        # Timestamp every successful raw read. pmsx003 publishes only on a good frame and
+        # nothing at all on a timeout, so without this .state freezes at its last good value.
+        - lambda: 'if (!std::isnan(x)) id(pms_last_ok) = millis();'
       filters:
         - filter_out: nan
         - clamp:
@@ -46,11 +50,16 @@ sensor:
     unit_of_measurement: "µg/m3"
     icon: mdi:molecule
     lambda: |-
+      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
+      // the upload. The PMS5003 streams a frame roughly every second, so this needs a full
+      // sample interval of silence.
+      if (id(pms_last_ok) == 0 || (millis() - id(pms_last_ok)) > 330000)
+        return NAN;
 
       float pm = id(pms_pm25).state;
       float rh = id(pms_rh).state;
       if (isnan(pm) || isnan(rh)) return NAN;
-      
+
       float corrected;
 
       if (pm < 30.0) {
@@ -83,3 +92,11 @@ sensor:
       // A clamp filter cannot do this - it maps NaN to min_value and would undo the dropout
       // above - but std::max is safe here because every path to this point is finite.
       return std::max(0.0f, corrected);
+
+
+# millis() of the last successful raw read
+globals:
+  - id: pms_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
