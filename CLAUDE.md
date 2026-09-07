@@ -355,6 +355,36 @@ platform sets up last wins for every `on_time` in the config. Both `ds1307_time`
 `sntp_time` pin `Etc/GMT` explicitly. `utcnow()` is unaffected either way; the local-time
 `on_time` triggers — the Monday 04:00 OTA window, the Sunday 04:00 RTC write — are not.
 
+### VOC baseline
+
+`tvoc.yaml` sets `learning_time_offset_hours: 720`. That is not a 720-hour baselining period
+that has to elapse before the index is usable — it is `mTau_Mean_Hours`, the EWMA time constant
+of the baseline mean estimator. Initialisation is a separate fixed constant,
+`INIT_DURATION_MEAN_VOC` (45 min), over which gamma is pulled toward a value derived from
+`TAU_INITIAL_MEAN_VOC` and is unaffected by our tau. So the index is live ~90 s after boot
+(`INITIAL_BLACKOUT`, 45 samples x 2), converges over the first ~45 min, then barely moves for a
+month.
+
+The consequence is that **the air a unit sees in its first 45 minutes sets its scale for the next
+month.** The learned baseline *is* index 100 (`VOC_INDEX_OFFSET_DEFAULT`), and the conversion in
+`samba_tvoc` maps index 100 to 94 ppb. Nothing in the chain is an absolute reference.
+
+- Baseline in the space the unit will monitor, in a representative state. Not a chamber and not a
+  store room: baselining in clean outdoor air pins 94 ppb to outdoor air, and at tau 720 h the
+  index then reads high indoors permanently instead of renormalising
+- 720 h is a deliberate trade. The 12 h default would absorb a sustained VOC event into the
+  baseline within a day; 720 h keeps it visible, at the cost of the anchoring above
+- A unit whose first 45 min was anomalous is recoverable by power-cycling it within ~3 h. The
+  baseline reaches NVS only once `SHORTEST_BASELINE_STORE_INTERVAL` (10800 s of sampling) has
+  passed, so before that a reboot re-learns from scratch. After it, only a config change clears it
+- Every OTA and every ESPHome upgrade re-baselines the fleet, deliberately: the NVS key is
+  `fnv1a_hash_extend(App.get_config_version_hash(), serial_number)`, and `get_config_version_hash()`
+  hashes the whole config plus `ESPHOME_VERSION`, so a baseline is discarded when the config it was
+  learned under no longer matches. A fleet OTA re-anchors every unit to wherever it is sitting
+- Restoring from NVS is not a restore of elapsed learning: `set_states` writes only mean and std,
+  and sets `Uptime_Gamma` to `PERSISTENCE_UPTIME_GAMMA` (3 h), not the real elapsed time. This is
+  also why a baseline cannot be pre-learned under the calibration firmware and carried across
+
 ### Secrets
 
 All credentials are in `secrets.yaml` (gitignored) and referenced via `!secret` in substitutions. Never hardcode credentials.
