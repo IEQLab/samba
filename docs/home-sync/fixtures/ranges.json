@@ -1,0 +1,175 @@
+{
+ "note": "Fetch cases over the fixtures. Byte offsets are into the files as committed.",
+ "cases": [
+  {
+   "name": "cold-fetch",
+   "file": "F8B3B7C65CDC_260910_0412.txt",
+   "state_before": {
+    "bytes_synced": 0,
+    "fragment": ""
+   },
+   "request": {
+    "method": "GET",
+    "range": null
+   },
+   "response": {
+    "status": 200,
+    "transfer_encoding": "chunked"
+   },
+   "expect": {
+    "rows": 72,
+    "fragment": "",
+    "bytes_synced_after": 6004
+   }
+  },
+  {
+   "name": "incremental-at-row-boundary",
+   "file": "F8B3B7C65CDC_260910_0412.txt",
+   "state_before": {
+    "bytes_synced": 3053,
+    "fragment": ""
+   },
+   "request": {
+    "method": "GET",
+    "range": "bytes=3053-"
+   },
+   "response": {
+    "status": 206,
+    "content_range": "bytes 3053-6003/6004"
+   },
+   "expect": {
+    "rows": 36,
+    "first_ts": 1789024500,
+    "fragment": "",
+    "bytes_synced_after": 6004
+   }
+  },
+  {
+   "name": "resume-mid-row",
+   "file": "F8B3B7C65CDC_260910_0412.txt",
+   "note": "The previous fetch stopped inside a row. Its tail was kept as the fragment and the bookmark still advanced past it.",
+   "state_before": {
+    "bytes_synced": 3090,
+    "fragment": "2026-09-10 07:15:00,24.17,24.63,51.5,"
+   },
+   "request": {
+    "method": "GET",
+    "range": "bytes=3090-"
+   },
+   "response": {
+    "status": 206,
+    "content_range": "bytes 3090-6003/6004"
+   },
+   "expect": {
+    "rows": 36,
+    "first_ts": 1789024500,
+    "fragment": "",
+    "bytes_synced_after": 6004,
+    "why": "Prepending the fragment restores the row the cut split, so the same rows arrive as if the fetch had started at the row boundary."
+   }
+  },
+  {
+   "name": "offset-at-size",
+   "file": "F8B3B7C65CDC_260910_0412.txt",
+   "state_before": {
+    "bytes_synced": 6004,
+    "fragment": ""
+   },
+   "request": {
+    "method": "GET",
+    "range": "bytes=6004-"
+   },
+   "response": {
+    "status": 416
+   },
+   "expect": {
+    "action": "reset the bookmark to 0 and refetch the whole file",
+    "why": "416 means the card was replaced or the file truncated. In ordinary sync the listing reports an equal size and the file is skipped without a request."
+   }
+  },
+  {
+   "name": "chunked-stream",
+   "file": "F8B3B7C65CDC_260910_0412.txt",
+   "note": "One cold fetch delivered in the 1460-byte chunks the firmware sends, fed to the splitter in order. Rows summed over the chunks equal the whole-file parse.",
+   "state_before": {
+    "bytes_synced": 0,
+    "fragment": ""
+   },
+   "request": {
+    "method": "GET",
+    "range": null
+   },
+   "response": {
+    "status": 200,
+    "transfer_encoding": "chunked"
+   },
+   "chunks": [
+    {
+     "bytes": [
+      0,
+      1460
+     ],
+     "rows": 16,
+     "fragment_after": "2026-09-10 05:35:00,24."
+    },
+    {
+     "bytes": [
+      1460,
+      2920
+     ],
+     "rows": 18,
+     "fragment_after": "2026-09-10 07:05:00,24.25,2"
+    },
+    {
+     "bytes": [
+      2920,
+      4380
+     ],
+     "rows": 18,
+     "fragment_after": "2026-09-10 08:35:00,2"
+    },
+    {
+     "bytes": [
+      4380,
+      5840
+     ],
+     "rows": 18,
+     "fragment_after": ""
+    },
+    {
+     "bytes": [
+      5840,
+      6004
+     ],
+     "rows": 2,
+     "fragment_after": ""
+    }
+   ],
+   "expect": {
+    "rows": 72,
+    "fragment": ""
+   }
+  },
+  {
+   "name": "partial-last-line",
+   "file": "F8B3B7C65CDC_260911_0753.txt",
+   "state_before": {
+    "bytes_synced": 0,
+    "fragment": ""
+   },
+   "request": {
+    "method": "GET",
+    "range": null
+   },
+   "response": {
+    "status": 200
+   },
+   "expect": {
+    "rows": 11,
+    "fragment": "2026-09-11 08:50:00,24.31,24.7",
+    "bytes_synced_after": 1060,
+    "why": "The bookmark covers the partial line too, and the fragment is kept with it. The next listing reports an equal size, so the file is skipped and the partial row is never stored."
+   }
+  }
+ ]
+}

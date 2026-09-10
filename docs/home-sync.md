@@ -29,14 +29,16 @@ sync.
 ## 2. Wire contract
 
 This table is the portability layer. The iOS app, the Android port and the firmware bench test
-all conform to it. Fixture files go in `docs/home-sync/fixtures/` (see section 6).
+all conform to it. [`home-sync/fixtures/`](home-sync/fixtures/) holds it as bytes — three log
+files, a listing, the expected rows and the fetch cases — so each side is written against files
+rather than against the other side's source (see section 6).
 
 Discovery is unchanged firmware behaviour: mDNS `_esphomelib._tcp`, TXT record carrying `mac`,
 `project_name` and `version`. Only the two HTTP endpoints below are new. Port 80.
 
 | Request | Response | Notes |
 |---|---|---|
-| `GET /sd` | `200 application/json` — `{"mac":"F8B3B7C65CDC","files":[{"name":"F8B3B7C65CDC_250910_0412.txt","size":183426}]}` | Root of the card only, `.txt` only, sorted by name. The name embeds boot time in UTC, so order is chronological. No mtime: FATFS timestamps are not reliable before the first SNTP sync. |
+| `GET /sd` | `200 application/json` — `{"mac":"F8B3B7C65CDC","files":[{"name":"F8B3B7C65CDC_260910_0412.txt","size":183426}]}` | Root of the card only, `.txt` only, sorted by name. The name embeds boot time in UTC, so order is chronological. No mtime: FATFS timestamps are not reliable before the first SNTP sync. |
 | `GET /sd/<name>` | `200 text/csv`, `Transfer-Encoding: chunked` | Whole file streamed in 1460-byte chunks. No `Content-Length`; the listing carries size. |
 | `GET /sd/<name>` with `Range: bytes=183000-` | `206`, `Content-Range: bytes 183000-183425/183426` | Open-ended ranges only. An offset at or past the current size returns `416`, which the app reads as "card replaced or file truncated". |
 | `HEAD /sd/<name>` | `200` + `X-File-Size` | Optional cheap size probe for one file. The app normally uses the listing. |
@@ -57,10 +59,30 @@ time,ta,tg,rh,as,mrt,co2,lux,pm25,tvoc,nox,laeq,la90,la10
 2026-09-10 04:20:00,23.39,23.85,51.4,0.079,24.09,nan,181,3.1,103,1,37.9,32.8,41.9
 ```
 
+One `snprintf` in `config/sample.yaml` writes each row, so the precision per column is fixed and
+a conforming writer is byte-exact:
+
+| Column | Measurand | Unit | Written as |
+|---|---|---|---|
+| `time` | timestamp, UTC | — | `%Y-%m-%d %H:%M:%S` |
+| `ta` | air temperature | °C | `%.2f` |
+| `tg` | globe temperature | °C | `%.2f` |
+| `rh` | relative humidity | % | `%.1f` |
+| `as` | air speed | m/s | `%.3f` |
+| `mrt` | mean radiant temperature | °C | `%.2f` |
+| `co2` | carbon dioxide | ppm | `%.0f` |
+| `lux` | illuminance | lux | `%.0f` |
+| `pm25` | PM2.5 | µg/m³ | `%.1f` |
+| `tvoc`, `nox` | VOC and NOx index | index | `%.0f` |
+| `laeq`, `la90`, `la10` | sound pressure level | dB(A) | `%.1f` |
+
 - Timestamps are UTC from the DS1307, second resolution, one row per 5 minutes. About 85 bytes
   per row, 24 KB per day, 9 MB per year.
-- `nan` marks a sensor that failed that cycle. The app stores it as null and draws a gap, never
-  an interpolation.
+- File names are `<MAC>_<yymmdd>_<HHMM>.txt` at the card root, the MAC without colons and the
+  boot time in UTC. The two-digit year sorts chronologically within the century.
+- `nan` marks a sensor that failed that cycle, and `-nan` the same thing with the sign bit set,
+  which is what newlib prints when a calibration lambda negates a NaN. The app stores either as
+  null and draws a gap, never an interpolation.
 - A new file is created per boot, after the first time sync. Rows are only written while the SD
   switch is on, so a gap in time is a gap in the record.
 - Values are calibrated. The app applies no coefficients.
@@ -268,10 +290,12 @@ foreground.
 Contract first, code second. The port is scoped by what it must conform to, not by what the Swift
 code happens to do.
 
-- **Fixtures in this repo.** `docs/home-sync/fixtures/` holds three real log files (clean, with
-  `nan` rows, with a partial last line), a listing JSON, and the expected parsed rows as JSON.
-  `SambaCore`'s tests run against them from day one; the Android port runs the same files through
-  the same assertions.
+- **Fixtures in this repo.** `docs/home-sync/fixtures/` holds three log files (clean; `nan` rows,
+  a `-nan` and a hole in the record; a partial last line), the listing JSON, the expected parsed
+  rows, and the fetch cases including a resume mid-row and a `416`. `SambaCore`'s tests run
+  against them from day one; the Android port runs the same files through the same assertions.
+  The measurements are synthetic until a unit has logged a real day — the formats are not, and
+  the directory's README says which is which.
 - **Same schema, same algorithm.** The SQLite schema above is created verbatim by Room. The six
   sync steps are the spec; the Kotlin implementation follows them line by line.
 - **Kotlin equivalents:** `NsdManager` for mDNS, OkHttp with its digest authenticator, Room, Vico
