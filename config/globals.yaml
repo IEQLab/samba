@@ -56,6 +56,14 @@ globals:
     restore_value: yes
     initial_value: '""'
 
+  # Pairing password for the SD file server, provisioned over the native API
+  # (config/fileserver.yaml). Empty = listener off. 12 to 32 printable ASCII, one per unit.
+  - id: fileserver_password
+    type: std::string
+    max_restore_data_length: 32
+    restore_value: yes
+    initial_value: '""'
+
   # CO2 calibration (y = mx + b)
   - id: calibration_co2_m
     type: double

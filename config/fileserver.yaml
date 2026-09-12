@@ -1,0 +1,78 @@
+# SAMBA v2 FIRMWARE
+# read-only file service over the SD log for the SAMBA Home app (docs/home-sync.md)
+# written by Thomas Parkinson, September 2026
+
+
+# The component: lists the card and streams logs on port 80 behind digest auth, user "samba".
+# Inert until a password is set; a building unit never opens the port outside the captive portal.
+sd_file_server:
+  id: sd_files
+  sd_spi_card_id: sd0
+
+# Pairing password provisioning over the native API (`samba home password`), the fourth
+# credential after the API key, the InfluxDB token and the OTA password and the same shape as
+# config/ota.yaml: the password lives in the fileserver_password global (NVS, which OTA never
+# rewrites), is handed to the component on boot, and only its fingerprint is ever published.
+# Unlike the other three it is one per unit, printed on the pairing label the app scans.
+esphome:
+  on_boot:
+    # after the globals are restored (HARDWARE), before the component's setup() at WIFI - 1
+    - priority: 600
+      then:
+        - lambda: |-
+            if (!id(fileserver_password).empty())
+              id(sd_files).set_password(id(fileserver_password));
+
+api:
+  actions:
+    - action: fileserver_set_password
+      variables:
+        password: string
+      then:
+        - lambda: |-
+            // An empty password clears the provisioned one and stops the listener.
+            if (!password.empty() && (password.size() < 12 || password.size() > 32)) {
+              ESP_LOGW("samba", "Rejected file server password: %u characters", (unsigned) password.size());
+              return;
+            }
+            for (char c : password) {
+              if (c <= ' ' || c > '~') {
+                ESP_LOGW("samba", "Rejected file server password: not printable ASCII");
+                return;
+              }
+            }
+            id(fileserver_password) = password;
+            id(sd_files).set_password(password);
+            id(fileserver_fp).update();
+            ESP_LOGI("samba", "File server password %s (fingerprint %s)",
+                     password.empty() ? "cleared" : "set", id(fileserver_fp).get_state().c_str());
+        - script.execute: fileserver_password_save
+
+text_sensor:
+  # Fingerprint of the pairing password as for the other credentials (FNV-1 32-bit, 8 hex
+  # digits), or "off" while no password is set and the listener is down.
+  - platform: template
+    name: "File Server"
+    id: fileserver_fp
+    icon: mdi:folder-network-outline
+    entity_category: "diagnostic"
+    update_interval: 60s
+    lambda: |-
+      if (id(fileserver_password).empty())
+        return std::string("off");
+      char buf[9];
+      snprintf(buf, sizeof(buf), "%08x", (unsigned) esphome::fnv1_hash(id(fileserver_password)));
+      return std::string(buf);
+
+script:
+  # Flush the password to flash now (same shape as ota_password_save).
+  - id: fileserver_password_save
+    mode: restart
+    then:
+      - delay: 2s
+      - lambda: |-
+          if (!global_preferences->sync()) {
+            ESP_LOGE("samba", "Failed to save file server password to flash; it will revert on power cycle");
+            return;
+          }
+          ESP_LOGI("samba", "File server password saved to flash");

@@ -33,6 +33,7 @@ logger:
     pmsx003: NONE
     resistance: NONE
     samba: INFO
+    sd_file_server: INFO
     sd_spi_card: INFO
     senseair_i2c: ERROR
     sensirion_i2c: ERROR
@@ -51,6 +52,7 @@ packages:
   - !include config/co2.yaml
   - !include config/diagnostics.yaml
   - !include config/esp32.yaml
+  - !include config/fileserver.yaml
   - !include config/globals.yaml
   - !include config/homeassistant.yaml
   - !include config/illuminance.yaml

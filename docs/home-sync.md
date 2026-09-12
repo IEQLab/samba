@@ -38,13 +38,13 @@ Discovery is unchanged firmware behaviour: mDNS `_esphomelib._tcp`, TXT record c
 
 | Request | Response | Notes |
 |---|---|---|
-| `GET /sd` | `200 application/json` — `{"mac":"F8B3B7C65CDC","files":[{"name":"F8B3B7C65CDC_260910_0412.txt","size":183426}]}` | Root of the card only, `.txt` only, sorted by name. The name embeds boot time in UTC, so order is chronological. No mtime: FATFS timestamps are not reliable before the first SNTP sync. |
+| `GET /sd` | `200 application/json` — `{"mac":"F8B3B7C65CDC","files":[{"name":"F8B3B7C65CDC_260910_0412.txt","size":183426}]}` | Root of the card only, `.txt` only, in directory order. The app sorts by name: the name embeds boot time in UTC, so that order is chronological, and sorting on the unit would need a name table or a directory scan per file. No mtime: FATFS timestamps are not reliable before the first SNTP sync. |
 | `GET /sd/<name>` | `200 text/csv`, `Transfer-Encoding: chunked` | Whole file streamed in 1460-byte chunks. No `Content-Length`; the listing carries size. |
 | `GET /sd/<name>` with `Range: bytes=183000-` | `206`, `Content-Range: bytes 183000-183425/183426` | Open-ended ranges only. An offset at or past the current size returns `416`, which the app reads as "card replaced or file truncated". |
 | `HEAD /sd/<name>` | `200` + `X-File-Size` | Optional cheap size probe for one file. The app normally uses the listing. |
 | any, no or bad credentials | `401`, `WWW-Authenticate: Digest` | Username is always `samba`. Digest keeps the password off the wire on an unencrypted LAN. |
 | any, card not mounted | `503`, `Retry-After: 30` | Mirrors the 30 s remount retry in `sd_spi_card`. |
-| second concurrent download | `503`, `Retry-After: 2` | One streaming read at a time. The app serialises anyway. |
+| second request during a download | waits | The IDF server is one task serving one request at a time, so a second connection queues rather than being refused. The app keeps one connection anyway. |
 | name with `/`, `..`, no `.txt`, or over 40 chars | `404` | Path validation before any filesystem call. |
 
 ### The file the app parses (already what the firmware writes)
@@ -99,15 +99,20 @@ components/sd_file_server/sd_file_server.h  ~50 lines
 components/sd_file_server/sd_file_server.cpp ~220 lines: list, stream, range, validation
 config/fileserver.yaml                      ~70 lines: component, password global, api action,
                                             on_boot, fingerprint sensor
-samba.yaml                                  +1 line in packages
-CLAUDE.md, README.md                        credential #4, status table row
+samba.yaml                                  +1 line in packages, one logger line
+config/globals.yaml                         the fileserver_password global
+docs/home-sync/bench.py                     the bench test, standard library only
+CLAUDE.md, README.md                        credential #4
 ```
 
 ### Component design
 
-- **Depends on `sd_spi_card` for one call,** `is_mounted()`. Files are read with `opendir`,
-  `stat`, `fopen`, `fseek` and `fread` on `/sd`, the same VFS the append already uses. No new
-  methods on the SD component.
+- **Depends on `sd_spi_card` for one call,** `is_mounted()`. Files are read with `stat`,
+  `fopen`, `fseek` and `fread` on `/sd`, the same VFS the append already uses. The listing reads
+  the root directory with FatFs's own `f_readdir`, which returns each size in the same pass: the
+  VFS `readdir` carries no size and a `stat` per file rescans the directory each time, which
+  took seconds on a lab card with 90 files. FatFs is built re-entrant, so this sits safely beside
+  the append. No new methods on the SD component.
 - **Registers with `web_server_base` through `add_handler()`,** which routes every request
   through the existing auth middleware (`WebServerBase::set_auth_username/password`, active
   under `USE_WEBSERVER_AUTH`). The captive portal uses `add_handler_without_auth()` and is
@@ -117,16 +122,25 @@ CLAUDE.md, README.md                        credential #4, status table row
   body in a `std::string`, which is why the n-serrette `sd_file_server` cannot serve a month-old
   log on this hardware.
 - **One static 1460-byte buffer** as a `std::array` member, matching the TCP segment size the IDF
-  server already uses for receives (`RECV_CHUNK_SIZE`). No heap after `setup()`. A
-  `std::atomic<bool> busy_` serialises downloads.
+  server already uses for receives (`RECV_CHUNK_SIZE`). No heap after `setup()`. Nothing
+  serialises downloads in the component: the IDF server is one task and serves requests one at
+  a time by construction.
 - **Handlers run on the httpd task,** not the main loop, so a download cannot trip the loop
   watchdog. The FAT VFS holds one lock per filesystem: the 5-minute append waits for at most one
   chunk read, roughly a millisecond at SPI speed.
-- **Listing builds JSON with `snprintf`** into the same buffer, sending each file entry as its
-  own chunk. No ArduinoJson, no per-request allocation.
+- **Listing builds JSON with `snprintf`** into the same buffer, packing entries and sending a
+  segment at a time (one chunk per entry cost a round trip each under Nagle). No ArduinoJson, no
+  per-request allocation. `TCP_NODELAY` is set on every request so a short tail goes out at once.
 - **Password gate.** `setup()` calls `base_->init()` only when the password global is non-empty.
   The api action sets the password, calls `init()` or `deinit()` accordingly, and flushes NVS
-  through a `_save` script exactly as the OTA password does.
+  through a `_save` script exactly as the OTA password does. The constructor gives
+  `web_server_base` the user name and a null password: the middleware then wraps every
+  authenticated route but passes everything until a password exists, so a fleet unit's captive
+  portal is unchanged, and once a password is set it also guards the portal's firmware upload.
+  With no password the `/sd` routes are not there at all (`canHandle` is false).
+- **HEAD.** ESPHome's server registers only GET, POST and OPTIONS with the IDF server; the
+  component registers HEAD through the same dispatcher after each start so it meets the same
+  middleware and handlers.
 - **No `loop()`.** The component is a handler plus a setup hook.
 
 ### The package, `config/fileserver.yaml`
@@ -135,12 +149,13 @@ Same shape as the token and OTA password blocks, so a reader of `config/ota.yaml
 immediately.
 
 - `fileserver_password` global, `restore_value: yes`, `max_restore_data_length: 32`, initial
-  `""`. Printable ASCII, 12 to 32 characters, enforced in the action.
+  `""`, kept in `config/globals.yaml` beside the other three credentials. Printable ASCII, 12 to
+  32 characters, enforced in the action.
 - `fileserver_set_password` api action. Empty string clears it and stops the listener.
 - `on_boot` priority 600 hands the stored password to the component before `setup()` runs,
   matching the existing pattern.
 - "File Server" text sensor, diagnostic, publishing `off` or the 8-digit FNV-1 fingerprint.
-  Never the password.
+  Never the password. `samba home password` verifies against it.
 - The component block itself: `sd_file_server: {id: sd_files, sd_spi_card_id: sd0}`. Port stays
   at 80 from `web_server_base`.
 
@@ -161,13 +176,18 @@ half-wiring check in CLAUDE.md still runs as part of `/bump`.
 
 ### Bench test before the manifest lands on main
 
+`docs/home-sync/bench.py HOST --password PW` runs the contract checks below that a client can
+see (auth, listing, chunked and ranged transfers, `416`, `HEAD`, bad names, two downloads at
+once) and `--soak MINUTES` polls the listing every 10 s; the heap figures it cannot see are on
+the serial log, printed whenever the listener starts or stops.
+
 - Fleet behaviour first: with no password set, confirm port 80 is closed after WiFi connects and
   free heap matches the previous build within noise.
 - Set a password, confirm the listener starts without a reboot, and that a wrong password gets
   `401` on both endpoints.
 - Stream a 700 KB file while the 5-minute sample fires. Row count and checksum on the phone equal
   the card read on a laptop. Watch for any `sd_spi_card` write failure.
-- Range fetch at offset, at exact size, and past size. Expect `206`, empty `206`, and `416`.
+- Range fetch at offset, at exact size, and past size. Expect `206`, `416` and `416`.
 - Pull the card mid-download and expect `503` on the next request, then success after remount.
 - Leave a unit under a 10-second poll for 24 hours. Heap must be flat; the captive portal must
   still come up after a WiFi loss.

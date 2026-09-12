@@ -24,6 +24,7 @@ config/                 # Modular YAML configs (one per function/sensor)
   homeassistant.yaml    # Native API endpoint (Noise encryption, key provisioned at runtime)
   wifi.yaml             # WiFi and captive portal
   ota.yaml              # HTTP OTA updates + esphome OTA password provisioning
+  fileserver.yaml       # SD file server for the home app + pairing password provisioning
   led.yaml              # WS2812 RGB LED effects
   diagnostics.yaml      # WiFi signal, uptime, restart buttons
   tair.yaml             # SHT4x temperature/RH (linear cal + vapour pressure correction)
@@ -41,6 +42,7 @@ components/             # Custom external ESPHome components (C++ and Python)
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
   i2c_recovery/         # Runtime I2C bus reset (clocks out a wedged target)
+  sd_file_server/       # Read-only HTTP service over the SD log, digest auth (docs/home-sync.md)
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
 .claude/skills/bump.md   # /bump skill: version bump and release procedure
@@ -321,10 +323,11 @@ and the three below are provisioned at runtime — see next section.
 
 ### Credential provisioning
 
-Three credentials are written **at runtime** over the native API instead of compiled in. Each
-is **one per building**, held by the provisioning client `samba_app` (`samba deploy`,
-`samba buildings`), and kept on the device in NVS, which OTA never rewrites. Order matters:
-`samba deploy` sets the API key first so everything after it travels encrypted.
+Four credentials are written **at runtime** over the native API instead of compiled in. The
+first three are **one per building**, held by the provisioning client `samba_app` (`samba deploy`,
+`samba buildings`); the fourth is one per home unit. All are kept on the device in NVS, which
+OTA never rewrites. Order matters: `samba deploy` sets the API key first so everything after it
+travels encrypted.
 
 1. **Native API key** (`config/homeassistant.yaml`, `encryption: {}`). ESPHome's own
    mechanism: with no `key:` in YAML the device boots unkeyed, accepts a Noise handshake with
@@ -356,6 +359,15 @@ is **one per building**, held by the provisioning client `samba_app` (`samba dep
    compiled-in password only — and with none once the fallback is `""`. This is accepted:
    it exists only on a unit that is already broken, it is the sole recovery route there,
    and the alternative is the shared secret this removes.
+
+4. **SD file server pairing password** (`config/fileserver.yaml`, docs/home-sync.md). Same
+   shape again: `fileserver_password` global (`max_restore_data_length: 32`),
+   `fileserver_set_password` action (12 to 32 printable ASCII; `""` clears), `on_boot` 600
+   hands it to the `sd_file_server` component, `File Server` text sensor is the fingerprint or
+   `off`. Set with `samba home password <host>`, which prints the pairing label the home app
+   scans. The password gates the listener: no password, no port 80 outside the captive
+   portal, so a building unit is unchanged. With one set, every authenticated route on port
+   80 needs it, including the captive portal's firmware upload.
 
 Nothing publishes a credential back. A text entity was rejected for this on purpose: a text
 entity's state goes to every connected API client.
