@@ -34,7 +34,9 @@ files, a listing, the expected rows and the fetch cases — so each side is writ
 rather than against the other side's source (see section 6).
 
 Discovery is unchanged firmware behaviour: mDNS `_esphomelib._tcp`, TXT record carrying `mac`,
-`project_name` and `version`. Only the two HTTP endpoints below are new. Port 80.
+`project_name`, `project_version` (the firmware's own version, the same string as the log's
+`# version:` line) and `version` (the ESPHome release). Only the two HTTP endpoints below are new.
+Port 80.
 
 | Request | Response | Notes |
 |---|---|---|
@@ -237,8 +239,8 @@ re-implementation against fixtures rather than a reverse-engineering.
 ### Stack
 
 - **Discovery:** `NWBrowser` for `_esphomelib._tcp`; the TXT record carries `mac`,
-  `project_name` and `version`, so the app matches a paired unit by MAC when its DHCP address
-  changes.
+  `project_name`, `project_version` and `version`, so the app matches a paired unit by MAC when
+  its DHCP address changes and shows the firmware version it advertises.
 - **HTTP:** `URLSession` with `httpMaximumConnectionsPerHost = 1`. Digest auth is handled by the
   system challenge delegate.
 - **Store:** SQLite through GRDB. Chosen over SwiftData because the schema must be portable to
