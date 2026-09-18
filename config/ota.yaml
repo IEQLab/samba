@@ -11,6 +11,12 @@ ota:
     # Compiled-in fallback; a password provisioned over the native API takes precedence (see
     # the provisioning block below). Keep `password:` present even when it is "" so ESPHome
     # compiles the auth path, which set_auth_password() needs.
+    #
+    # 2026.9.0 offers the client an encrypted OTA session, keyed by the provisioned
+    # `api: encryption: key`. It does not replace this password: `encryption:` here is what
+    # makes encryption *mandatory*, and ESPHome rejects that block when the api key is
+    # provisioned at run time rather than compiled in. Without it a client that skips the
+    # noise offer still walks to the data phase, so the password is the only thing gating it.
     password: "${ota_password}"
     on_begin:
       then:
