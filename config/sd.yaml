@@ -11,6 +11,17 @@ sd_spi_card:
   miso_pin: GPIO19
   cs_pin: GPIO5
   auto_mount: true
+  # A card absent at boot mounts later, long after on_time_sync has been and gone. Without
+  # this the whole boot's data lands in a headerless file.
+  on_mount:
+    then:
+      - if:
+          condition:
+            and:
+              - lambda: 'return !id(sd_logfile);'
+              - lambda: 'return id(ds1307_time).now().is_valid();'
+          then:
+            - script.execute: sd_create
   
 # Script to create file after initial time sync
 script:
@@ -41,7 +52,11 @@ script:
                      id(level_tag).c_str(),
                      id(zone_tag).c_str());
             return std::string(header);
-      - lambda: 'id(sd_logfile) = true;'
+      # Only latch on a file that actually exists. create_file returns NOT_MOUNTED without
+      # writing when the card is absent, and the action swallows that result, so setting this
+      # unconditionally retired the header for the rest of the boot. create_file is idempotent,
+      # so re-running the script over an existing file is safe.
+      - lambda: 'id(sd_logfile) = id(sd0).file_exists(id(sd_filename));'
 
 
 # Store filename as global variable

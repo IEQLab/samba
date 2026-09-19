@@ -10,6 +10,10 @@ time:
     id: ds1307_time
     address: 0x68
     update_interval: 1h
+    # Pin this explicitly. The default is the *build machine's* timezone, and apply_timezone_
+    # writes a process-global, so whichever time platform sets up last wins for every on_time
+    # below. Both must say UTC or the Monday 04:00 OTA window drifts with the build host.
+    timezone: "Etc/GMT"
     
 # Only create log file on sd card after time has been synced
     on_time_sync:

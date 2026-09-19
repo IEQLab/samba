@@ -41,7 +41,6 @@ components/             # Custom external ESPHome components (C++ and Python)
   senseair_i2c/         # K30/K33 CO2 sensor over I2C
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
-  i2c_recovery/         # Runtime I2C bus reset (clocks out a wedged target)
   sd_file_server/       # Read-only HTTP service over the SD log, digest auth (docs/home-sync.md)
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
@@ -67,14 +66,41 @@ All sensor calibrations use persistent global variables (stored in flash, modifi
 
 ### Error Recovery
 
-A failed sensor costs only its own measurands: the raw read publishes NaN, so the field is
-absent in InfluxDB, `nan` on SD and unknown in Home Assistant, and every other sensor keeps
-reporting. A restart is the last resort, never the first response — the watchdogs used to fire
-faster than the 5min sample, so one dead sensor took the whole unit off the air.
+A failed sensor costs only its own measurands: the field is absent in InfluxDB, `nan` on SD
+and unknown in Home Assistant, and every other sensor keeps reporting. A restart is the last
+resort, never the first response — the watchdogs used to fire faster than the 5min sample, so
+one dead sensor took the whole unit off the air.
+
+**Dropout is a staleness guard, not a NaN check, and every sensor needs one.** Most ESPHome
+sensor components publish *nothing* on a failed read (sht4x, pmsx003, ads1115) or publish NaN
+that an upstream `filter_out: nan` then swallows (opt3001), so `.state` freezes at its last
+good value and the template lambda recomputes that same value forever. `influxdb`'s `fresh`
+flag cannot save you here: `sample.yaml` calls `publish_state()` on every template sensor each
+cycle, which re-arms it. So each sensor stamps `<x>_last_ok = millis()` from `on_raw_value`,
+and its template lambda returns `NAN` when that stamp is older than **330000 ms** — one 5min
+sample interval plus margin. Thresholds are uniform on purpose; the poll rates do the work
+(11 consecutive failures for SHT4x/NTC/OPT3001, 165 for the 2s air-speed channels).
+
+Guards live in the file that owns the sensor: `sht_last_ok` (tair), `opt_last_ok`
+(illuminance), `pms_last_ok` (pm25), `k30_last_ok` (co2), `sgp_last_ok` (tvoc), and the three
+`ads_*_last_ok` (adc, consumed by tglobe and airspeed).
+
+**`clamp` filters cannot express a dropout, and NaN silently defeats `std::min`/`std::max`.**
+`ClampFilter` maps NaN to `min_value` when `ignore_out_of_range: false`, and drops the publish
+— freezing the state — when it is `true`. Neither preserves NaN. Likewise `std::min(100.0f,
+NAN)` returns `100.0f`, because every comparison against NaN is false; this shipped as RH
+reporting a confident 100% from a sensor that had never read. **Always return NaN before
+clamping**, then `std::min`/`std::max` are safe because their operands are known finite. This
+is the one place to prefer a lambda over a filter.
+
+**Watch for cascades when adding a guard.** `airspeed.yaml` reads `samba_temperature.state`
+for its sensor floor, so NaN-ing temperature would have taken air speed with it — and the
+final `clamp` would have reported that NaN as a confident 0.02 m/s. It falls back to a nominal
+22 °C instead. MRT genuinely needs Ta, so that cascade is left in place.
 
 All three I2C sensors keep an hour-scale EWMA duty cycle (`k30_unhealthy`, `ads_unhealthy`,
 `sgp_unhealthy`), each reading directly as **seconds failed per hour** at steady state
-(`3571 x duty`). Divide by `35.71` for a percentage. Only the K30 and ADS1115 escalate to a
+(`3600 x duty`). Divide by `36` for a percentage. Only the K30 and ADS1115 escalate to a
 restart, and both also require `sys_uptime > 3600`, which self-rate-limits to one attempt an hour.
 
 - **CO2 (K30):** re-initialise on the first failure, then every 10th (5min) while it stays
@@ -84,13 +110,20 @@ restart, and both also require `sys_uptime > 3600`, which self-rate-limits to on
   `mark_failed()`s in `setup()` and the self test; every runtime read failure is
   `status_set_warning()` and the component clears it itself on the next good read. A reboot would
   also discard the `learning_time_offset_hours: 720` gas baseline. Error counting skips the first
-  100s warmup. `sgp_unhealthy` is diagnostic only.
-- **ADS1115:** soft recovery first — `i2c_recovery_a.reset_bus()` clocks out a stuck target at
-  the warning threshold (90 ticks / 3min), rate-limited to 30s apart and capped at three attempts
-  per episode. Restart needs all three of `ads_error_count >= 150` (5min), `ads_unhealthy > 1250`
+  150s warmup. `sgp_unhealthy` is diagnostic only.
+- **ADS1115:** restart needs all three of `ads_error_count >= 150` (5min), `ads_unhealthy > 1250`
   (35% of the hour) and uptime over an hour. The counter measures per-channel **staleness** of the
   last successful read, not `isnan()` — a failed ADS1115 read leaves `.state` at its last good value.
+  There is no runtime bus reset: the ESP-IDF I2C driver already clears the bus and resets the
+  peripheral after a timeout, before the next transaction (`i2c_master.c`, `s_i2c_hw_fsm_reset`).
 - **System:** safe mode on boot crash, periodic SD card presence check.
+
+Two non-sensor traps in the same family. `http_request` raises the task WDT once for a whole
+request, then runs `esp_http_client_open` and the body write with no feed between them, so
+`watchdog_timeout` must exceed **twice** `timeout` (DNS is not bounded by `timeout` at all);
+ESPHome forces `CONFIG_ESP_TASK_WDT_PANIC`, so an overrun reboots. And a bare `millis() < N`
+boot guard re-engages for N ms at the 49.7-day rollover — latch it behind a bool global
+(`led_armed`, `sgp_warmed`). Differences of `millis()` are rollover-safe and need no latch.
 
 The status LED is driven from one arbiter in `config/led.yaml` polling these counters every 10s,
 so an alarm survives the 5min sample heartbeat. Colour identifies the subsystem — **amber**
@@ -303,6 +336,10 @@ EOF
 ### SD Card
 
 - Mount point is `/sd` (hardcoded in sd_spi_card.h)
+- The `create_file` action swallows its `WriteResult`, so YAML cannot see a failure — gate
+  `sd_logfile` on `sd0.file_exists()` instead. `create_file` is idempotent (it returns
+  `SUCCESS` without truncating an existing file), so `sd_create` is safe to re-run, and
+  `on_mount` re-runs it for a card inserted after the first time sync
 - Filenames use MAC address + UTC timestamp from DS1307
 - `sd_logfile` global flag prevents duplicate file creation per boot
 - `script.execute` is async — code after it runs before the script completes
@@ -311,6 +348,44 @@ EOF
 
 - `ESP_LOGCONFIG` (used in `dump_config`) outputs at CONFIG level — set component log level to DEBUG to see it
 - Component-specific log levels are set in `samba.yaml` under `logger.logs`
+
+### Time zones
+
+Neither `time` platform may rely on the default `timezone`. It resolves to the **build
+machine's** zone, and `RealTimeClock::apply_timezone_` writes a process-global, so whichever
+platform sets up last wins for every `on_time` in the config. Both `ds1307_time` and
+`sntp_time` pin `Etc/GMT` explicitly. `utcnow()` is unaffected either way; the local-time
+`on_time` triggers — the Monday 04:00 OTA window, the Sunday 04:00 RTC write — are not.
+
+### VOC baseline
+
+`tvoc.yaml` sets `learning_time_offset_hours: 720`. That is not a 720-hour baselining period
+that has to elapse before the index is usable — it is `mTau_Mean_Hours`, the EWMA time constant
+of the baseline mean estimator. Initialisation is a separate fixed constant,
+`INIT_DURATION_MEAN_VOC` (45 min), over which gamma is pulled toward a value derived from
+`TAU_INITIAL_MEAN_VOC` and is unaffected by our tau. So the index is live ~90 s after boot
+(`INITIAL_BLACKOUT`, 45 samples x 2), converges over the first ~45 min, then barely moves for a
+month.
+
+The consequence is that **the air a unit sees in its first 45 minutes sets its scale for the next
+month.** The learned baseline *is* index 100 (`VOC_INDEX_OFFSET_DEFAULT`), and the conversion in
+`samba_tvoc` maps index 100 to 94 ppb. Nothing in the chain is an absolute reference.
+
+- Baseline in the space the unit will monitor, in a representative state. Not a chamber and not a
+  store room: baselining in clean outdoor air pins 94 ppb to outdoor air, and at tau 720 h the
+  index then reads high indoors permanently instead of renormalising
+- 720 h is a deliberate trade. The 12 h default would absorb a sustained VOC event into the
+  baseline within a day; 720 h keeps it visible, at the cost of the anchoring above
+- A unit whose first 45 min was anomalous is recoverable by power-cycling it within ~3 h. The
+  baseline reaches NVS only once `SHORTEST_BASELINE_STORE_INTERVAL` (10800 s of sampling) has
+  passed, so before that a reboot re-learns from scratch. After it, only a config change clears it
+- Every OTA and every ESPHome upgrade re-baselines the fleet, deliberately: the NVS key is
+  `fnv1a_hash_extend(App.get_config_version_hash(), serial_number)`, and `get_config_version_hash()`
+  hashes the whole config plus `ESPHOME_VERSION`, so a baseline is discarded when the config it was
+  learned under no longer matches. A fleet OTA re-anchors every unit to wherever it is sitting
+- Restoring from NVS is not a restore of elapsed learning: `set_states` writes only mean and std,
+  and sets `Uptime_Gamma` to `PERSISTENCE_UPTIME_GAMMA` (3 h), not the real elapsed time. This is
+  also why a baseline cannot be pre-learned under the calibration firmware and carried across
 
 ### Secrets
 

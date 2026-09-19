@@ -55,7 +55,7 @@ The `components/` directory contains four [external components](https://esphome.
 | Air Speed | [Thermal Anemometer](https://moderndevice.com/products/wind-sensor) | [airspeed.yaml](https://github.com/IEQLab/samba/blob/main/config/airspeed.yaml) | [ads1115](https://esphome.io/components/sensor/ads1115.html) |
 | CO2 | [CO2Meter K30](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module) | [co2.yaml](https://github.com/IEQLab/samba/blob/main/config/co2.yaml) | [senseair_i2c](https://github.com/IEQLab/samba/tree/main/components/senseair_i2c) |
 | PM2.5 | [Plantower PMS5003T](https://www.plantower.com/en/products_33/74.html) | [pm25.yaml](https://github.com/IEQLab/samba/blob/main/config/pm25.yaml) | [pmsx003](https://esphome.io/components/sensor/pmsx003.html) |
-| VOC / NOx Index | [Sensirion SGP40](https://sensirion.com/products/catalog/SGP40/) | [tvoc.yaml](https://github.com/IEQLab/samba/blob/main/config/tvoc.yaml) | [sgp4x](https://esphome.io/components/sensor/sgp4x.html) |
+| VOC / NOx Index | [Sensirion SGP41](https://sensirion.com/products/catalog/SGP41/) | [tvoc.yaml](https://github.com/IEQLab/samba/blob/main/config/tvoc.yaml) | [sgp4x](https://esphome.io/components/sensor/sgp4x.html) |
 | Illuminance | [TI OPT3001](https://www.ti.com/product/OPT3001) | [illuminance.yaml](https://github.com/IEQLab/samba/blob/main/config/illuminance.yaml) | [opt3001](https://esphome.io/components/sensor/opt3001.html) |
 | Sound Pressure Level | [ICS-43434 Microphone](https://invensense.tdk.com/products/ics-43434/) | [spl.yaml](https://github.com/IEQLab/samba/blob/main/config/spl.yaml) | [sound_level_meter](https://github.com/stas-sl/esphome-sound-level-meter) |
 
@@ -98,9 +98,10 @@ Published measurements are sent every 5 minutes to one or more of the following 
 
 A single RGB LED on the board reports device state. One rule covers the whole scheme:
 **colour identifies the subsystem, and pulsing versus solid identifies severity.** A slow
-pulse is a warning the device expects to recover from on its own; a steady light means it has
-escalated and will attempt a restart if the fault persists. Brightness is deliberately low
-throughout so a rack of units is not distracting in an occupied office.
+pulse is a warning the device expects to recover from on its own; a steady light means the fault
+is sustained. Only the ADS1115 and K30 escalate to a restart, and only after an hour of uptime.
+Brightness is deliberately low throughout so a rack of units is not distracting in an occupied
+office.
 
 | LED | Meaning | What to do |
 |-----|---------|------------|
@@ -108,11 +109,11 @@ throughout so a rack of units is not distracting in an occupied office.
 | White, brief flash | 5-minute sample taken and uploaded | Nothing — this is the healthy heartbeat |
 | Off | Running normally | Nothing |
 | Amber, pulsing | Globe temperature / air speed unresponsive ~3 min | Watch — often transient |
-| Amber, solid | Same, ~5 min. Bus recovery attempted; restarts if the fault persists for over a third of an hour | Check the RJ45 cable to the remote board, then reseat both ends |
+| Amber, solid | Same, ~5 min. Restarts once the fault has covered 35% of the last hour (about 25 min continuous) | Check the RJ45 cable to the remote board, then reseat both ends |
 | Blue, pulsing | CO2 (K30) failed 3 consecutive reads | Watch — usually self-recovers |
-| Blue, solid | CO2 failed 4 or more; restart attempted after an hour | Check the K30; a persistent fault is often board-specific rather than the sensor |
+| Blue, solid | CO2 failed 4 or more; restarts once it has failed 67% of the last hour (about 65 min of near-total failure) | Check the K30; a persistent fault is often board-specific rather than the sensor |
 | Magenta, pulsing | VOC / NOx (SGP4x) failed 4 consecutive reads | Watch — usually self-recovers |
-| Magenta, solid | VOC / NOx failed 6 or more; restart attempted after an hour | Check the sensor |
+| Magenta, solid | VOC / NOx failed 6 or more. Never restarts: the sensor keeps retrying itself, and a reboot would discard its month-long baseline | Check the sensor |
 
 The LED is applied from a single 10-second poll of the error counters rather than from each
 sensor's error handler, so it survives the sample heartbeat and returns to off within about ten
@@ -123,6 +124,13 @@ shows, and the ADS1115 wins a tie.
 `nan` and left out of the upload, while every other measurement continues to be sampled and
 sent. Restarts are rate-limited to at most one per hour precisely so that one dead sensor
 cannot take the whole unit off the air.
+
+Every sensor drops out the same way: each stamps the time of its last successful read, and a
+measurand goes `nan` once that stamp is more than 5.5 minutes old — one sample interval plus
+margin. A single failed read never costs a reading, because the sensors poll far faster than
+they are sampled; it takes eleven consecutive failures for temperature, humidity, globe or
+illuminance, and 165 for air speed. What this does *not* catch is a sensor that keeps
+answering with a stuck value.
 
 Amber is the one worth attention in the field: the remote board connects over an RJ45 lead,
 and a marginal cable is the most common cause of it.
@@ -147,9 +155,11 @@ SAMBA devices check for firmware updates every Monday at 4 am by comparing again
 
 SAMBA devices are shipped pre-calibrated, with their location tags (building, level, zone) and calibration coefficients already set by the IEQ Lab. Follow these steps to connect a new SAMBA to your network and start sampling:
 
-1. **Power on** the SAMBA. The status LED will strobe red, green, and blue to indicate it is in setup mode.
-2. **Connect to the hotspot.** Using a phone or laptop, join the `samba_connect` WiFi network and open the [captive portal](https://esphome.io/components/captive_portal.html) at [http://192.168.4.1](http://192.168.4.1).
+1. **Power on** the SAMBA. The status LED blinks green while it boots. This firmware has no separate setup colour, so a unit still waiting for a network looks the same as one that is sampling.
+2. **Connect to the hotspot.** Using a phone or laptop, join the SAMBA's own open WiFi network — it is named after the device, `samba-xxxxxx`, where `xxxxxx` is the last three bytes of its MAC address — and open the [captive portal](https://esphome.io/components/captive_portal.html) at [http://192.168.4.1](http://192.168.4.1). There is no password on the hotspot.
 3. **Enter WiFi credentials.** Select the target 2.4 GHz network from the list and enter the password. The SAMBA will connect and begin sampling automatically. The LED will blink green during the warm-up period and then turn off once it enters the normal sampling routine.
+
+**Switch it on in the room it will monitor.** The VOC sensor's index is relative: it learns a baseline from the air it sees in its first 45 minutes and then holds that baseline for about a month, so the first hour sets the scale every later TVOC reading is reported against. Boot the unit in its final position under normal conditions — not on a bench in another room, and not somewhere unusually clean or unusually solvent-heavy. If a unit's first hour was unrepresentative, power-cycling it within three hours discards the baseline and it learns again from scratch; after three hours only a firmware update clears it. This also means TVOC may step to a new baseline after an automatic update. Nothing else in the unit depends on where it is first switched on.
 
 There is no web interface on the device. The location tags, the *InfluxDB Upload* / *SD Card Write* / *Automatic Updates* switches and the calibration coefficients are exposed over the [ESPHome native API](https://esphome.io/components/api.html), so they can be viewed and changed from [Home Assistant](https://www.home-assistant.io/integrations/esphome/) or with the IEQ Lab's [samba_app](https://github.com/IEQLab/samba_app) laptop client (its *Identify SAMBA* button blinks the LED to pick one unit out of a batch). If you need a SAMBA recalibrated or re-tagged, please reach out — see [Project Maintenance](#project-maintenance) below.
 

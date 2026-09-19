@@ -7,7 +7,8 @@ description: >-
   under components/. Covers naming, C++ field visibility, preprocessor rules,
   embedded memory/STL container choices, callback managers, config schemas,
   automations, and Python state management. Reconciled with upstream
-  esphome/esphome AGENTS.md (dev branch); local examples take precedence.
+  esphome/esphome AGENTS.md (dev branch, through PR #18941); local examples
+  take precedence.
 ---
 
 # ESPHome Component Conventions
@@ -31,6 +32,9 @@ Load these when the task touches their area:
   skeleton, automations (triggers/actions/conditions), validators, platform
   sub-components, and `CORE.data` state management. Read before editing
   `__init__.py` or adding a new component/platform.
+
+Upstream <https://developers.esphome.io> is the authoritative reference for the
+component lifecycle and the loop primitives; go there when this skill is silent.
 
 ---
 
@@ -70,6 +74,43 @@ Load these when the task touches their area:
    protected:
     text::Text *source_;
   };
+  ```
+
+- **Timing in `loop()`:** Never call `millis()` in a `loop()` body. The current
+  tick's timestamp is already cached — use `App.get_loop_component_start_time()`
+  (from `esphome/core/application.h`). This applies to `Component::loop()` only;
+  a FreeRTOS task with its own `while` loop, like `sound_level_meter`'s, still
+  calls `millis()`.
+
+- **Rate-limiting gates:** The main loop runs every ~16 ms, so a gate shorter
+  than that never fires early and is dead weight. Use an interval comfortably
+  longer than 16 ms, or drop the gate.
+
+  ```cpp
+  // Bad - 10ms gate can never trigger; millis() in a loop body
+  static constexpr uint32_t POLL_INTERVAL_MS = 10;
+  const uint32_t now = millis();
+  if (now - this->last_poll_ < POLL_INTERVAL_MS)
+    return;
+  this->last_poll_ = now;
+
+  // Good
+  static constexpr uint32_t POLL_INTERVAL_MS = 100;
+  const uint32_t now = App.get_loop_component_start_time();
+  if (now - this->last_poll_ < POLL_INTERVAL_MS)
+    return;
+  this->last_poll_ = now;
+  ```
+
+- **No redundant overrides:** Don't override a base-class method just to return
+  what it already returns. `Component::get_setup_priority()` already returns
+  `setup_priority::DATA`; overriding it to return the same value is noise.
+
+- **Logging string literals:** Wrap a string literal passed as a `%s` argument in
+  `LOG_STR_LITERAL()` so it lives in flash rather than RAM.
+
+  ```cpp
+  ESP_LOGCONFIG(TAG, "  Mode: %s", LOG_STR_LITERAL("continuous"));
   ```
 
 ## C++ preprocessor directives

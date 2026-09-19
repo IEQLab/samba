@@ -20,7 +20,12 @@ sensor:
           send_every: 10
           send_first_at: 10
       - lambda: |-
+            // Nominal fallback: a dead SHT4x must not take air speed with it. Without this the
+            // floor goes NaN, the lambda returns NaN, and the clamp below - ignore_out_of_range
+            // is false - maps that NaN to its min_value and reports a confident 0.02 m/s.
             float temp = id(samba_temperature).state;
+            if (std::isnan(temp))
+              temp = 22.0f;
             float floor = id(calibration_as1_d0) + id(calibration_as1_d1) * temp;
             float v_above_floor = std::max(x - floor, 0.01f);
             return id(calibration_as1_a) * pow(v_above_floor, id(calibration_as1_b));
@@ -44,7 +49,12 @@ sensor:
           send_every: 10
           send_first_at: 10
       - lambda: |-
+            // Nominal fallback: a dead SHT4x must not take air speed with it. Without this the
+            // floor goes NaN, the lambda returns NaN, and the clamp below - ignore_out_of_range
+            // is false - maps that NaN to its min_value and reports a confident 0.02 m/s.
             float temp = id(samba_temperature).state;
+            if (std::isnan(temp))
+              temp = 22.0f;
             float floor = id(calibration_as2_d0) + id(calibration_as2_d1) * temp;
             float v_above_floor = std::max(x - floor, 0.01f);
             return id(calibration_as2_a) * pow(v_above_floor, id(calibration_as2_b));
@@ -63,4 +73,16 @@ sensor:
     unit_of_measurement: "m/s"
     icon: mdi:weather-windy
     lambda: |-
+      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
+      // the upload. Per channel, so one dead anemometer leaves the other reporting rather
+      // than letting max() pick whichever frozen value happens to be higher.
+      const uint32_t now = millis();
+      const bool as1_stale = id(ads_as1_last_ok) == 0 || (now - id(ads_as1_last_ok)) > 330000;
+      const bool as2_stale = id(ads_as2_last_ok) == 0 || (now - id(ads_as2_last_ok)) > 330000;
+      if (as1_stale && as2_stale)
+        return NAN;
+      if (as1_stale)
+        return id(as_2).state;
+      if (as2_stale)
+        return id(as_1).state;
       return max(id(as_1).state, id(as_2).state);

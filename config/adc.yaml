@@ -61,13 +61,13 @@ sensor:
       const bool ntc_stale = (now - id(ads_ntc_last_ok)) > 90000;
       const bool stale = as1_stale || as2_stale || ntc_stale;
 
-      // Seconds stale per hour, EWMA over ~59min, gating the restart only: errors here come
-      // in waves and a reboot must not react to one. Steady state is 3571 * duty cycle, so
-      // the 1250 threshold in ads_restart_due is a sustained 35%.
-      id(ads_unhealthy) = (id(ads_unhealthy) + (stale ? 2.0f : 0.0f)) * 0.99944f;
+      // Seconds stale per hour: EWMA with a one-hour time constant, so steady state is
+      // 3600 * duty cycle. Gates the restart only; errors here come in waves and a reboot
+      // must not react to one. The 1250 threshold in ads_restart_due is a sustained 35%.
+      id(ads_unhealthy) = (id(ads_unhealthy) + (stale ? 2.0f : 0.0f)) * 0.9994444f;
 
-      // Consecutive-failure ticks, driving the LED and the soft recovery. Any successful read
-      // resets it. A global, not a static, so it can be read back when diagnosing a unit.
+      // Consecutive-failure ticks, driving the LED. Any successful read resets it. A global,
+      // not a static, so it can be read back when diagnosing a unit.
       if (stale) {
         id(ads_error_ticks)++;
       } else {
@@ -100,12 +100,6 @@ globals:
     restore_value: no
     initial_value: '0.0f'
 
-# Bus resets performed in the current error episode, cleared when the warning releases
-  - id: ads_reset_attempts
-    type: int
-    restore_value: no
-    initial_value: '0'
-
 # ADS1115 error detection. LED handled by the arbiter in led.yaml
 binary_sensor:
 # Warning after 3min of continuous errors
@@ -120,7 +114,6 @@ binary_sensor:
           tag: "samba"
           format: "ADS1115 unresponsive for 3min"
     on_release:
-      - lambda: 'id(ads_reset_attempts) = 0;'
       - logger.log:
           level: INFO
           tag: "samba"
@@ -145,30 +138,6 @@ binary_sensor:
       - logger.log:
           level: ERROR
           format: "ADS1115 stale %.0f percent of last hour - restarting"
-          args: ['id(ads_unhealthy) / 35.71f']
+          args: ['id(ads_unhealthy) / 36.0f']
       - delay: 5s
       - button.press: sys_restart
-
-# Soft recovery to unstick a wedged bus in place, three attempts per episode
-interval:
-  - interval: 10s
-    then:
-      - lambda: |-
-          if (!id(ads_error_warning).state)
-            return;
-
-          // A reset that genuinely unwedges a bus works on the first attempt. The Aug 2026
-          // soak fired 92 with no measurable effect, 56 of them into a single 27min episode
-          // that then recovered on its own schedule. Kept because a wedged bus is real and
-          // the reset is cheap, but capped: three attempts is a clean test of the premise,
-          // where an unbounded retry every 30s only produces noise.
-          if (id(ads_reset_attempts) >= 3)
-            return;
-
-          if (id(i2c_recovery_a).reset_bus()) {
-            id(ads_reset_attempts)++;
-            ESP_LOGW("adc", "ADS1115 unresponsive for %.0f x 2s - I2C bus reset %d of 3",
-                     id(ads_error_count).state, id(ads_reset_attempts));
-          } else {
-            ESP_LOGD("adc", "ADS1115 still unresponsive - bus reset rate-limited or failed");
-          }

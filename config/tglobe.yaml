@@ -45,6 +45,11 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
+      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
+      // the upload. The NTC channel polls every 30s, so this needs eleven consecutive failed
+      // reads; ads_ntc_last_ok is stamped in adc.yaml.
+      if (id(ads_ntc_last_ok) == 0 || (millis() - id(ads_ntc_last_ok)) > 330000)
+        return NAN;
       return ((id(calibration_tg_m) * id(ntc_temperature).state) + id(calibration_tg_b));
 
 # Define mean radiant temperature measurements
@@ -56,9 +61,9 @@ sensor:
     device_class: temperature
     unit_of_measurement: "°C"
     icon: mdi:thermometer
-    filters:
-      - filter_out: nan
     lambda: |-
+      // No filter_out: nan here. It would swallow the NaN this lambda returns, freezing MRT at
+      // its last good value and republishing that every sample - the dropout must survive.
       if (isnan(id(samba_globe).state) || isnan(id(samba_airspeed).state) || isnan(id(samba_temperature).state))
         return NAN;
       return pow(pow(id(samba_globe).state + 273.15, 4) +

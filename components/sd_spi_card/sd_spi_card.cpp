@@ -1,4 +1,5 @@
 #include "sd_spi_card.h"
+#include "esphome/core/application.h"
 #include "esphome/core/log.h"
 #include <cstdio>
 #include <cerrno>
@@ -134,7 +135,8 @@ void SdSpiCard::loop() {
     return;
   }
   
-  uint32_t now = millis();
+  // The tick's timestamp is already cached; millis() in a loop() body is redundant work.
+  const uint32_t now = App.get_loop_component_start_time();
   
   // Periodic card presence check
   if (now - last_check_millis_ > check_interval_ms_) {

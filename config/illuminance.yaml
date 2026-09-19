@@ -11,6 +11,10 @@ sensor:
     update_interval: 20s
     internal: true
     address: 0x45
+    on_raw_value:
+      # Timestamp every successful raw read. opt3001 publishes NaN on a read error, which the
+      # filter_out below drops, so without this .state freezes at its last good value.
+      - lambda: 'if (!std::isnan(x)) id(opt_last_ok) = millis();'
     filters:
       - filter_out: nan
       - clamp:
@@ -34,5 +38,17 @@ sensor:
     icon: mdi:sun-wireless-outline
     filters:
       - lambda: |-
+          // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out
+          // of the upload. Only after a full sample interval of silence - the 20s poll and
+          // 15-wide median carry illuminance through sixteen consecutive failed reads.
+          if (id(opt_last_ok) == 0 || (millis() - id(opt_last_ok)) > 330000)
+            return NAN;
           return ((id(calibration_lux_m) * id(opt_lux).state) + id(calibration_lux_b));
-      - filter_out: nan
+
+
+# millis() of the last successful raw read
+globals:
+  - id: opt_last_ok
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'

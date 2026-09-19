@@ -15,6 +15,25 @@ Helpers that hide allocation (`std::string`, `std::to_string`, string-returning
 helpers) are being deprecated upstream in favor of buffer and view-based APIs.
 Prefer fixed buffers and views over dynamic strings in new code.
 
+### Strings set once from config → `StringRef`
+
+A `std::string` member set once from the YAML config heap-copies a literal that
+already lives in flash. Use `StringRef` (`esphome/core/string_ref.h`) instead: it
+is a pointer plus a length, and the codegen literal it points at is static.
+
+```cpp
+// Bad - heap copy of a flash literal, held for the life of the device
+void set_mount_point(const std::string &mount_point) { this->mount_point_ = mount_point; }
+std::string mount_point_;
+
+// Good - no allocation
+void set_mount_point(const StringRef &mount_point) { this->mount_point_ = mount_point; }
+StringRef mount_point_;
+```
+
+This applies only to values that are **invariant after `setup()`**. A string
+built or mutated at runtime still needs to own its storage.
+
 ## STL container guidelines
 
 ### 1. Compile-time-known sizes → `std::array`
