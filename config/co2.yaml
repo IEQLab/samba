@@ -15,7 +15,7 @@ sensor:
     abc_interval: 180h
     read_delay_ms: 80
     retry_delay_ms: 160
-    max_retries: 10
+    max_retries: 5
     filters:
       - filter_out: nan
       - clamp:
@@ -74,7 +74,13 @@ interval:
       - lambda: |-
           // Check if CO2 sensor is returning valid data. The raw value is NaN after a failed
           // read; the filtered .state never is, because filter_out drops the NaN.
-          const bool failed = std::isnan(id(k30_co2).get_raw_state());
+          //
+          // The staleness term is belt and braces: every senseair_i2c failure path now
+          // publishes NaN, so isnan(raw) is sufficient today, but a future path that returns
+          // without publishing would freeze raw_state at a good value and read as healthy -
+          // clearing the LED while the sensor is dead. 45s is one 30s poll plus margin.
+          const bool failed = std::isnan(id(k30_co2).get_raw_state())
+              || (id(k30_last_ok) != 0 && (millis() - id(k30_last_ok)) > 45000);
 
           // Nothing read yet in the first minute is setup still running, not a failure:
           // this interval can fire before the first poll, and reinitialize() then restarts

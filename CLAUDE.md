@@ -116,7 +116,17 @@ restart, and both also require `sys_uptime > 3600`, which self-rate-limits to on
   last successful read, not `isnan()` — a failed ADS1115 read leaves `.state` at its last good value.
   There is no runtime bus reset: the ESP-IDF I2C driver already clears the bus and resets the
   peripheral after a timeout, before the next transaction (`i2c_master.c`, `s_i2c_hw_fsm_reset`).
+  `config/adc.yaml` re-runs `setup()` whenever `is_failed()`, because upstream `ads1115` marks
+  itself failed for the whole boot on one bad transaction and then silently runs in continuous
+  mode, costing globe temperature and air speed until reboot.
 - **System:** safe mode on boot crash, periodic SD card presence check.
+
+**Losing the occasional transaction on `bus_a` is structural, so tolerate a failed read rather
+than latch.** The K30 holds SCL low for ~40ms while it measures and the ESP32 timeout register
+tops out at 13ms, so no `timeout:` value can cover it and no master-side recovery can shorten it —
+a target holding SCL cannot be clocked free, unlike one holding SDA. Expect ~2% of transactions to
+fail, addressed to any device. A component that reacts to a single failure by disabling itself is
+the bug.
 
 Two non-sensor traps in the same family. `http_request` raises the task WDT once for a whole
 request, then runs `esp_http_client_open` and the body write with no feed between them, so

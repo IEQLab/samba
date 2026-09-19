@@ -105,7 +105,9 @@ protected:
   void read_diagnostics_();
   
   // --- Helper methods ---
-  void handle_retry_(std::function<void()> operation, uint8_t& retry_count, 
+  // Last bus error seen by a transaction, reported when retries are exhausted
+  i2c::ErrorCode last_error_{i2c::ERROR_OK};
+  void handle_retry_(std::function<void()> operation, uint8_t& retry_count,
                      const char* operation_name, std::function<void()> on_failure);
   bool validate_checksum_(const uint8_t *data, size_t data_len, uint8_t received_checksum) const;
   uint8_t calculate_checksum_(const uint8_t *data, size_t len) const;

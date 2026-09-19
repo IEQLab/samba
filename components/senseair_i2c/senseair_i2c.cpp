@@ -45,7 +45,11 @@ void SenseairI2CSensor::handle_retry_(std::function<void()> operation, uint8_t& 
     ESP_LOGV(TAG, "%s retry %d/%d", operation_name, retry_count, this->max_retries_);
     this->set_timeout(this->retry_delay_ms_, std::move(operation));
   } else {
-    ESP_LOGW(TAG, "%s failed after %d retries", operation_name, this->max_retries_);
+    // Report the last bus error: a K30 stretching SCL past the 13ms bus timeout and a plain
+    // NACK both arrive as ERROR_NOT_ACKNOWLEDGED (2), so this is the only field-visible clue
+    // short of VERBOSE.
+    ESP_LOGW(TAG, "%s failed after %d retries (last i2c error %d)", operation_name,
+             this->max_retries_, (int) this->last_error_);
     on_failure();
   }
 }
@@ -412,9 +416,12 @@ void SenseairI2CSensor::read_diagnostics_() {
 }
 
 void SenseairI2CSensor::update() {
-  // Check if setup completed successfully
+  // Check if setup completed successfully. Publish NaN rather than nothing: a silent return
+  // leaves raw_state at the last good reading, so the co2.yaml watchdog sees a healthy sensor
+  // and clears the LED while the staleness guard correctly reports no data.
   if (!this->setup_success_) {
     ESP_LOGW(TAG, "Setup incomplete or failed, skipping measurement");
+    this->publish_state(NAN);
     return;
   }
   
@@ -439,6 +446,7 @@ void SenseairI2CSensor::attempt_measurement_() {
     // Send measurement command
     auto error = this->write(SENSEAIR_MEASURE_CMD, sizeof(SENSEAIR_MEASURE_CMD));
     if (error != i2c::ERROR_OK) {
+      this->last_error_ = error;
       ESP_LOGV(TAG, "Measurement write error: %d", error);
       this->handle_retry_([this]() { this->attempt_measurement_(); }, 
                           this->measure_write_retry_count_, "Measurement write",
@@ -461,6 +469,7 @@ void SenseairI2CSensor::attempt_measurement_() {
     // Read measurement response: [status, data_msb, data_lsb, checksum]
     auto error = this->read(this->measure_data_, 4);
     if (error != i2c::ERROR_OK) {
+      this->last_error_ = error;
       ESP_LOGV(TAG, "Measurement read error: %d", error);
       this->handle_retry_([this]() { 
         // Retry the read without resending command
@@ -477,10 +486,18 @@ void SenseairI2CSensor::attempt_measurement_() {
               this->measure_data_[0], this->measure_data_[1], 
                                                          this->measure_data_[2], this->measure_data_[3]);
     
-    // Check if measurement is ready (bit 0 of status should be 1)
+    // Check if measurement is ready (bit 0 of status should be 1). TDE4700 section 4.1: the
+    // controller repeats the response read until the "complete" bit is set or it times out, so
+    // an incomplete frame is a retry, not a result. Abandoning it here published nothing, which
+    // froze raw_state at the previous value and made a dead sensor read as healthy.
     if ((this->measure_data_[0] & STATUS_COMPLETE_BIT) != STATUS_COMPLETE_BIT) {
-      ESP_LOGW(TAG, "Measurement not ready (status: 0x%02X)", this->measure_data_[0]);
-      this->measure_step_ = MEASURE_IDLE;
+      ESP_LOGV(TAG, "Measurement not ready (status: 0x%02X)", this->measure_data_[0]);
+      this->handle_retry_([this]() { this->attempt_measurement_(); },
+                          this->measure_read_retry_count_, "Measurement not ready",
+                          [this]() {
+                            this->measure_step_ = MEASURE_IDLE;
+                            this->publish_state(NAN);
+                          });
       return;
     }
     

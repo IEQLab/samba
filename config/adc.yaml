@@ -141,3 +141,34 @@ binary_sensor:
           args: ['id(ads_unhealthy) / 36.0f']
       - delay: 5s
       - button.press: sys_restart
+
+
+# Retry ADS1115 setup after a boot-time bus collision.
+#
+# ADS1115Component::setup() reads the conversion register once; if that single transaction
+# fails it calls mark_failed() and returns *before* prev_config_ is ever written. mark_failed
+# is permanent for the boot, and prev_config_ stays 0 - so every later request_measurement()
+# derives its config word from 0 and never sets the single-shot MODE bit, leaving the chip in
+# continuous mode. There the OS bit reads 0 essentially always, so each poll spins the full
+# 100ms and logs "Reading ADS1115 timed out" before returning NAN. One unlucky transaction at
+# boot therefore costs globe temperature and air speed for the whole boot.
+#
+# That log line reads backwards: the spin loop only reaches it while the config register read
+# keeps *succeeding*, because a real bus fault exits the loop silently. A flood of "Reading
+# ADS1115 timed out" is therefore evidence the chip is answering, not that the bus is down.
+#
+# A collision at boot is not rare here: the K30 holds SCL low for ~40ms while it measures
+# (TDE4700 section 3.7) and the ESP32 I2C timeout ceiling is 13ms, so any transaction
+# overlapping that window fails.
+#
+# is_failed() is the whole guard - setup has long since run by the first tick, so this needs
+# no millis() boot guard and no rollover latch.
+interval:
+  - interval: 30s
+    then:
+      - lambda: |-
+          if (!id(ads_dac).is_failed())
+            return;
+          ESP_LOGW("samba", "ADS1115 failed setup - resetting component to retry");
+          id(ads_dac).reset_to_construction_state();
+          id(ads_dac).call();
