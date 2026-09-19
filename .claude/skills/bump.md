@@ -137,33 +137,17 @@ change. Without samba_app, `esphome upload samba.yaml --device <BENCH_IP> --file
 does the push without the check. If no bench unit is available, say so in the summary — do not
 skip silently.
 
-### 5b. Update the deployment firmware OTA URL
+### 5b. The way back onto a unit
 
-`samba_calibration/firmware/samba_deployment.yaml` builds the factory image that is the way back
-onto a unit in the field — the release binaries here are OTA images with no bootloader or
-partition table, so they cannot be written over serial. Its web UI carries a "Flash production
-firmware" button pinning one specific release, so a release that skips this step leaves field
-staff reflashing the *previous* version.
-
-Find the `ota.http_request.flash` block under that button and set both values:
-
-```yaml
-      - ota.http_request.flash:
-          url: https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v<VERSION>.bin
-          md5: "<MD5_HASH>"
-```
-
-The URL and md5 are baked into the image at build time, so the edit only reaches the field when
-that firmware is next rebuilt and flashed. Units already carrying the deployment build keep
-pointing at the old release.
-
-If the file does not exist, warn the user and skip. It was retired in samba_calibration `a2223a1`
-and restored in `d01a35e` for exactly this reason — do not assume its absence is permanent.
+The release binaries here are OTA images with no bootloader or partition table, so they cannot be
+written over serial. To recover a unit that will not take an OTA, flash the calibration factory
+image from samba_calibration with `samba flash serial`, then push the release with
+`samba flash ota HOST --bin firmware/samba_v<VERSION>.bin`. Nothing in that repo pins a release
+version, so a bump needs no edit there.
 
 ### 6. Print summary
 
-Show the version, MD5 hash, a `jq` summary of the manifest, the bench validation result, and
-whether the deployment firmware was updated.
+Show the version, MD5 hash, a `jq` summary of the manifest, and the bench validation result.
 
 ### 7. Git tag and push (only if `--tag`)
 
@@ -176,21 +160,6 @@ git tag -a "v<VERSION>" -m "<SUMMARY>"
 git push
 git push --tags
 ```
-
-If the deployment firmware was updated in step 5b, also commit in the **samba_calibration**
-repository:
-
-```bash
-cd ../samba_calibration
-git add firmware/samba_deployment.yaml
-git commit -m "bump production firmware to v<VERSION>"
-git push
-cd ../samba
-```
-
-That repo has no branch protection, but it does receive work from other machines. If the push is
-rejected as non-fast-forward, `git fetch` and inspect `HEAD..origin/main` before integrating —
-rebase the one-line bump onto it. Never force-push over the divergence.
 
 Note `main` has a branch-protection rule requiring pull requests. Pushing directly succeeds
 for accounts with bypass permission but is reported as `Bypassed rule violations`. If that
