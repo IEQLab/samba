@@ -8,15 +8,8 @@
 ota:
   - platform: esphome
     id: ota_esphome
-    # Compiled-in fallback; a password provisioned over the native API takes precedence (see
-    # the provisioning block below). Keep `password:` present even when it is "" so ESPHome
-    # compiles the auth path, which set_auth_password() needs.
-    #
-    # 2026.9.0 offers the client an encrypted OTA session, keyed by the provisioned
-    # `api: encryption: key`. It does not replace this password: `encryption:` here is what
-    # makes encryption *mandatory*, and ESPHome rejects that block when the api key is
-    # provisioned at run time rather than compiled in. Without it a client that skips the
-    # noise offer still walks to the data phase, so the password is the only thing gating it.
+    # Compiled-in fallback; a password provisioned over the native API takes precedence
+    # Keep `password:` present even when "" so ESPHome compiles the auth path
     password: "${ota_password}"
     on_begin:
       then:
@@ -47,11 +40,7 @@ http_request:
     id: http_client
     verify_ssl: true
     timeout: 8s
-    # Must exceed the worst-case blocking span, not one operation. http_request raises the WDT
-    # once for the whole request, then runs esp_http_client_open (DNS, TCP, TLS, headers) and
-    # the body write with no feed between them - two 8s socket timeouts back to back, and DNS
-    # is not bounded by `timeout` at all. ESPHome forces CONFIG_ESP_TASK_WDT_PANIC, so an
-    # overrun is a reboot, not a log line.
+    # Must exceed twice the timeout - http_request feeds the WDT once for the whole request
     watchdog_timeout: 30s
     buffer_size_tx: 1024   # request line + headers incl. the InfluxDB token exceed the 512 default
 
@@ -60,19 +49,11 @@ http_request:
 safe_mode:
   on_safe_mode:
     then:
-      # Actions here must not reference another component by id. Doing so makes
-      # safe_mode's own codegen wait on that id, which pushes the early return in
-      # setup() into the middle of the component block - components then get set up
-      # before their pointers are assigned and the device crashes on every boot.
-      # logger.log is safe because it waits on nothing.
+      # Never reference another component by id here - it half-wires setup() and bricks the unit
       - logger.log: "Restoring SAMBA due to an unknown error"
 
-# OTA password provisioning over the native API (samba_app: `samba deploy`), the same shape as
-# the InfluxDB token in config/influx.yaml: the password lives in the ota_password global (NVS,
-# which OTA never rewrites) and takes precedence over the compiled-in one, so published
-# binaries can stop carrying a secret. One password per building. Nothing here logs it.
-# Safe mode never reaches on_boot, so a crash-looping unit serves the esphome OTA platform
-# with the compiled-in password only - and with none once secrets.yaml has ota_password "".
+# Provision the OTA password over the native API (`samba deploy`), one per building
+# Lives in the ota_password global and takes precedence over the compiled-in one
 esphome:
   on_boot:
     # after the globals are restored (HARDWARE); set_auth_password only stores the string
@@ -89,8 +70,7 @@ api:
         password: string
       then:
         - lambda: |-
-            // An empty password clears the provisioned one (the compiled-in password, if any,
-            // applies again).
+            // An empty password clears the provisioned one
             if (password.size() > 64) {
               ESP_LOGW("samba", "Rejected OTA password: %u characters", (unsigned) password.size());
               return;
@@ -109,8 +89,7 @@ api:
         - script.execute: ota_password_save
 
 text_sensor:
-  # Fingerprint of the provisioned OTA password, as for the InfluxDB token: FNV-1 32-bit hash
-  # as 8 hex digits, "unset" when none.
+  # Fingerprint of the provisioned OTA password, or "unset" when none
   - platform: template
     name: "OTA Password"
     id: ota_password_fp
@@ -133,7 +112,7 @@ globals:
 
 # Define script to scatter firmware update checks
 script:
-  # Flush the OTA password to flash now (same shape as influx_token_save).
+  # Flush the OTA password to flash
   - id: ota_password_save
     mode: restart
     then:

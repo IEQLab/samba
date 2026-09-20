@@ -41,9 +41,7 @@ sensor:
     icon: mdi:molecule-co2
     filters:
       - lambda: |-
-          // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out
-          // of the upload. Only after a full sample interval of silence - the 6-wide median
-          // carries CO2 through a single failed poll.
+          // Drop out after a full sample interval of silence
           if (id(k30_last_ok) == 0 || (millis() - id(k30_last_ok)) > 330000)
             return NAN;
           return ((id(calibration_co2_m) * id(k30_co2).state) + id(calibration_co2_b));
@@ -60,8 +58,7 @@ globals:
     type: int
     restore_value: no
     initial_value: '0'
-# Hour-scale failure duty cycle, restart gate only. Not restored: a restart is itself the
-# recovery attempt, so its own justification must not carry over.
+# Hour-scale failure duty cycle, restart gate only; not restored across a restart
   - id: k30_unhealthy
     type: float
     restore_value: no
@@ -72,29 +69,21 @@ interval:
   - interval: 30s
     then:
       - lambda: |-
-          // Check if CO2 sensor is returning valid data. The raw value is NaN after a failed
-          // read; the filtered .state never is, because filter_out drops the NaN.
-          //
-          // The staleness term is belt and braces: every senseair_i2c failure path now
-          // publishes NaN, so isnan(raw) is sufficient today, but a future path that returns
-          // without publishing would freeze raw_state at a good value and read as healthy -
-          // clearing the LED while the sensor is dead. 45s is one 30s poll plus margin.
+          // Failed if the raw read is NaN or stale; the filtered .state never goes NaN
+          // 45s is one 30s poll plus margin
           const bool failed = std::isnan(id(k30_co2).get_raw_state())
               || (id(k30_last_ok) != 0 && (millis() - id(k30_last_ok)) > 45000);
 
-          // Nothing read yet in the first minute is setup still running, not a failure:
-          // this interval can fire before the first poll, and reinitialize() then restarts
-          // a setup that is still in progress.
+          // Nothing read in the first minute is setup still running, not a failure
           if (id(k30_last_ok) == 0 && millis() < 60000)
             return;
 
-          // Seconds failed per hour: EWMA with a one-hour time constant at this 30s poll, so
-          // steady state is 3600 * duty cycle and k30_unhealthy reads as seconds of the last hour.
+          // Seconds failed per hour: EWMA over one hour
           id(k30_unhealthy) = (id(k30_unhealthy) + (failed ? 30.0f : 0.0f)) * 0.9916667f;
 
           if (failed) {
             id(k30_error_count)++;
-            // Re-initialise on the first failure, then every 10th (5min) while it stays down.
+            // Re-initialise on the first failure, then every 10th (5min) while it stays down
             if (id(k30_error_count) == 1 || id(k30_error_count) % 10 == 0) {
               ESP_LOGW("samba", "K30 CO2 sensor failure %d - attempting re-initialisation",
                        id(k30_error_count));
@@ -103,11 +92,9 @@ interval:
               ESP_LOGW("samba", "K30 CO2 sensor failure %d", id(k30_error_count));
             }
 
-            // LED handled by the arbiter in led.yaml.
+            // LED handled by the arbiter in led.yaml
 
-            // Restart only on a sustained fault: 2400 is 67% of the hour, so a flaky K30 rides it
-            // out and only a near-dead one reboots (restarts did nothing for a 31%-failing board,
-            // see 7f398d1). NaN propagates upstream, so until then a dead K30 costs only CO2.
+            // Restart only on a sustained fault: 2400 is 67% of the hour
             if (id(k30_error_count) >= 4 && id(k30_unhealthy) > 2400.0f
                 && id(sys_uptime).state > 3600) {
               ESP_LOGE("samba", "K30 failed %.0f percent of the last hour - restarting to attempt recovery",

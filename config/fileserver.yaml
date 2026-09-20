@@ -3,17 +3,13 @@
 # written by Thomas Parkinson, September 2026
 
 
-# The component: lists the card and streams logs on port 80 behind digest auth, user "samba".
-# Inert until a password is set; a building unit never opens the port outside the captive portal.
+# Lists the card and streams logs on port 80 behind digest auth, user "samba"
 sd_file_server:
   id: sd_files
   sd_spi_card_id: sd0
 
-# Pairing password provisioning over the native API (`samba home password`), the fourth
-# credential after the API key, the InfluxDB token and the OTA password and the same shape as
-# config/ota.yaml: the password lives in the fileserver_password global (NVS, which OTA never
-# rewrites), is handed to the component on boot, and only its fingerprint is ever published.
-# Unlike the other three it is one per unit, printed on the pairing label the app scans.
+# Provision the pairing password over the native API (`samba home password`), one per unit
+# Lives in the fileserver_password global and gates the listener
 esphome:
   on_boot:
     # after the globals are restored (HARDWARE), before the component's setup() at WIFI - 1
@@ -30,7 +26,7 @@ api:
         password: string
       then:
         - lambda: |-
-            // An empty password clears the provisioned one and stops the listener.
+            // An empty password clears the provisioned one and stops the listener
             if (!password.empty() && (password.size() < 12 || password.size() > 32)) {
               ESP_LOGW("samba", "Rejected file server password: %u characters", (unsigned) password.size());
               return;
@@ -49,8 +45,7 @@ api:
         - script.execute: fileserver_password_save
 
 text_sensor:
-  # Fingerprint of the pairing password as for the other credentials (FNV-1 32-bit, 8 hex
-  # digits), or "off" while no password is set and the listener is down.
+  # Fingerprint of the pairing password, or "off" when the listener is down
   - platform: template
     name: "File Server"
     id: fileserver_fp
@@ -65,7 +60,7 @@ text_sensor:
       return std::string(buf);
 
 script:
-  # Flush the password to flash now (same shape as ota_password_save).
+  # Flush the password to flash
   - id: fileserver_password_save
     mode: restart
     then:

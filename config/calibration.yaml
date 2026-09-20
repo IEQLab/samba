@@ -5,12 +5,8 @@
 
 # Editable calibration coefficients (mirror the persistent globals in config/globals.yaml)
 # https://esphome.io/components/number/template.html
-# Entity names match the deployment firmware (samba_deployment.yaml) so the samba_app
-# laptop client needs a single alias table. The globals remain the only NVS copy: no
-# restore_value here, and NumberCalls outside min/max are dropped by ESPHome without
-# an error, so clients must validate against the advertised range first.
-# disabled_by_default keeps them off a Home Assistant device page (a lay user can
-# wreck a unit with them) while the native API still lists and accepts them.
+# Out-of-range NumberCalls are dropped without an error, so clients validate the range first
+# disabled_by_default keeps them off the Home Assistant device page, not off the native API
 number:
   - platform: template
     name: "CO2 slope [m]"
@@ -375,10 +371,8 @@ button:
       - script.execute: sensor_sample
 
 script:
-  # Flush coefficients to flash now rather than waiting out flash_write_interval (10 min).
-  # Same shape as tags_save (config/tags.yaml): the globals component only stages a
-  # changed value from its loop(), so wait for that before syncing. mode: restart
-  # debounces a burst of edits into a single NVS write.
+  # Flush coefficients to flash rather than waiting out flash_write_interval (10 min)
+  # The delay lets the globals component stage the change before sync()
   - id: cal_save
     mode: restart
     then:

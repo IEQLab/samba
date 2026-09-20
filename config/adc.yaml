@@ -48,7 +48,7 @@ sensor:
     on_value:
       - lambda: 'id(ads_ntc_last_ok) = millis();'
 
-# ADS1115 error counter: 2s stale ticks. Not isnan() - a failed read is never published
+# Count 2s ticks where any channel has gone stale
   - platform: template
     id: ads_error_count
     internal: true
@@ -61,13 +61,10 @@ sensor:
       const bool ntc_stale = (now - id(ads_ntc_last_ok)) > 90000;
       const bool stale = as1_stale || as2_stale || ntc_stale;
 
-      // Seconds stale per hour: EWMA with a one-hour time constant, so steady state is
-      // 3600 * duty cycle. Gates the restart only; errors here come in waves and a reboot
-      // must not react to one. The 1250 threshold in ads_restart_due is a sustained 35%.
+      // Seconds stale per hour: EWMA over one hour, gating the restart only
       id(ads_unhealthy) = (id(ads_unhealthy) + (stale ? 2.0f : 0.0f)) * 0.9994444f;
 
-      // Consecutive-failure ticks, driving the LED. Any successful read resets it. A global,
-      // not a static, so it can be read back when diagnosing a unit.
+      // Consecutive stale ticks, driving the LED; any successful read resets it
       if (stale) {
         id(ads_error_ticks)++;
       } else {
@@ -75,7 +72,7 @@ sensor:
       }
       return id(ads_error_ticks);
 
-# Last successful read per channel (millis; uint32_t subtraction survives rollover).
+# Last successful read per channel
 globals:
   - id: ads_as1_last_ok
     type: uint32_t
@@ -143,26 +140,7 @@ binary_sensor:
       - button.press: sys_restart
 
 
-# Retry ADS1115 setup after a boot-time bus collision.
-#
-# ADS1115Component::setup() reads the conversion register once; if that single transaction
-# fails it calls mark_failed() and returns *before* prev_config_ is ever written. mark_failed
-# is permanent for the boot, and prev_config_ stays 0 - so every later request_measurement()
-# derives its config word from 0 and never sets the single-shot MODE bit, leaving the chip in
-# continuous mode. There the OS bit reads 0 essentially always, so each poll spins the full
-# 100ms and logs "Reading ADS1115 timed out" before returning NAN. One unlucky transaction at
-# boot therefore costs globe temperature and air speed for the whole boot.
-#
-# That log line reads backwards: the spin loop only reaches it while the config register read
-# keeps *succeeding*, because a real bus fault exits the loop silently. A flood of "Reading
-# ADS1115 timed out" is therefore evidence the chip is answering, not that the bus is down.
-#
-# A collision at boot is not rare here: the K30 holds SCL low for ~40ms while it measures
-# (TDE4700 section 3.7) and the ESP32 I2C timeout ceiling is 13ms, so any transaction
-# overlapping that window fails.
-#
-# is_failed() is the whole guard - setup has long since run by the first tick, so this needs
-# no millis() boot guard and no rollover latch.
+# Retry ADS1115 setup after a boot-time bus collision
 interval:
   - interval: 30s
     then:

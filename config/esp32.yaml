@@ -51,12 +51,7 @@ i2c:
     sda: GPIO26
     scan: false
     frequency: 50kHz
-    # 13ms is the ESP32 ceiling, not a choice: the timeout register is 20 bits of APB clock
-    # (2^20 cycles), and both ESPHome and ESP-IDF clamp to it. The K30 holds SCL low for ~40ms
-    # while it measures (TDE4700 section 3.7), so any transaction on this bus that overlaps
-    # that window is a guaranteed hardware timeout no matter which device it addresses. Losing
-    # the occasional transaction here is structural - every component on bus_a must tolerate a
-    # single failed read rather than latch.
+    # 13ms is the ESP32 ceiling, not a choice; the K30 holds SCL low for ~40ms while measuring
     timeout: 13ms
 
 # Configure UART bus

@@ -50,9 +50,7 @@ light:
 
 # Alarm indication
 globals:
-  # -1 until the arbiter has run once, so its first tick past the boot guard always applies a
-  # state. Starting at 0 would match `want` and return early, leaving the boot strobe running
-  # until the first sample turned the light off.
+  # -1 until the arbiter has run once, so its first tick always applies a state
   - id: led_alarm
     type: int
     restore_value: no
@@ -67,9 +65,7 @@ interval:
   - interval: 10s
     then:
       - lambda: |-
-          // Leave the boot strobe alone; no alarm can have tripped this early anyway. The
-          // first tick past this guard clears it, because led_alarm still holds -1. Latching,
-          // because a bare millis() < N re-engages for two minutes at the 49.7-day rollover.
+          // Leave the boot strobe alone; latched against the millis() rollover
           if (!id(led_armed)) {
             if (millis() < 120000)
               return;
@@ -91,9 +87,7 @@ interval:
             want = 1;                             // magenta pulse
           }
 
-          // Only on a change, or when the heartbeat has switched the light off underneath us
-          // (it is the only caller that publishes). Re-applying every tick would restart the
-          // pulse, because start_effect_() always stops and starts.
+          // Only on a change; re-applying every tick would restart the pulse
           const bool clobbered = (want != 0) && !id(samba_led).remote_values.is_on();
           if (want == id(led_alarm) && !clobbered)
             return;
@@ -122,7 +116,7 @@ interval:
             call.set_effect("none");
             call.set_brightness(0.25f);
           } else {
-            // The effect drives brightness itself, so setting it here would be overridden.
+            // The effect drives brightness itself, so setting it here would be overridden
             call.set_effect("pulse_slow");
           }
           call.perform();

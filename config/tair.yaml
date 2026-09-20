@@ -14,9 +14,7 @@ sensor:
       id: sht_temperature
       internal: true
       on_raw_value:
-        # Timestamp every successful raw read. sht4x publishes both words only after a fully
-        # successful transaction and publishes nothing at all on failure, so one stamp covers
-        # the pair and .state would otherwise freeze at its last good value forever.
+        # Timestamp every successful raw read; sht4x publishes nothing on failure
         - lambda: 'if (!std::isnan(x)) id(sht_last_ok) = millis();'
       filters:
         - filter_out: nan
@@ -53,9 +51,7 @@ sensor:
     unit_of_measurement: "°C"
     icon: mdi:thermometer
     lambda: |-
-      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
-      // the upload. Only after a full sample interval of silence - the 30s poll and 10-wide
-      // median carry temperature through ten consecutive failed reads.
+      // Drop out after a full sample interval of silence
       if (id(sht_last_ok) == 0 || (millis() - id(sht_last_ok)) > 330000)
         return NAN;
       return id(calibration_ta_b)
@@ -77,9 +73,7 @@ sensor:
         return NAN;
       float t_raw       = id(sht_temperature).state;
       float rh_raw      = id(sht_humidity).state;
-      // Must precede the clamp below. Every comparison against NaN is false, so
-      // std::min(100.0f, NAN) returns 100.0f and a sensor that never read would report a
-      // confident 100% RH instead of dropping out.
+      // Return NaN before the clamp below: std::min(100.0f, NAN) returns 100.0f
       if (std::isnan(t_raw) || std::isnan(rh_raw))
         return NAN;
       float t_corrected = id(calibration_ta_b)
@@ -87,7 +81,7 @@ sensor:
       float es_raw      = 6.1078f * expf(17.625f * t_raw       / (243.04f + t_raw));
       float es_cor      = 6.1078f * expf(17.625f * t_corrected / (243.04f + t_corrected));
       float rh_corrected = 100.0f * (rh_raw / 100.0f) * es_raw / es_cor;
-      // Safe now: both operands are known finite.
+      // Both operands are finite here
       return std::max(0.0f, std::min(100.0f, rh_corrected));
 
 

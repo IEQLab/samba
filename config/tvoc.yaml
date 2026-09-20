@@ -48,9 +48,7 @@ sensor:
     unit_of_measurement: "ppb"
     icon: mdi:radiator
     lambda: |-
-      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
-      // the upload. Only after a full sample interval of silence - the 8-wide median carries
-      // VOC and NOx through a single transient failure.
+      // Drop out after a full sample interval of silence
       if (id(sgp_last_ok) == 0 || (millis() - id(sgp_last_ok)) > 330000)
         return NAN;
       return (log(501.0 - id(sgp_voc).state) - 6.24) * (-381.97);
@@ -85,8 +83,7 @@ globals:
     type: bool
     restore_value: no
     initial_value: 'false'
-# Hour-scale failure duty cycle. Diagnostic only - nothing gates on it - but it keeps the
-# SGP4x directly comparable with k30_unhealthy and ads_unhealthy.
+# Hour-scale failure duty cycle, diagnostic only
   - id: sgp_unhealthy
     type: float
     restore_value: no
@@ -97,13 +94,10 @@ interval:
   - interval: 30s
     then:
       - lambda: |-
-          // No value yet, or the last poll failed: a failed request leaves the old index in
-          // place and a failed read withholds it, but both set the warning.
+          // No value yet, or the last poll failed; both set the warning flag
           const bool failed = std::isnan(id(sgp_voc).state) || id(sgp41).status_has_warning();
 
-          // Skip error counting during warmup: sgp4x publishes nothing for its first 90
-          // samples, and the first 30s update slot after that can land past 120s. Latching,
-          // because a bare millis() < N re-engages for 150s at the 49.7-day rollover.
+          // Skip error counting during warmup; latched against the millis() rollover
           if (!id(sgp_warmed)) {
             if (millis() < 150000) {
               ESP_LOGD("samba", "SGP4x sensor warming up - skipping error check");
@@ -112,18 +106,13 @@ interval:
             id(sgp_warmed) = true;
           }
 
-          // Seconds failed per hour: EWMA with a one-hour time constant at this 30s poll, so
-          // steady state is 3600 * duty cycle. Nothing gates on it; it keeps the three I2C
-          // sensors directly comparable.
+          // Seconds failed per hour: EWMA over one hour, diagnostic only
           id(sgp_unhealthy) = (id(sgp_unhealthy) + (failed ? 30.0f : 0.0f)) * 0.9916667f;
 
           if (failed) {
             id(sgp_error_count)++;
 
-            // No restart, deliberately: sgp4x only mark_failed()s in setup() and the self test,
-            // every runtime failure is a warning it clears itself on the next good read, and a
-            // reboot would discard the gas baseline that learning_time_offset_hours: 720 takes
-            // a month to rebuild. NaN propagates upstream, so a dead SGP4x costs only VOC/NOx.
+            // No restart: a reboot would discard the gas baseline, and NaN already costs only VOC/NOx
             if (id(sgp_error_count) == 6) {
               ESP_LOGE("samba", "SGP4x failed 6 consecutive polls, %.0f percent of the last hour",
                        id(sgp_unhealthy) / 36.0f);
@@ -131,7 +120,7 @@ interval:
               ESP_LOGW("samba", "SGP4x sensor failure %d", id(sgp_error_count));
             }
 
-            // LED handled by the arbiter in led.yaml.
+            // LED handled by the arbiter in led.yaml
 
           } else {
             if (id(sgp_error_count) > 0) {

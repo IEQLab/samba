@@ -20,9 +20,7 @@ sensor:
           send_every: 10
           send_first_at: 10
       - lambda: |-
-            // Nominal fallback: a dead SHT4x must not take air speed with it. Without this the
-            // floor goes NaN, the lambda returns NaN, and the clamp below - ignore_out_of_range
-            // is false - maps that NaN to its min_value and reports a confident 0.02 m/s.
+            // Nominal fallback so a dead SHT4x does not take air speed with it
             float temp = id(samba_temperature).state;
             if (std::isnan(temp))
               temp = 22.0f;
@@ -49,9 +47,7 @@ sensor:
           send_every: 10
           send_first_at: 10
       - lambda: |-
-            // Nominal fallback: a dead SHT4x must not take air speed with it. Without this the
-            // floor goes NaN, the lambda returns NaN, and the clamp below - ignore_out_of_range
-            // is false - maps that NaN to its min_value and reports a confident 0.02 m/s.
+            // Nominal fallback so a dead SHT4x does not take air speed with it
             float temp = id(samba_temperature).state;
             if (std::isnan(temp))
               temp = 22.0f;
@@ -73,9 +69,7 @@ sensor:
     unit_of_measurement: "m/s"
     icon: mdi:weather-windy
     lambda: |-
-      // NaN so a dead sensor shows as unknown in HA, nan on the SD card, and is left out of
-      // the upload. Per channel, so one dead anemometer leaves the other reporting rather
-      // than letting max() pick whichever frozen value happens to be higher.
+      // Drop out per channel, so one dead anemometer leaves the other reporting
       const uint32_t now = millis();
       const bool as1_stale = id(ads_as1_last_ok) == 0 || (now - id(ads_as1_last_ok)) > 330000;
       const bool as2_stale = id(ads_as2_last_ok) == 0 || (now - id(ads_as2_last_ok)) > 330000;

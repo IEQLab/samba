@@ -118,7 +118,9 @@ restart, and both also require `sys_uptime > 3600`, which self-rate-limits to on
   peripheral after a timeout, before the next transaction (`i2c_master.c`, `s_i2c_hw_fsm_reset`).
   `config/adc.yaml` re-runs `setup()` whenever `is_failed()`, because upstream `ads1115` marks
   itself failed for the whole boot on one bad transaction and then silently runs in continuous
-  mode, costing globe temperature and air speed until reboot.
+  mode, costing globe temperature and air speed until reboot. A flood of `Reading ADS1115 timed
+  out` is evidence the chip is **answering**: the spin loop only reaches that log while the
+  config-register read keeps succeeding, because a real bus fault exits it silently.
 - **System:** safe mode on boot crash, periodic SD card presence check.
 
 **Losing the occasional transaction on `bus_a` is structural, so tolerate a failed read rather
@@ -439,7 +441,10 @@ travels encrypted.
    `set_auth_password()` on `ota_esphome`, `on_boot` (priority 600) re-applies it, `OTA
    Password` text sensor is the fingerprint. `ota_password` in `secrets.yaml` is the
    fallback exactly as for the token; keep `password:` present in YAML even as `""`, which
-   is what makes ESPHome compile the auth path. **Safe mode never reaches `on_boot`** (the
+   is what makes ESPHome compile the auth path. 2026.9.0's `encryption:` block, which makes
+   an encrypted OTA session *mandatory*, cannot be used here — ESPHome rejects it when the
+   api key is provisioned at run time — so a client that skips the noise offer still reaches
+   the data phase and this password is the only thing gating it. **Safe mode never reaches `on_boot`** (the
    trigger registers after the early return), so a crash-looping unit serves OTA with the
    compiled-in password only — and with none once the fallback is `""`. This is accepted:
    it exists only on a unit that is already broken, it is the sole recovery route there,

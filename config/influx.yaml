@@ -20,9 +20,7 @@ influxdb:
   update_interval: never
   status_text_sensor: influx_status
 
-  # Sensors to upload, keyed by ESPHome id and grouped into measurements by `measurement`.
-  # A sensor is only included when it has produced a value since the previous upload, so a
-  # sensor that has stopped reporting drops out of the payload instead of repeating its last value.
+  # Sensors to upload, keyed by ESPHome id and grouped by measurement
   sensors:
     - {id: samba_temperature, measurement: ieq, field: air_temp}
     - {id: samba_humidity,    measurement: ieq, field: rel_humidity}
@@ -63,13 +61,8 @@ switch:
       - lambda: 'id(influx_enable) = false;'
 
 
-# Token provisioning over the native API (samba_app: `samba deploy` / `samba buildings`).
-# The token lives in the influx_token global (NVS, which OTA never rewrites) and takes
-# precedence over the compiled-in one, so published binaries can stop carrying a secret and
-# a building's token can be rotated without a reflash. It is written through an api action
-# rather than a text entity because a text entity's state is pushed to every connected
-# client; the action publishes nothing, and what is readable is only a fingerprint.
-# Nothing here logs the token itself.
+# Provision the InfluxDB token over the native API (`samba deploy`), one per building
+# Lives in the influx_token global and takes precedence over the compiled-in one
 esphome:
   on_boot:
     # after the globals are restored (HARDWARE), before the influxdb component sets up
@@ -84,8 +77,7 @@ api:
         token: string
       then:
         - lambda: |-
-            // InfluxDB tokens are base64: 88 printable ASCII characters. An empty token clears
-            // the provisioned one (the compiled-in token, if any, applies again).
+            // Tokens are 88 printable ASCII characters; an empty token clears the provisioned one
             if (token.size() > 88) {
               ESP_LOGW("samba", "Rejected InfluxDB token: %u characters", (unsigned) token.size());
               return;
@@ -104,9 +96,7 @@ api:
         - script.execute: influx_token_save
 
 text_sensor:
-  # Fingerprint of the provisioned token: FNV-1 32-bit hash as 8 hex digits, "unset" when
-  # none. Enough for a client to verify what it wrote and tell buildings apart, not enough
-  # to recover the token.
+  # Fingerprint of the provisioned token, or "unset" when none
   - platform: template
     name: "InfluxDB Token"
     id: influx_token_fp
@@ -120,8 +110,7 @@ text_sensor:
       snprintf(buf, sizeof(buf), "%08x", (unsigned) esphome::fnv1_hash(id(influx_token)));
       return std::string(buf);
 
-  # Outcome of the last upload attempt, published by the influxdb component:
-  # "HTTP 204" is success; "HTTP 401" is a bad token; "no token" is an unprovisioned unit.
+  # Outcome of the last upload attempt, published by the influxdb component
   - platform: template
     name: "InfluxDB Status"
     id: influx_status
@@ -130,9 +119,7 @@ text_sensor:
     update_interval: never
 
 script:
-  # Flush the token to flash now (same shape as tags_save / cal_save), then prove it with a
-  # real write: a device_status line carrying only the uptime, so the status sensor reports
-  # the outcome without waiting for the next 5-minute sample.
+  # Flush the token to flash, then prove it with a real write
   - id: influx_token_save
     mode: restart
     then:

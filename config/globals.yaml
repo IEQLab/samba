@@ -39,25 +39,22 @@ globals:
     restore_value: yes
     initial_value: 'true'
 
-  # InfluxDB token provisioned over the native API (config/influx.yaml). Empty = use the
-  # compiled-in token, or skip uploads once the build no longer carries one. InfluxDB v2
-  # tokens are 88 characters; max_restore_data_length must cover that or the save is dropped.
+  # InfluxDB token provisioned over the native API; empty = compiled-in token or no upload
+  # v2 tokens are 88 characters, which max_restore_data_length must cover
   - id: influx_token
     type: std::string
     max_restore_data_length: 88
     restore_value: yes
     initial_value: '""'
 
-  # Password for the `esphome` OTA platform, provisioned over the native API (config/ota.yaml).
-  # Empty = use the compiled-in password, or none once the build no longer carries one.
+  # OTA password provisioned over the native API; empty = compiled-in password or none
   - id: ota_password
     type: std::string
     max_restore_data_length: 64
     restore_value: yes
     initial_value: '""'
 
-  # Pairing password for the SD file server, provisioned over the native API
-  # (config/fileserver.yaml). Empty = listener off. 12 to 32 printable ASCII, one per unit.
+  # SD file server pairing password provisioned over the native API; empty = listener off
   - id: fileserver_password
     type: std::string
     max_restore_data_length: 32

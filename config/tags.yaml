@@ -5,8 +5,7 @@
 
 # Editable tag fields (mirror the persistent globals set by the setup firmware)
 # https://esphome.io/components/text/template.html
-# NOTE: max_length must stay <= max_restore_data_length on the backing global
-#       (config/globals.yaml), or the value is silently dropped instead of saved.
+# max_length must stay <= max_restore_data_length on the backing global, or the save is dropped
 text:
   - platform: template
     name: "Building"
@@ -63,10 +62,8 @@ text:
           raw: !lambda 'return x;'
 
 script:
-  # Sanitise, store and echo back a tag value.
-  # The `pattern` above is advertised to Home Assistant but ESPHome itself only
-  # validates length (text_call.cpp), so anything reaching us over the API or the
-  # setup firmware's web server is scrubbed here rather than trusted.
+  # Sanitise, store and echo back a tag value
+  # ESPHome validates length only, never the `pattern` above, so scrub rather than trust
   - id: tag_set
     mode: queued
     max_runs: 3
@@ -75,8 +72,7 @@ script:
       raw: string
     then:
       - lambda: |-
-          // Keep [A-Za-z0-9_-]; collapse any run of other characters to a single
-          // underscore; trim leading/trailing underscores; cap at 24 characters.
+          // Keep [A-Za-z0-9_-], collapse other runs to one underscore, trim, cap at 24
           std::string out;
           out.reserve(raw.size());
           bool pending_us = false;
@@ -96,7 +92,7 @@ script:
           while (!out.empty() && out.back() == '_')
             out.pop_back();
 
-          // Nothing usable left — put the stored value back so the UI reverts.
+          // Nothing usable left, so put the stored value back and the UI reverts
           if (out.empty()) {
             ESP_LOGW("samba", "Rejected tag %s: '%s' has no usable characters", key.c_str(), raw.c_str());
             if (key == "building") id(text_building).publish_state(id(building_tag));
@@ -120,10 +116,8 @@ script:
           }
       - script.execute: tags_save
 
-  # Flush tags to flash now rather than waiting out flash_write_interval (10 min).
-  # The globals component only stages a changed value from its loop(), so wait for
-  # that to happen before syncing. mode: restart debounces a burst of tag edits
-  # into a single NVS write; sync() skips keys whose stored bytes are unchanged.
+  # Flush tags to flash rather than waiting out flash_write_interval (10 min)
+  # The delay lets the globals component stage the change before sync()
   - id: tags_save
     mode: restart
     then:
@@ -135,9 +129,7 @@ script:
           }
           ESP_LOGI("samba", "Tags saved to flash: building=%s level=%s zone=%s",
                    id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str());
-      # The SD file header records the tags at creation, so start a new file. Same guard as
-      # rtc.yaml: only with a valid clock, otherwise the filename is garbage; on_time_sync
-      # picks it up later because sd_logfile is cleared here.
+      # The SD header records tags at creation, so start a new file when they change
       - lambda: 'id(sd_logfile) = false;'
       - if:
           condition:
