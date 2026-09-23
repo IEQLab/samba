@@ -6,14 +6,12 @@
 # Editable calibration coefficients (mirror the persistent globals in config/globals.yaml)
 # https://esphome.io/components/number/template.html
 # Out-of-range NumberCalls are dropped without an error, so clients validate the range first
-# disabled_by_default keeps them off the Home Assistant device page, not off the native API
 number:
   - platform: template
     name: "CO2 slope [m]"
     id: cal_co2_m
     icon: mdi:molecule-co2
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: 0
     max_value: 2
@@ -32,7 +30,6 @@ number:
     id: cal_co2_b
     icon: mdi:molecule-co2
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: -100
     max_value: 100
@@ -51,7 +48,6 @@ number:
     id: cal_lux_m
     icon: mdi:sun-wireless-outline
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: 0
     max_value: 15
@@ -70,7 +66,6 @@ number:
     id: cal_lux_b
     icon: mdi:sun-wireless-outline
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: -28
     max_value: 28
@@ -89,7 +84,6 @@ number:
     id: cal_ta_m1
     icon: mdi:thermometer
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: 1.0
     max_value: 2.0
@@ -108,7 +102,6 @@ number:
     id: cal_ta_b
     icon: mdi:thermometer
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: -30
     max_value: 0
@@ -123,49 +116,10 @@ number:
       - script.execute: cal_save
 
   - platform: template
-    name: "Relative humidity slope [m]"
-    id: cal_rh_m
-    icon: mdi:water-percent
-    entity_category: "config"
-    disabled_by_default: true
-    mode: box
-    min_value: 0
-    max_value: 1
-    step: 0.001
-    update_interval: 60s
-    lambda: |-
-      return id(calibration_rh_m);
-    set_action:
-      - lambda: |-
-          id(calibration_rh_m) = x;
-          id(cal_rh_m).publish_state(x);
-      - script.execute: cal_save
-
-  - platform: template
-    name: "Relative humidity offset [b]"
-    id: cal_rh_b
-    icon: mdi:water-percent
-    entity_category: "config"
-    disabled_by_default: true
-    mode: box
-    min_value: -28
-    max_value: 28
-    step: 0.01
-    update_interval: 60s
-    lambda: |-
-      return id(calibration_rh_b);
-    set_action:
-      - lambda: |-
-          id(calibration_rh_b) = x;
-          id(cal_rh_b).publish_state(x);
-      - script.execute: cal_save
-
-  - platform: template
     name: "Globe temperature slope [m]"
     id: cal_tg_m
     icon: mdi:thermometer
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: 0
     max_value: 2
@@ -184,7 +138,6 @@ number:
     id: cal_tg_b
     icon: mdi:thermometer
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: -25
     max_value: 0
@@ -203,7 +156,6 @@ number:
     id: cal_as1_a
     icon: mdi:weather-windy
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: 0.5
     max_value: 3.0
@@ -222,7 +174,6 @@ number:
     id: cal_as1_b
     icon: mdi:weather-windy
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: 0.5
     max_value: 4.0
@@ -241,7 +192,6 @@ number:
     id: cal_as1_d0
     icon: mdi:weather-windy
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: -1.5
     max_value: 4.0
@@ -260,7 +210,6 @@ number:
     id: cal_as1_d1
     icon: mdi:weather-windy
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: -1.0
     max_value: 1.0
@@ -279,7 +228,6 @@ number:
     id: cal_as2_a
     icon: mdi:weather-windy
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: 0.5
     max_value: 3.0
@@ -298,7 +246,6 @@ number:
     id: cal_as2_b
     icon: mdi:weather-windy
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: 0.5
     max_value: 4.0
@@ -317,7 +264,6 @@ number:
     id: cal_as2_d0
     icon: mdi:weather-windy
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: -1.5
     max_value: 4.0
@@ -336,7 +282,6 @@ number:
     id: cal_as2_d1
     icon: mdi:weather-windy
     entity_category: "config"
-    disabled_by_default: true
     mode: box
     min_value: -1.0
     max_value: 1.0
@@ -383,12 +328,11 @@ script:
             return;
           }
           ESP_LOGI("samba",
-                   "Calibration saved to flash: CO2 %.3f/%.2f Lux %.3f/%.2f Ta %.3f/%.2f RH %.3f/%.2f Tg %.3f/%.2f "
+                   "Calibration saved to flash: CO2 %.3f/%.2f Lux %.3f/%.2f Ta %.3f/%.2f Tg %.3f/%.2f "
                    "AS1 %.3f/%.3f/%.3f/%.3f AS2 %.3f/%.3f/%.3f/%.3f",
                    id(calibration_co2_m), id(calibration_co2_b),
                    id(calibration_lux_m), id(calibration_lux_b),
                    id(calibration_ta_m1), id(calibration_ta_b),
-                   id(calibration_rh_m), id(calibration_rh_b),
                    id(calibration_tg_m), id(calibration_tg_b),
                    id(calibration_as1_a), id(calibration_as1_b), id(calibration_as1_d0), id(calibration_as1_d1),
                    id(calibration_as2_a), id(calibration_as2_b), id(calibration_as2_d0), id(calibration_as2_d1));

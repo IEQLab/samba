@@ -696,13 +696,6 @@ void SenseairI2CSensor::abc_get_period() {
   this->read_abc_period_();
 }
 
-void SenseairI2CSensor::perform_calibration_command_(uint16_t address, uint16_t command, 
-                                                     const char* name) {
-  // This method is no longer used - keeping for compatibility
-  // Use background_calibration_with_ppm() instead
-  ESP_LOGW(TAG, "perform_calibration_command_ is deprecated");
-}
-
 void SenseairI2CSensor::read_abc_period_() {
   // Read ABC period from EEPROM address 0x40 (2 bytes)
   // Command: [cmd, addr_msb, addr_lsb, checksum]
