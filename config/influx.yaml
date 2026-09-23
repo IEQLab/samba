@@ -79,7 +79,7 @@ api:
         token: string
       then:
         - lambda: |-
-            // Tokens are 88 printable ASCII characters; an empty token clears it, falling back to the compiled-in one
+            // Tokens are 88 printable ASCII characters; an empty token clears it, leaving any compiled-in token
             if (token.size() > 88) {
               ESP_LOGW("samba", "Rejected InfluxDB token: %u characters", (unsigned) token.size());
               return;

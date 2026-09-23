@@ -38,6 +38,16 @@ files are what decode a crash from these exact binaries.
 - [ ] USB cable and a serial monitor: `uv run samba flash ports`, then keep
       `uv run python -m serial.tools.miniterm /dev/cu.<port> 115200` open. Safe mode has no API,
       so `samba logs` shows nothing there. Close it before any `samba flash serial`.
+      A data cable: a charge-only one powers the unit and no port appears.
+- [ ] **Opening the port resets the unit** (CP2102N; presetting DTR/RTS does not stop it). Open
+      one monitor before a test and leave it open rather than reopening it to look. Never open it
+      within 60 s of an OTA boot: the image is only marked valid at `Boot seems successful`, so
+      the reset rolls it back (`OTA rollback detected! Rolled back from partition 'app0'`).
+- [ ] OTA **from the calibration image** needs the lab OTA password, which config.toml does not
+      hold: `export SAMBA_OTA_PASSWORD="$(uv run python -c "import yaml; print(yaml.safe_load(open('firmware/secrets.yaml'))['ota_password'])")"`.
+      Without it `samba flash ota` fails with `ESP requests password, but no password given!`.
+- [ ] Turn *InfluxDB Upload* off before any token lands if the bench data must stay out of the
+      buckets. It persists across reboots and OTA, and the post-token test write honours it.
 - [ ] Probably: after every OTA from the calibration image, the unit comes up as an access point
       (`samba-xxxxxx`). The calibration image's WiFi is compiled in, and neither 2.0 nor 1.99.99
       carries networks, so onboard it through the captive portal with a phone.
@@ -50,7 +60,7 @@ files are what decode a crash from these exact binaries.
 - [ ] `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin --no-verify`
       (`--no-verify` is required: without it the command stops at the API connect.)
 - [ ] **Confirmed** if the serial log shows `Guru Meditation Error ... LoadProhibited`,
-      `EXCVADDR: 0x0000004c`, with a backtrace in `ESPHomeOTAComponent::handle_handshake_`,
+      `EXCVADDR: 0x00000048` (0x4c was predicted; 0x48 on the bench), with a backtrace in `ESPHomeOTAComponent::handle_handshake_`,
       then the unit reboots into normal firmware. Save the raw `Backtrace:` line; decode it
       wherever an Xtensa toolchain exists (any machine that has built ESPHome):
       `xtensa-esp32-elf-addr2line -pfiaC -e $B/samba_v2.0.0.elf <PC> <addrs...>`
@@ -63,10 +73,12 @@ files are what decode a crash from these exact binaries.
 
 - [ ] `uv run samba flash serial --erase --bin $B/calibration_v1.13.factory.bin`
 - [ ] Unit joins the lab WiFi on the calibration image; `uv run samba info <IP>`.
-- [ ] `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin`, which reports the new build.
+- [ ] `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin` with `SAMBA_OTA_PASSWORD` set
+      (§0). The unit comes up as an AP, so the command times out waiting for it: expected.
 - [ ] Onboard WiFi through the captive portal if it comes up as an AP.
 - [ ] `uv run samba info <IP> --entities`: production 2.0.0, API not keyed, *InfluxDB Token*
-      `unset`, *InfluxDB Status* `no token`, *OTA Password* `unset`, anemometer entities
+      `unset`, *InfluxDB Status* `unknown` (it reads `no token` only once a sample has tried to
+      upload), *OTA Password* `unset`, anemometer entities
       `Anemometer 1 [A]…[k]` at the placeholders (A 0, B 9.671, n 1.173, k 0).
 - [ ] `uv run samba deploy --mac F8:B3:B7:C7:C4:18 --dry-run`, then without `--dry-run`: key,
       OTA password, tags, token, each readback-verified. **No coefficients**: `data/v2` has no
@@ -99,3 +111,62 @@ files are what decode a crash from these exact binaries.
 
 Crash confirmed or refuted (with PC and EXCVADDR); any step that deviated; the fingerprints after
 the power cycle. Then gates 9.2 and 9.3 are re-run on the release candidate after §8.
+
+### 2026-09-24, bench binaries above (samba 26cb36d), ESPHome 2026.9.0
+
+§9.1 and §9.2 ran on **F8:B3:B7:C7:D0:6C** (tunnel channel 5, just calibrated), not the bench
+unit, which was away as a home test unit. It will be deployed at wilkinson / 4 / chamber1.
+§9.3 ran on F8:B3:B7:C7:C4:18, re-tagged wilkinson / 4 / researchers_area. *InfluxDB Upload*
+was off on both throughout, so no bench data reached the buckets.
+
+**§9.1: confirmed.** The safe-mode boot survived over 60 s. `samba flash ota --no-verify` then
+crashed it at the handshake and it rebooted into normal 2.0.0:
+
+```
+Guru Meditation Error: Core  1 panic'ed (LoadProhibited). Exception was unhandled.
+PC      : 0x400eba65  EXCCAUSE: 0x0000001c  EXCVADDR: 0x00000048
+Backtrace: 0x400eba62:0x3ffb68d0 0x400ebb98:0x3ffb6920 0x400ddca1:0x3ffb6940
+ELF file SHA256: b9bdcb9f1
+```
+
+```
+0x400eba62: esphome::noise::NoiseContext::has_psk() const at esphome/components/noise/noise.h:32
+ (inlined by) esphome::ESPHomeOTAComponent::handle_handshake_() at esphome/components/esphome/ota/ota_esphome.cpp:310
+0x400ebb98: esphome::ESPHomeOTAComponent::loop() at esphome/components/esphome/ota/ota_esphome.cpp:178
+0x400ddca1: esphome::loop_task(void*) at esphome/components/esp32/core.cpp:28
+```
+
+The desk reading holds: a null context dereferenced in `handle_handshake_`. EXCVADDR is 0x48,
+not 0x4c, which is only the offset of the field read. The upstream null guard goes ahead. The
+client's automatic retry then reached the rebooted normal firmware, which asked for the
+building password it had not been given; that is the retry, not safe mode.
+
+**§9.2: passed, three deviations.**
+- The calibration image refused the OTA without its lab password (now in §0).
+- *InfluxDB Status* read `unknown`, not `no token`, before the first sample, and `HTTP 204`
+  was not checked because uploads were off on purpose.
+- `samba home password` was skipped: a building unit has no pairing password.
+
+Deploy wrote 6/6 with readback: API key a6f02ba9, OTA ba978482, token 7c11d363, tags.
+After a hard reset the unit was encrypted with the same three fingerprints, the tags, both
+hand-set values (Ta slope 1.600, Anemometer 1 [B] 9.000; since restored to 1.506 and 9.671),
+and uploads still off. The authenticated OTA ran encrypted with the building password. At the
+first sample every measurand reported: Ta 24.8 °C, Tg 24.5 °C, RH 52 %, CO2 1047 ppm, PM2.5
+3 µg/m³, 168 lx, LAeq 35.0 dBA, air speed 0.18 m/s on the placeholders. The SGP4x failed every
+poll that boot (TVOC and NOx `nan`, the dropout working as designed); after a power cycle it
+read TVOC 76 ppb, NOx 1. Bursts of 2 s-cadence I2C timeouts (the ADS1115) appeared in the
+first ~40 s of a boot, stopped, and did not cost globe temperature or air speed. Before the
+remote was reseated they ran continuously.
+
+**§9.3: passed, on a different starting build.** C4:18 ran a `main` build from 2026-09-20 that
+reports 1.99.99 but already carries provisioning, not the published v1.99.99 binary. So the step
+tested more of the upgrade and less of the field path. With the wilkinson credentials deployed
+on 1.99.99 and Ta slope set to 1.600, `samba flash ota --require-encryption` to 2.0.0 kept:
+encryption with key a6f02ba9, OTA ba978482, token 7c11d363, file server 56afa0b7, tags, the
+Ta slope, uploads off. `Air speed [a]…[d1]`, the RH pair and *Factory Restore SAMBA* were gone
+and `Anemometer [A]…[k]` sat at the placeholders (54 → 51 entities). Ta slope restored to 1.506.
+**The published-v1.99.99 path (unkeyed and tokenless after the upgrade) is still untested**; run
+§9.3 as written on the release candidate.
+
+Also seen: `manifest_v2.json` returns 404 until the first 2.x `/bump`, so a 2.0 unit logs an
+update-check error at boot and every 12 h and does not update itself. Both units stay on 2.0.0.
