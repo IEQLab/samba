@@ -91,9 +91,10 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Required(CONF_HTTP_REQUEST_ID): cv.use_id(http_request.HttpRequestComponent),
         cv.Optional(CONF_TIME_ID): cv.use_id(time.RealTimeClock),
         cv.Required(CONF_HOST): cv.string_strict,
-        # May be "" when every unit gets its token at runtime via set_token_override(); an
+        # Compiled-in token for builds that upload to their own InfluxDB. May be "" when every
+        # unit gets its token at runtime via set_token_override(), which takes precedence; an
         # unprovisioned unit then skips uploads and reports "no token" on the status sensor.
-        cv.Required(CONF_TOKEN): cv.sensitive(cv.string_strict),
+        cv.Optional(CONF_TOKEN, default=""): cv.sensitive(cv.string_strict),
         cv.Required(CONF_BUCKET): cv.string_strict,
         cv.Required(CONF_ORG): cv.string_strict,
         cv.Optional(CONF_PORT, default=8086): cv.port,

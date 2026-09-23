@@ -20,17 +20,27 @@ sensor:
           send_every: 10
           send_first_at: 10
       - lambda: |-
-            // Nominal fallback so a dead SHT4x does not take air speed with it
-            float temp = id(samba_temperature).state;
-            if (std::isnan(temp))
-              temp = 22.0f;
-            float floor = id(calibration_as1_d0) + id(calibration_as1_d1) * temp;
-            float v_above_floor = std::max(x - floor, 0.01f);
-            return id(calibration_as1_a) * pow(v_above_floor, id(calibration_as1_b));
-      - clamp:
-          min_value: 0.02
-          max_value: 1.0
-          ignore_out_of_range: false
+            // King's law, V^2 = (1 - k*Ta) * (A + B*v^n), solved for v
+            // Nominal 22 degC so a dead SHT4x does not take air speed with it
+            float ta = id(samba_temperature).state;
+            if (std::isnan(ta))
+              ta = 22.0f;
+            const float a = id(calibration_as1_king_a);
+            const float b = id(calibration_as1_king_b);
+            const float n = id(calibration_as1_king_n);
+            const float k = id(calibration_as1_king_k);
+            if (std::isnan(a) || std::isnan(b) || std::isnan(n) || std::isnan(k) || b <= 0 || n <= 0)
+              return NAN;
+            const float s = 1.0f - k * ta;
+            if (s <= 0)
+              return NAN;
+            const float e = x * x / s - a;
+            // Still air below the fitted floor
+            if (e <= 0)
+              return 0.02f;
+            // A clamp filter would turn NaN into 0.02, so bound it here once v is known finite
+            const float v = powf(e / b, 1.0f / n);
+            return std::min(std::max(v, 0.02f), 1.0f);
 
   - platform: copy
     id: as_2
@@ -47,17 +57,27 @@ sensor:
           send_every: 10
           send_first_at: 10
       - lambda: |-
-            // Nominal fallback so a dead SHT4x does not take air speed with it
-            float temp = id(samba_temperature).state;
-            if (std::isnan(temp))
-              temp = 22.0f;
-            float floor = id(calibration_as2_d0) + id(calibration_as2_d1) * temp;
-            float v_above_floor = std::max(x - floor, 0.01f);
-            return id(calibration_as2_a) * pow(v_above_floor, id(calibration_as2_b));
-      - clamp:
-          min_value: 0.02
-          max_value: 1.0
-          ignore_out_of_range: false
+            // King's law, V^2 = (1 - k*Ta) * (A + B*v^n), solved for v
+            // Nominal 22 degC so a dead SHT4x does not take air speed with it
+            float ta = id(samba_temperature).state;
+            if (std::isnan(ta))
+              ta = 22.0f;
+            const float a = id(calibration_as2_king_a);
+            const float b = id(calibration_as2_king_b);
+            const float n = id(calibration_as2_king_n);
+            const float k = id(calibration_as2_king_k);
+            if (std::isnan(a) || std::isnan(b) || std::isnan(n) || std::isnan(k) || b <= 0 || n <= 0)
+              return NAN;
+            const float s = 1.0f - k * ta;
+            if (s <= 0)
+              return NAN;
+            const float e = x * x / s - a;
+            // Still air below the fitted floor
+            if (e <= 0)
+              return 0.02f;
+            // A clamp filter would turn NaN into 0.02, so bound it here once v is known finite
+            const float v = powf(e / b, 1.0f / n);
+            return std::min(std::max(v, 0.02f), 1.0f);
 
 # Define air speed measurements
   - platform: template
@@ -79,4 +99,11 @@ sensor:
         return id(as_2).state;
       if (as2_stale)
         return id(as_1).state;
-      return max(id(as_1).state, id(as_2).state);
+      // std::max returns whichever argument NaN lands in, so choose explicitly
+      const float as1 = id(as_1).state;
+      const float as2 = id(as_2).state;
+      if (std::isnan(as1))
+        return as2;
+      if (std::isnan(as2))
+        return as1;
+      return std::max(as1, as2);

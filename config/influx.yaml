@@ -11,7 +11,9 @@ influxdb:
   time_id: sntp_time
   host: "${influx_host}"
   port: "${influx_port}"
-  token: "${influx_token}"
+  # Empty: the fleet's token is provisioned at runtime. A build for another InfluxDB can put
+  # a token here instead; a provisioned one still takes precedence
+  token: ""
   bucket: "${influx_bucket}"
   org: "${influx_org}"
   use_ssl: true
@@ -62,7 +64,7 @@ switch:
 
 
 # Provision the InfluxDB token over the native API (`samba deploy`), one per building
-# Lives in the influx_token global and takes precedence over the compiled-in one
+# Lives in the influx_token global and takes precedence over any compiled-in token
 esphome:
   on_boot:
     # after the globals are restored (HARDWARE), before the influxdb component sets up
@@ -77,7 +79,7 @@ api:
         token: string
       then:
         - lambda: |-
-            // Tokens are 88 printable ASCII characters; an empty token clears the provisioned one
+            // Tokens are 88 printable ASCII characters; an empty token clears it, leaving any compiled-in token
             if (token.size() > 88) {
               ESP_LOGW("samba", "Rejected InfluxDB token: %u characters", (unsigned) token.size());
               return;

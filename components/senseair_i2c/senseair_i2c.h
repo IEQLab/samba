@@ -84,7 +84,6 @@ protected:
   CalibrationStep calibration_step_{CAL_IDLE};
   uint8_t calibration_retry_count_{0};
   uint8_t calibration_data_[4];
-  void perform_calibration_command_(uint16_t address, uint16_t command, const char* name);
   void read_abc_period_();
   uint16_t get_calibration_address_() const;
   

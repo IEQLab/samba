@@ -8,9 +8,9 @@
 ota:
   - platform: esphome
     id: ota_esphome
-    # Compiled-in fallback; a password provisioned over the native API takes precedence
-    # Keep `password:` present even when "" so ESPHome compiles the auth path
-    password: "${ota_password}"
+    # No compiled-in password: the one provisioned over the native API is the only one
+    # Keep `password:` present even as "" so ESPHome compiles the auth path
+    password: ""
     on_begin:
       then:
         - logger.log: 
@@ -31,7 +31,7 @@ update:
   - platform: http_request
     id: fw_update
     name: "Firmware"
-    source: https://github.com/IEQLab/samba/raw/main/firmware/manifest.json
+    source: https://github.com/IEQLab/samba/raw/main/firmware/manifest_v2.json
     update_interval: 12h
 
 # Enable HTTP Request component for OTA and Influx
@@ -53,7 +53,7 @@ safe_mode:
       - logger.log: "Restoring SAMBA due to an unknown error"
 
 # Provision the OTA password over the native API (`samba deploy`), one per building
-# Lives in the ota_password global and takes precedence over the compiled-in one
+# Lives in the ota_password global; until one is set the esphome OTA platform takes no password
 esphome:
   on_boot:
     # after the globals are restored (HARDWARE); set_auth_password only stores the string
@@ -70,7 +70,7 @@ api:
         password: string
       then:
         - lambda: |-
-            // An empty password clears the provisioned one
+            // An empty password clears it and leaves OTA unauthenticated
             if (password.size() > 64) {
               ESP_LOGW("samba", "Rejected OTA password: %u characters", (unsigned) password.size());
               return;
@@ -82,7 +82,7 @@ api:
               }
             }
             id(ota_password) = password;
-            id(ota_esphome).set_auth_password(password.empty() ? std::string("${ota_password}") : password);
+            id(ota_esphome).set_auth_password(password);
             id(ota_password_fp).update();
             ESP_LOGI("samba", "OTA password %s (fingerprint %s)",
                      password.empty() ? "cleared" : "set", id(ota_password_fp).get_state().c_str());
