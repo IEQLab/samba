@@ -59,9 +59,9 @@ pcb/                    # Hardware PCB design files
 
 ### Calibration
 
-All sensor calibrations use persistent global variables (stored in flash, modifiable via Home Assistant):
+All sensor calibrations use persistent global variables (stored in flash, set over the native API by the `samba` client):
 - **Linear (y = mx + b):** CO2, temperature, RH, illuminance, globe temp
-- **Power (y = a * V^b):** Air speed with temperature compensation
+- **King's law (V² = (1 − k·Ta)(A + B·vⁿ)):** Air speed, per anemometer (`config/airspeed.yaml`; values pending, docs/v2-release-plan.md §4)
 - **Complex:** PM2.5 (piecewise RH-corrected), RH (vapour pressure correction), MRT (radiant heat)
 
 ### Error Recovery
@@ -157,7 +157,7 @@ purple are retired. See the Status LED table in README.md.
 ### Prerequisites
 
 - ESPHome 2026.8.1+ installed
-- `secrets.yaml` with WiFi, OTA, and InfluxDB credentials
+- `secrets.yaml` copied from `secrets.yaml.example` (InfluxDB host, port, org and bucket only)
 - USB-C cable for initial flash
 
 ### Common Commands
@@ -401,17 +401,15 @@ month.** The learned baseline *is* index 100 (`VOC_INDEX_OFFSET_DEFAULT`), and t
 
 ### Secrets
 
-All credentials are in `secrets.yaml` (gitignored) and referenced via `!secret` in substitutions. Never hardcode credentials.
-
-Note that `!secret` only keeps a value out of the YAML: ESPHome bakes substitutions into the
-generated C++ and therefore into the binary, and `firmware/*.bin` is committed to this public
-repo. No credential has to be there any more: the WiFi password never was (captive portal),
-and the three below are provisioned at runtime — see next section.
+No credential is compiled in, and none may be: `!secret` only keeps a value out of the YAML,
+ESPHome bakes substitutions into the binary, and `firmware/*.bin` is committed to this public
+repo. WiFi comes from the captive portal and the rest are provisioned at runtime (next section).
+`secrets.yaml` (gitignored) holds only the InfluxDB connection values.
 
 ### Credential provisioning
 
 Four credentials are written **at runtime** over the native API instead of compiled in. The
-first three are **one per building**, held by the provisioning client `samba_app` (`samba deploy`,
+first three are **one per building**, held by the provisioning client in samba_calibration (`samba deploy`,
 `samba buildings`); the fourth is one per home unit. All are kept on the device in NVS, which
 OTA never rewrites. Order matters: `samba deploy` sets the API key first so everything after it
 travels encrypted.
@@ -426,29 +424,26 @@ travels encrypted.
    YES/NO`. This is the key Home Assistant or any local client uses.
 2. **InfluxDB token** (`config/influx.yaml`). `influx_token` (`config/globals.yaml`,
    `max_restore_data_length: 88`) is set by the `influx_set_token` api action, which hands it
-   to the component (`InfluxDB::set_token_override`) and flushes NVS. A runtime token takes
-   precedence over `influx_token` from `secrets.yaml`, which is the **fallback**: leave it set
-   while units are still being provisioned, then set it to `""` to ship a build with no
-   token in it. An unprovisioned unit on such a build skips uploads and reports `no token`.
+   to the component (`InfluxDB::set_token`) and flushes NVS. The component has no compiled-in
+   token; an unprovisioned unit skips uploads and reports `no token`.
    The `InfluxDB Token` text sensor carries only a fingerprint (`esphome::fnv1_hash`, 8 hex
    digits, `unset` when empty) and `InfluxDB Status` the outcome of the last upload (`HTTP
    204`, `HTTP 401`, `connection failed`, `no token`), published by the component
    (`status_text_sensor`). The action is followed by a real write (a `device_status` line
    with only the uptime) so the status reflects the new token immediately. Never log the
-   token; `dump_config` says only provisioned / compiled-in / none.
+   token; `dump_config` says only provisioned / none.
 3. **`esphome` OTA password** (`config/ota.yaml`). Same shape: `ota_password` global
    (`max_restore_data_length: 64`), `ota_set_password` action calling
    `set_auth_password()` on `ota_esphome`, `on_boot` (priority 600) re-applies it, `OTA
-   Password` text sensor is the fingerprint. `ota_password` in `secrets.yaml` is the
-   fallback exactly as for the token; keep `password:` present in YAML even as `""`, which
-   is what makes ESPHome compile the auth path. 2026.9.0's `encryption:` block, which makes
+   Password` text sensor is the fingerprint. There is no compiled-in password; keep
+   `password: ""` present in YAML, which is what makes ESPHome compile the auth path. 2026.9.0's `encryption:` block, which makes
    an encrypted OTA session *mandatory*, cannot be used here — ESPHome rejects it when the
    api key is provisioned at run time — so a client that skips the noise offer still reaches
    the data phase and this password is the only thing gating it. **Safe mode never reaches `on_boot`** (the
-   trigger registers after the early return), so a crash-looping unit serves OTA with the
-   compiled-in password only — and with none once the fallback is `""`. This is accepted:
-   it exists only on a unit that is already broken, it is the sole recovery route there,
-   and the alternative is the shared secret this removes.
+   trigger registers after the early return), so a unit in safe mode would serve OTA with no
+   password. In practice it serves none: on 2026.9.0 the OTA handshake dereferences the API
+   server, which safe mode never constructs, and crashes the unit (docs/v2-release-plan.md
+   §9.1). Recover from safe mode over the captive portal or USB until upstream guards it.
 
 4. **SD file server pairing password** (`config/fileserver.yaml`, docs/home-sync.md). Same
    shape again: `fileserver_password` global (`max_restore_data_length: 32`),
@@ -462,10 +457,8 @@ travels encrypted.
 Nothing publishes a credential back. A text entity was rejected for this on purpose: a text
 entity's state goes to every connected API client.
 
-Field units without LAN access stay on the fallbacks (and unkeyed) until a tech is on site;
-none of the three transitions changes their behaviour until then. Revoke the old InfluxDB
-token only once every unit reports a fingerprint — it is in every published `.bin` in git
-history, so removing it from the next build is not what closes the hole.
+The 1.99.99 field units still carry the old compiled-in token and password, which are in the
+public v1.99.99 binary. Rotate both only once the last of them is recalled onto 2.0.
 
 ## InfluxDB Architecture
 

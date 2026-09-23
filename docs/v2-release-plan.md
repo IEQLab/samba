@@ -93,11 +93,20 @@ client falls back to matching on object_id, so "Air speed 1 [A]" would collide w
 - The k range keeps `1 − k·Ta` strictly positive below 50 °C (at k = 0.02 it reaches zero at
   exactly 50 °C, hence 0.019). The fitting scripts' ±0.05 bound does not; the fit adopts the
   firmware's range.
-- Units agree: the `as*` columns of `raw/thermal.csv` are volts (0.7–1.4, filtered 0.3–4.7 in
-  `models.R`), the same quantity as the lambda's `x`.
+- **Open (found 2026-09-23): the September batch does not fit inside that range.** Pooled per
+  tip over its three sessions (28.2, 22.5, 18.3 °C), every tip wants k ≈ 0.028–0.031. At the
+  0.019 cap k pins on all ten tips and RMSE is 0.14–0.17 m/s, worse than the power law's
+  0.060–0.076. With k free, RMSE is 0.021–0.039, but `1 − k·Ta` reaches zero at 33.5 °C, so every
+  unit reads NaN above about 33 °C, and with n ≈ 0.4 a shared default is poor (pooled RMSE
+  0.26 m/s). A pins at 0 on every tip and is not identified. The §8 sessions decide between
+  widening k (with a documented hot-room cutoff) and a different temperature form; the `v2`
+  branch carries the structure with placeholder values until then.
+- Units agree: the `as*` columns of `raw/thermal.csv` are volts (0.47–2.66 in the September
+  batch, filtered 0.3–4.7 in `models.R`), the same quantity as the lambda's `x`.
 - The fleet-median defaults are computed from the confirmed batch (§8) and written into
   `globals.yaml` and the client's `FIRMWARE_DEFAULTS` in the same commit. Until then the
-  defaults are the September batch medians, marked provisional in the YAML comment.
+  defaults are placeholders marked `TODO(v2)`: the September k = 0 medians (A 0, B 9.671,
+  n 1.173, k 0), which read level 1 about 2× high and level 7 about 40 % low.
 - The old `[a] [b] [d0] [d1]` entities and their globals are removed outright. Their NVS blobs are
   orphaned on a reflashed unit and read by nothing.
 
@@ -213,7 +222,18 @@ population check on A, B, n, k, the fleet-median defaults, and `FIRMWARE_DEFAULT
 
 ## 9. Release gates
 
-1. **Safe mode on the bench unit.** On F8:B3:B7:C7:C4:18 running a main build, press
+1. **Safe mode on the bench unit.** *Desk result, 2026-09-23:* the boot survives and the OTA
+   crashes. `global_api_server` is null in safe mode (it is set only in the `APIServer`
+   constructor, emitted after the early return), and `ota_esphome.cpp:34-36`
+   `noise_context_()` dereferences it with no null check. It is reached from `dump_config`,
+   which compiles to nothing at `logger: level: INFO`, and from `handle_handshake_` (:310) on
+   every client that offers the extended protocol, which `espota2.py` always does. The boot
+   counter is already cleared by then, so the crash reboots into normal firmware. The bench
+   run is therefore a confirmation. Expect `LoadProhibited`, `EXCVADDR 0x0000004c`, PC in
+   `ESPHomeOTAComponent::handle_handshake_`. The fix is upstream: a null guard in
+   `noise_context_()` returning a keyless context, so safe mode falls back to the password
+   path. Until it ships, captive-portal upload or USB recovers a unit from safe mode.
+   Original procedure: on F8:B3:B7:C7:C4:18 running a main build, press
    `Restart SAMBA (Safe Mode)`, wait past the point where `dump_config` runs (a minute), then push
    a `samba flash ota` while it is in safe mode and watch the upload complete and the unit boot
    normally. The reading of `main.cpp` says `APIServer` is constructed after the safe-mode return

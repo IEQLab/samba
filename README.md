@@ -76,7 +76,7 @@ SAMBA continuously measures environmental parameters, applies quality filters an
 | Air Temperature | 30s | clamp; moving median; linear calibration |
 | Relative Humidity | 30s | clamp; moving median; linear calibration |
 | Globe Temperature | 30s | clamp; moving median; linear calibration |
-| Air Speed | 2s | clamp; moving median; multivariate calibration; clamp |
+| Air Speed | 2s | clamp; moving median; King's-law calibration with air temperature |
 | CO2 | 30s | filter; clamp; moving median; linear calibration; clamp |
 | PM2.5 | ~1s | clamp; moving median |
 | VOC Index | 30s | moving median |
@@ -139,11 +139,11 @@ and a marginal cable is the most common cause of it.
 
 Users are free to modify the SAMBA firmware to suit their needs. We recommend familiarity with ESPHome and microcontroller programming before doing so. To get started:
 
-1. Define your project-specific parameters in [`secrets.yaml`](https://esphome.io/guides/yaml.html#secrets-and-the-secrets-yaml-file).
+1. Copy `secrets.yaml.example` to [`secrets.yaml`](https://esphome.io/guides/yaml.html#secrets-and-the-secrets-yaml-file) and set your InfluxDB server.
 2. Modify the relevant `.yaml` files in `config/`.
 3. Compile and upload via USB-C with `esphome run samba.yaml`, or wirelessly with `esphome run samba.yaml --device <IP_ADDRESS>`.
 
-Calibration coefficients are stored as persistent [global variables](https://github.com/IEQLab/samba/blob/main/config/globals.yaml) and can be updated either by editing the lambda functions in the relevant config files or by modifying the globals directly.
+Calibration coefficients are stored as persistent [global variables](https://github.com/IEQLab/samba/blob/main/config/globals.yaml) and exposed as number entities over the native API (`config/calibration.yaml`), so they are set on the device rather than compiled in.
 
 The user is responsible for managing any device running modified firmware.
 
@@ -161,9 +161,9 @@ SAMBA devices are shipped pre-calibrated, with their location tags (building, le
 
 **Switch it on in the room it will monitor.** The VOC sensor's index is relative: it learns a baseline from the air it sees in its first 45 minutes and then holds that baseline for about a month, so the first hour sets the scale every later TVOC reading is reported against. Boot the unit in its final position under normal conditions — not on a bench in another room, and not somewhere unusually clean or unusually solvent-heavy. If a unit's first hour was unrepresentative, power-cycling it within three hours discards the baseline and it learns again from scratch; after three hours only a firmware update clears it. This also means TVOC may step to a new baseline after an automatic update. Nothing else in the unit depends on where it is first switched on.
 
-There is no web interface on the device. The location tags, the *InfluxDB Upload* / *SD Card Write* / *Automatic Updates* switches and the calibration coefficients are exposed over the [ESPHome native API](https://esphome.io/components/api.html), so they can be viewed and changed from [Home Assistant](https://www.home-assistant.io/integrations/esphome/) or with the IEQ Lab's [samba_app](https://github.com/IEQLab/samba_app) laptop client (its *Identify SAMBA* button blinks the LED to pick one unit out of a batch). If you need a SAMBA recalibrated or re-tagged, please reach out — see [Project Maintenance](#project-maintenance) below.
+The location tags, the *InfluxDB Upload* / *SD Card Write* / *Automatic Updates* switches and the calibration coefficients are exposed over the [ESPHome native API](https://esphome.io/components/api.html), so they can be viewed and changed from [Home Assistant](https://www.home-assistant.io/integrations/esphome/) or with the IEQ Lab's `samba` laptop client from [samba_calibration](https://github.com/IEQLab/samba_calibration) (its *Identify SAMBA* button blinks the LED to pick one unit out of a batch). If you need a SAMBA recalibrated or re-tagged, please reach out — see [Project Maintenance](#project-maintenance) below.
 
-The API is [encrypted](https://esphome.io/components/api.html#configuration-variables) with a key that is set on the device by the IEQ Lab during deployment rather than compiled into the firmware, so the published binaries carry no key; until one is set, the device accepts unencrypted connections so it can be provisioned. The same is true of the InfluxDB token and the OTA password (see `config/influx.yaml` and `config/ota.yaml`): each is stored on the device, survives updates, and the device only ever reports a fingerprint of it (*InfluxDB Token*, *OTA Password*) together with the result of its last upload (*InfluxDB Status*). If you build your own firmware, `influx_token` and `ota_password` in `secrets.yaml` still work as compiled-in values and are what the device uses until one is provisioned. A unit going into a home gets a fourth credential, a pairing password that turns on a read-only HTTP service over the SD card log for the SAMBA Home app (see `config/fileserver.yaml` and [docs/home-sync.md](docs/home-sync.md)); without one the service is off and the unit behaves exactly as a building unit.
+The API is [encrypted](https://esphome.io/components/api.html#configuration-variables) with a key that is set on the device by the IEQ Lab during deployment rather than compiled into the firmware, so the published binaries carry no key; until one is set, the device accepts unencrypted connections so it can be provisioned. The same is true of the InfluxDB token and the OTA password (see `config/influx.yaml` and `config/ota.yaml`): each is stored on the device, survives updates, and the device only ever reports a fingerprint of it (*InfluxDB Token*, *OTA Password*) together with the result of its last upload (*InfluxDB Status*). There are no compiled-in fallbacks: a unit that has not been provisioned does not upload to InfluxDB and takes OTA updates without a password, so provision it before it leaves a network you trust. A unit going into a home gets a fourth credential, a pairing password that turns on a read-only HTTP service over the SD card log for the SAMBA Home app (see `config/fileserver.yaml` and [docs/home-sync.md](docs/home-sync.md)); without one the service is off and the unit behaves exactly as a building unit.
 
 ### Project Maintenance
 
