@@ -11,9 +11,11 @@ ESPHome devices are configured using [YAML](https://yaml.org). This repository i
 ├── config/
 |   ├── adc.yaml            # analog-to-digital converter
 |   ├── airspeed.yaml       # anemometers
+|   ├── calibration.yaml    # calibration coefficients
 |   ├── co2.yaml            # CO2 sensor
 |   ├── diagnostics.yaml    # device diagnostics
 |   ├── esp32.yaml          # ESP32 board and framework
+|   ├── fileserver.yaml     # SD file server for SAMBA Home
 |   ├── globals.yaml        # global variables
 |   ├── homeassistant.yaml  # Home Assistant API
 |   ├── illuminance.yaml    # illuminance sensor
@@ -26,12 +28,14 @@ ESPHome devices are configured using [YAML](https://yaml.org). This repository i
 |   ├── sd.yaml             # SD card logging
 |   ├── spl.yaml            # sound pressure level
 |   ├── substitutions.yaml  # secrets and substitutions
+|   ├── tags.yaml           # InfluxDB location tags
 |   ├── tair.yaml           # air temperature and RH
 |   ├── tglobe.yaml         # globe temperature
 |   ├── tvoc.yaml           # TVOC and NOx sensor
 |   └── wifi.yaml           # wireless networking
 ├── components/             # custom ESPHome components
 |   ├── influxdb/           # InfluxDB v2 HTTP upload
+|   ├── sd_file_server/     # read-only HTTP access to the SD log
 |   ├── sd_spi_card/        # SPI SD card read/write
 |   ├── senseair_i2c/       # K30/K33 CO2 over I2C
 |   └── sound_level_meter/  # I2S audio DSP for SPL
@@ -39,12 +43,13 @@ ESPHome devices are configured using [YAML](https://yaml.org). This repository i
 └── pcb/                    # hardware design files (Altium)
 ```
 
-The `components/` directory contains four [external components](https://esphome.io/components/external_components.html) that extend ESPHome:
+The `components/` directory contains five [external components](https://esphome.io/components/external_components.html) that extend ESPHome:
 
 1. `sound_level_meter` — audio DSP for sound pressure level (LAeq, LA90, LA10)
 2. `senseair_i2c` — I2C driver for the [K30 CO2 sensor](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module)
 3. `influxdb` — HTTP upload to an InfluxDB v2 bucket
 4. `sd_spi_card` — FAT32 SD card logging via SPI
+5. `sd_file_server` — read-only HTTP service over the SD card log for the SAMBA Home app
 
 ### Sensors
 
@@ -60,6 +65,17 @@ The `components/` directory contains four [external components](https://esphome.
 | Sound Pressure Level | [ICS-43434 Microphone](https://invensense.tdk.com/products/ics-43434/) | [spl.yaml](https://github.com/IEQLab/samba/blob/main/config/spl.yaml) | [sound_level_meter](https://github.com/stas-sl/esphome-sound-level-meter) |
 
 Most sensors are natively supported by ESPHome. The CO2 sensor and sound pressure level measurement use custom external components in `components/`.
+
+### Anemometer Tips
+
+The remote board has two thermal anemometer tips, one on each face. The firmware numbers them the other way round from the [schematic](https://github.com/IEQLab/samba/blob/main/pcb/remote/schematics.pdf), so identify a tip by the face it is on:
+
+| Face | Tip | Schematic sheet | Firmware |
+|:----:|:---:|:---------------:|:--------:|
+| RJ45 connector | R9 | Airspeed 1 | `as2` (ADS1115 `A1`) |
+| Opposite face | R27 | Airspeed 2 | `as1` (ADS1115 `A0`) |
+
+The published `Air Speed` is the larger of the two, or the one still reporting if the other has dropped out.
 
 ### Sampling
 
@@ -90,7 +106,7 @@ Published measurements are sent every 5 minutes to one or more of the following 
 
 **[Home Assistant](https://www.home-assistant.io)** — An open-source home automation platform. Easy to use but requires additional hardware (e.g. Raspberry Pi) and some configuration to retain raw data beyond 10 days. Best suited for projects that also collect other measurements (e.g. energy, window/door state). Communication uses the native ESPHome [API component](https://esphome.io/components/api.html).
 
-**[InfluxDB](https://www.influxdata.com/products/influxdb-overview/)** — An open-source time series database optimised for IoT. Can be self-hosted or used via InfluxData's cloud service. Requires an active internet connection. Best suited for field deployments of multiple SAMBAs. Communication uses the custom `influxdb` component with building, level, and zone IDs as tags (set as [global variables](https://github.com/IEQLab/samba/blob/main/config/globals.yaml)). See the [InfluxDB key concepts](https://docs.influxdata.com/influxdb/v1/concepts/key_concepts/) for background.
+**[InfluxDB](https://www.influxdata.com/products/influxdb-overview/)** — An open-source time series database optimised for IoT. Can be self-hosted or used via InfluxData's cloud service. Requires an active internet connection. Best suited for field deployments of multiple SAMBAs. Communication uses the custom `influxdb` component with building, level, and zone IDs as tags (set over the native API, see [`config/tags.yaml`](https://github.com/IEQLab/samba/blob/main/config/tags.yaml)). See the [InfluxDB key concepts](https://docs.influxdata.com/influxdb/v1/concepts/key_concepts/) for background.
 
 **SD Card** — Local CSV logging via the `sd_spi_card` component. Files are named using the device MAC address and UTC timestamp. No network connection required.
 
@@ -149,7 +165,7 @@ The user is responsible for managing any device running modified firmware.
 
 ### OTA Updates
 
-SAMBA devices check for firmware updates every Monday at 4 am by comparing against [`firmware/manifest.json`](https://github.com/IEQLab/samba/blob/main/firmware/manifest.json). If a new version is available, the update is applied automatically with random jitter to avoid fleet-wide simultaneous downloads. Automatic updates can be disabled with the *Automatic Updates* switch (see [Deployment](#deployment)).
+SAMBA devices check for firmware updates every Monday at 04:00 UTC by comparing against [`firmware/manifest_v2.json`](https://github.com/IEQLab/samba/blob/main/firmware/manifest_v2.json). If a new version is available, the update is applied automatically after a random delay of up to 10 minutes to avoid fleet-wide simultaneous downloads. Units still on 1.x read [`firmware/manifest.json`](https://github.com/IEQLab/samba/blob/main/firmware/manifest.json) and never update to 2.x on their own; they move to 2.0 only when the IEQ Lab reflashes them. Automatic updates can be disabled with the *Automatic Updates* switch (see [Deployment](#deployment)).
 
 ### Deployment
 
