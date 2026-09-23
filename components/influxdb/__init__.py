@@ -8,6 +8,7 @@ CODEOWNERS = ["@IEQLab"]
 DEPENDENCIES = ["http_request", "network", "sensor", "time"]
 
 CONF_HOST = "host"
+CONF_TOKEN = "token"
 CONF_BUCKET = "bucket"
 CONF_ORG = "org"
 CONF_HTTP_REQUEST_ID = "http_request_id"
@@ -90,6 +91,10 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Required(CONF_HTTP_REQUEST_ID): cv.use_id(http_request.HttpRequestComponent),
         cv.Optional(CONF_TIME_ID): cv.use_id(time.RealTimeClock),
         cv.Required(CONF_HOST): cv.string_strict,
+        # Compiled-in token for builds that upload to their own InfluxDB. May be "" when every
+        # unit gets its token at runtime via set_token_override(), which takes precedence; an
+        # unprovisioned unit then skips uploads and reports "no token" on the status sensor.
+        cv.Optional(CONF_TOKEN, default=""): cv.sensitive(cv.string_strict),
         cv.Required(CONF_BUCKET): cv.string_strict,
         cv.Required(CONF_ORG): cv.string_strict,
         cv.Optional(CONF_PORT, default=8086): cv.port,
@@ -124,6 +129,7 @@ async def to_code(config):
 
     cg.add(var.set_host(config[CONF_HOST]))
     cg.add(var.set_port(config[CONF_PORT]))
+    cg.add(var.set_token(config[CONF_TOKEN]))
     cg.add(var.set_bucket(config[CONF_BUCKET]))
     cg.add(var.set_org(config[CONF_ORG]))
     cg.add(var.set_use_ssl(config[CONF_USE_SSL]))

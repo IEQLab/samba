@@ -80,8 +80,8 @@ void InfluxDB::setup() {
   }
 }
 
-void InfluxDB::set_token(const std::string &token) {
-  this->token_ = token;
+void InfluxDB::set_token_override(const std::string &token) {
+  this->runtime_token_ = token;
   this->update_auth_header_();
 }
 
@@ -90,7 +90,11 @@ void InfluxDB::update_auth_header_() {
     return;  // before setup(); it builds the header from the current token
   auto &value = this->headers_[1].value;
   value = "Token ";
-  value += this->token_;
+  if (this->runtime_token_.empty()) {
+    value += this->token_;
+  } else {
+    value += this->runtime_token_;
+  }
 }
 
 void InfluxDB::set_status_(const char *status) {
@@ -110,7 +114,7 @@ void InfluxDB::dump_config() {
                 "  Tags: %u%s\n"
                 "  Timestamps: %s",
                 this->url_.c_str(),
-                this->has_token() ? "provisioned" : "none",
+                !this->runtime_token_.empty() ? "provisioned" : (this->token_[0] != '\0' ? "compiled-in" : "none"),
                 (unsigned) this->fields_.size(), (unsigned) this->line_count_,
                 (unsigned) this->tags_.size(), this->send_mac_ ? " + device MAC" : "",
                 this->time_source_ != nullptr ? "device clock" : "server");

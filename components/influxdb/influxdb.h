@@ -45,10 +45,12 @@ class InfluxDB : public Component {
 
   void set_host(const char *host) { this->host_ = host; }
   void set_port(uint16_t port) { this->port_ = port; }
-  /// Token provisioned at runtime (the caller keeps it, e.g. in a restored global); there is no
-  /// compiled-in token. Empty means none, and uploads are skipped. Safe before setup().
-  void set_token(const std::string &token);
-  bool has_token() const { return !this->token_.empty(); }
+  /// Compiled-in token; may be empty when every unit is provisioned at runtime.
+  void set_token(const char *token) { this->token_ = token; }
+  /// Token provisioned at runtime (the caller keeps it, e.g. in a restored global). Takes
+  /// precedence over the compiled-in one; an empty string falls back to it. Safe before setup().
+  void set_token_override(const std::string &token);
+  bool has_token() const { return !this->runtime_token_.empty() || this->token_[0] != '\0'; }
 #ifdef USE_TEXT_SENSOR
   /// Receives the outcome of every upload attempt ("HTTP 204", "connection failed", "no token").
   void set_status_sensor(text_sensor::TextSensor *sensor) { this->status_sensor_ = sensor; }
@@ -93,7 +95,7 @@ class InfluxDB : public Component {
   /// POST body_; on a transient failure schedule a retry, otherwise finish.
   void send_();
   void retry_or_drop_(const char *reason);
-  /// Rebuild the Authorization header from the current token.
+  /// Rebuild the Authorization header from whichever token is current.
   void update_auth_header_();
   void set_status_(const char *status);
 
@@ -102,7 +104,8 @@ class InfluxDB : public Component {
 
   const char *host_{""};
   uint16_t port_{8086};
-  std::string token_;
+  const char *token_{""};
+  std::string runtime_token_;
   const char *bucket_{""};
   const char *org_{""};
   const char *timestamp_unit_{"s"};

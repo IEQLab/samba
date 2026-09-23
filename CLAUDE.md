@@ -424,14 +424,15 @@ travels encrypted.
    YES/NO`. This is the key Home Assistant or any local client uses.
 2. **InfluxDB token** (`config/influx.yaml`). `influx_token` (`config/globals.yaml`,
    `max_restore_data_length: 88`) is set by the `influx_set_token` api action, which hands it
-   to the component (`InfluxDB::set_token`) and flushes NVS. The component has no compiled-in
-   token; an unprovisioned unit skips uploads and reports `no token`.
+   to the component (`InfluxDB::set_token_override`) and flushes NVS. The component's optional
+   `token:` stays for builds that upload to another InfluxDB; samba's own config sets `""`, so
+   an unprovisioned unit skips uploads and reports `no token`.
    The `InfluxDB Token` text sensor carries only a fingerprint (`esphome::fnv1_hash`, 8 hex
    digits, `unset` when empty) and `InfluxDB Status` the outcome of the last upload (`HTTP
    204`, `HTTP 401`, `connection failed`, `no token`), published by the component
    (`status_text_sensor`). The action is followed by a real write (a `device_status` line
    with only the uptime) so the status reflects the new token immediately. Never log the
-   token; `dump_config` says only provisioned / none.
+   token; `dump_config` says only provisioned / compiled-in / none.
 3. **`esphome` OTA password** (`config/ota.yaml`). Same shape: `ota_password` global
    (`max_restore_data_length: 64`), `ota_set_password` action calling
    `set_auth_password()` on `ota_esphome`, `on_boot` (priority 600) re-applies it, `OTA
