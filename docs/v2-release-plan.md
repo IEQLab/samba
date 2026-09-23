@@ -313,7 +313,10 @@ population check on A, B, n, k, the fleet-median defaults, and `FIRMWARE_DEFAULT
 
 ## 13. Open items not decided here
 
-- Whether `spl-class2-prep` (LAeq energy average) rides along in 2.0.
+- *Decided 2026-09-24:* `spl-class2-prep` rides along in 2.0. `la_eq` becomes a true energy
+  average (it was L50) and LA90/LA10 move to 125ms blocks, so all three shift at the 2.0 boundary;
+  2.0 demarcates it in the data. The 2400-value `quantile` windows allocate on the heap every
+  minute, so the §9.5 bench run also watches free heap and largest free block over 24h.
 - The upstream `captive_portal` option, or a different onboarding route.
 - Whether the 2.0 firmware exposes anything for the home app that the manifest split changes
   (`project_version` in the TXT record now reads 2.x).

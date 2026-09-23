@@ -52,7 +52,7 @@ pcb/                    # Hardware PCB design files
 
 ### Data Flow (5-minute cycle)
 
-1. Sensors continuously measure at varying intervals (500ms for SPL, up to 60s for VOC).
+1. Sensors continuously measure at varying intervals (125ms for SPL, up to 60s for VOC).
 2. Raw readings pass through filters (clamp, NaN rejection, median smoothing) then calibration lambdas.
 3. Every 5 minutes, `sensor_sample` script triggers: updates all template sensors, publishes to InfluxDB, appends CSV row to SD card, blinks LED white.
 4. Upload is skipped if device uptime < 2 minutes (warm-up period).

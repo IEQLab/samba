@@ -31,6 +31,7 @@ sound_level_meter:
   auto_start: true
   ring_buffer_size: 125ms
   warmup_interval: 500ms
+  use_esp_dsp: true
 
   # audio processing task
   task_stack_size: 4096
@@ -71,38 +72,46 @@ sound_level_meter:
 #        - [  1.          ,  1.3294908   ,  0.44188643  ,  1.2312505    , 0.37899444 ]
 #        - [  1.          , -2.          ,  1.          , -1.9946145    , 0.9946217  ]
 
-  # calculate LAeq (average) sound level over specified period
+  # Every sample is processed; update_interval only sets the length of the back-to-back
+  # blocks each eq sensor integrates over. Both sensors share the filter chain, which runs once.
   sensors:
+    # 125ms blocks, the Fast time constant, feed the LA90/LA10 statistics
     - type: eq
       id: spl_laeq_raw
-      update_interval: 500ms
+      update_interval: 125ms
       internal: true
       dsp_filters: [f_ics43434, f_a]
       filters:
         - filter_out: nan
 
-# Derive percentiles from LAeq measurements
-sensor:
-  - platform: copy
-    source_id: spl_laeq_raw
-    id: spl_laeq
-    internal: true
-    filters:
-      - median:
-          window_size: 600
-          send_every: 120
-          send_first_at: 60
+    # LAeq is an energy average, not a median of levels: average 1min blocks in pressure
+    # squared over a sliding 5min window, then convert back to dB
+    - type: eq
+      id: spl_laeq
+      update_interval: 60s
+      internal: true
+      dsp_filters: [f_ics43434, f_a]
+      filters:
+        - filter_out: nan
+        - lambda: return pow(10.0f, x / 10.0f);
+        - sliding_window_moving_average:
+            window_size: 5
+            send_every: 1
+            send_first_at: 1
+        - lambda: return 10.0f * log10(x);
 
+# Derive percentiles over a sliding 5min window (2400 x 125ms), sent every minute
+sensor:
   - platform: copy
     source_id: spl_laeq_raw
     id: spl_la90
     internal: true
     filters:
       - quantile:
-          window_size: 600
+          window_size: 2400
           quantile: 0.10
-          send_every: 120
-          send_first_at: 60
+          send_every: 480
+          send_first_at: 240
 
   - platform: copy
     source_id: spl_laeq_raw
@@ -110,10 +119,10 @@ sensor:
     internal: true
     filters:
       - quantile:
-          window_size: 600
+          window_size: 2400
           quantile: 0.90
-          send_every: 120
-          send_first_at: 60
+          send_every: 480
+          send_first_at: 240
 
 #  - platform: copy
 #    source_id: spl_laeq_raw
@@ -121,10 +130,10 @@ sensor:
 #    internal: true
 #    filters:
 #      - quantile:
-#          window_size: 600
+#          window_size: 2400
 #          quantile: 0.95
-#          send_every: 120
-#          send_first_at: 60
+#          send_every: 480
+#          send_first_at: 240
 
 # Define SPL measurements
   - platform: template
