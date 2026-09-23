@@ -273,6 +273,9 @@ population check on A, B, n, k, the fleet-median defaults, and `FIRMWARE_DEFAULT
 - `data/schemas.py`: the air speed processed table becomes `as{1,2}_king_a, _king_b, _king_n,
   _king_k, _samples, _rmse, _rel_max`, matching the entity ids and never differing from the old
   names by case alone. `processed/` does not exist yet, so nothing migrates.
+  *Moved to step 5 (2026-09-23):* the table is written by the numpy port, which must agree with
+  `models.R` and the goldens, so it changes with them. Until then deploy reads the King columns
+  as absent and writes no air speed coefficients.
 - `models/`: King's-law fit per tip over all its sessions on levels 1–7 (A, B, n, k by nonlinear
   least squares within the firmware ranges), the RMSE and per-level gates, population check on the
   four; `analysis/models.R` first, port second, goldens third.
