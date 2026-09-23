@@ -31,7 +31,7 @@ update:
   - platform: http_request
     id: fw_update
     name: "Firmware"
-    source: https://github.com/IEQLab/samba/raw/main/firmware/manifest.json
+    source: https://github.com/IEQLab/samba/raw/main/firmware/manifest_v2.json
     update_interval: 12h
 
 # Enable HTTP Request component for OTA and Influx
