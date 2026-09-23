@@ -68,13 +68,16 @@ files are what decode a crash from these exact binaries.
 - [ ] `uv run samba info <IP> --entities`: production 2.0.0, API not keyed, *InfluxDB Token*
       `unset`, *InfluxDB Status* `no token`, *OTA Password* `unset`, anemometer entities
       `Anemometer 1 [A]…[k]` at the placeholders (A 0, B 9.671, n 1.173, k 0).
-- [ ] `uv run samba deploy --mac F8:B3:B7:C7:C4:18`: key, then OTA password, tags, token and
-      coefficients, each readback-verified. Air speed coefficients will be absent: there is no
-      King's-law fit in processed/ yet (expected).
+- [ ] `uv run samba deploy --mac F8:B3:B7:C7:C4:18 --dry-run`, then without `--dry-run`: key,
+      OTA password, tags, token, each readback-verified. **No coefficients**: `data/v2` has no
+      `processed/` and the bench unit has no raw calibration rows, so deploy writes credentials
+      and tags only (it says "nothing to deploy" if this laptop holds no wilkinson credentials).
+- [ ] Coefficient persistence by hand instead: on the Device page, Set `Air temperature slope [m1]`
+      to 1.600 and `Anemometer 1 [B]` to 9.000; both should read back.
 - [ ] `uv run samba home password <IP>` with the **existing** pairing password (Desktop label).
 - [ ] *InfluxDB Status* reads `HTTP 204` within seconds of the token landing.
 - [ ] Power-cycle, then `uv run samba status --live --mac F8:B3:B7:C7:C4:18`: same fingerprints,
-      encrypted, tags intact.
+      encrypted, tags intact, calibration "partly custom" with the two hand-set values kept.
 - [ ] One authenticated OTA: `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin`
       (uses the building password and key).
 
@@ -84,9 +87,9 @@ files are what decode a crash from these exact binaries.
 - [ ] `uv run samba flash ota <IP> --bin $B/samba_v1.99.99.bin`; onboard WiFi if needed.
 - [ ] `uv run samba tag <IP> --building wilkinson --level 4 --zone chamber2`, plus one non-anemometer
       coefficient by hand on the Device page (e.g. Ta slope), and note it.
-- [ ] The Device page shows `Air speed 1 [a]…[d1]` (the power-law line), and
-      `uv run samba deploy --mac F8:B3:B7:C7:C4:18 --verify` reports every coefficient as
-      "power law firmware takes no coefficients".
+- [ ] The Device page shows `Air speed 1 [a]…[d1]` (the power-law line) and the unit reads
+      "firmware defaults" apart from the hand-set Ta slope. (The line's "takes no coefficients"
+      refusal is covered by the test suite; with no processed/ there is nothing to refuse here.)
 - [ ] `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin`
 - [ ] Check: tags survive; the hand-set Ta coefficient survives; the anemometers show the King
       placeholders; the unit is unkeyed, *InfluxDB Token* `unset`, *OTA Password* `unset`.
