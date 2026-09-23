@@ -1,0 +1,18 @@
+name: esphome config
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Pinned to samba.yaml's min_version so CI validates what the fleet is built with
+      - run: pip install esphome==2026.9.0
+      - run: cp secrets.yaml.example secrets.yaml
+      - run: esphome config samba.yaml > /dev/null
