@@ -39,7 +39,7 @@ globals:
     restore_value: yes
     initial_value: 'true'
 
-  # InfluxDB token provisioned over the native API; empty = compiled-in token or no upload
+  # InfluxDB token provisioned over the native API; empty = no upload
   # v2 tokens are 88 characters, which max_restore_data_length must cover
   - id: influx_token
     type: std::string
@@ -47,7 +47,7 @@ globals:
     restore_value: yes
     initial_value: '""'
 
-  # OTA password provisioned over the native API; empty = compiled-in password or none
+  # OTA password provisioned over the native API; empty = none
   - id: ota_password
     type: std::string
     max_restore_data_length: 64

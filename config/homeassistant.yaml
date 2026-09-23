@@ -44,12 +44,3 @@ api:
         );
 
         ESP_LOGI("samba", "%s", msg);
-
-# Add factory reset switch to Home Assistant
-# https://esphome.io/components/switch/factory_reset.html
-switch:
-  - platform: factory_reset
-    name: "Factory Restore SAMBA"
-    icon: mdi:alert
-    entity_category: "config"
-    disabled_by_default: true

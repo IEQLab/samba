@@ -11,7 +11,6 @@ influxdb:
   time_id: sntp_time
   host: "${influx_host}"
   port: "${influx_port}"
-  token: "${influx_token}"
   bucket: "${influx_bucket}"
   org: "${influx_org}"
   use_ssl: true
@@ -62,13 +61,13 @@ switch:
 
 
 # Provision the InfluxDB token over the native API (`samba deploy`), one per building
-# Lives in the influx_token global and takes precedence over the compiled-in one
+# Lives in the influx_token global; there is no compiled-in token, so an unprovisioned unit does not upload
 esphome:
   on_boot:
     # after the globals are restored (HARDWARE), before the influxdb component sets up
     - priority: 600
       then:
-        - lambda: 'id(influx).set_token_override(id(influx_token));'
+        - lambda: 'id(influx).set_token(id(influx_token));'
 
 api:
   actions:
@@ -77,7 +76,7 @@ api:
         token: string
       then:
         - lambda: |-
-            // Tokens are 88 printable ASCII characters; an empty token clears the provisioned one
+            // Tokens are 88 printable ASCII characters; an empty token clears it and uploads stop
             if (token.size() > 88) {
               ESP_LOGW("samba", "Rejected InfluxDB token: %u characters", (unsigned) token.size());
               return;
@@ -89,7 +88,7 @@ api:
               }
             }
             id(influx_token) = token;
-            id(influx).set_token_override(token);
+            id(influx).set_token(token);
             id(influx_token_fp).update();
             ESP_LOGI("samba", "InfluxDB token %s (fingerprint %s)",
                      token.empty() ? "cleared" : "set", id(influx_token_fp).get_state().c_str());
