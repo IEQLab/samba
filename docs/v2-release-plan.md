@@ -315,8 +315,13 @@ population check on A, B, n, k, the fleet-median defaults, and `FIRMWARE_DEFAULT
 
 - *Decided 2026-09-24:* `spl-class2-prep` rides along in 2.0. `la_eq` becomes a true energy
   average (it was L50) and LA90/LA10 move to 125ms blocks, so all three shift at the 2.0 boundary;
-  2.0 demarcates it in the data. The 2400-value `quantile` windows allocate on the heap every
-  minute, so the §9.5 bench run also watches free heap and largest free block over 24h.
+  2.0 demarcates it in the data. As first merged it crash-looped a bench unit at boot: the two
+  2400-value `quantile` filters held 19.2KB of heap and copied a 9.6KB window on every output,
+  and the TLS firmware check ~10s after WiFi then ran out (lowest free heap 0.4KB, against
+  6-16KB before). `sound_level_meter` now computes all three itself (`type: stats`): 125ms
+  levels as uint16 deci-dB in one 4.8KB ring plus a 2.8KB 0.1dB histogram, allocated once in
+  setup, with nothing allocated per block or per output. The §9.5 bench run still watches free
+  heap and largest free block over 24h.
 - The upstream `captive_portal` option, or a different onboarding route.
 - Whether the 2.0 firmware exposes anything for the home app that the manifest split changes
   (`project_version` in the TXT record now reads 2.x).
