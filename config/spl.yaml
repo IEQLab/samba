@@ -29,7 +29,9 @@ sound_level_meter:
     microphone: samba_mic
     bits_per_sample: 32
   auto_start: true
-  ring_buffer_size: 125ms
+  # Holds three of the mic task's 16ms writes (9216 bytes). Benched at 48kHz: peak fill was one
+  # write (12.8% of 125ms) through 20 forced TLS update checks, at 2.6% CPU on core 1
+  ring_buffer_size: 48ms
   warmup_interval: 500ms
   use_esp_dsp: true
 
