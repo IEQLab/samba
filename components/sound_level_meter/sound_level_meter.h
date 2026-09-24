@@ -1,17 +1,22 @@
 #pragma once
 
-#include <deque>
-#include <mutex>
 #include <algorithm>
+#include <array>
+#include <atomic>
+#include <mutex>
+#include <vector>
 
 #include "esp_timer.h"
 
+#include "esphome/core/application.h"
 #include "esphome/core/automation.h"
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
 #include "esphome/components/ring_buffer/ring_buffer.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/microphone/microphone_source.h"
+
+#include "stats_window.h"
 
 #ifdef USE_OTA_STATE_LISTENER
 #include "esphome/components/ota/ota_backend.h"
@@ -22,7 +27,7 @@
 #endif
 
 namespace esphome::sound_level_meter {
-class SoundLevelMeterSensor;
+class SoundLevelMeterProcessor;
 class Filter;
 template<typename T> class BufferStack;
 
@@ -32,7 +37,7 @@ class SoundLevelMeter : public Component
                         public ota::OTAGlobalStateListener
 #endif
 {
-  friend class SoundLevelMeterSensor;
+  friend class SoundLevelMeterProcessor;
   friend class SoundLevelMeterSensorMax;
   friend class SoundLevelMeterSensorMin;
 
@@ -54,7 +59,7 @@ class SoundLevelMeter : public Component
   optional<float> get_offset();
   void set_is_high_freq(bool is_high_freq);
   void set_is_auto_start(bool is_auto_start);
-  void add_sensor(SoundLevelMeterSensor *sensor);
+  void add_processor(SoundLevelMeterProcessor *processor);
   void add_dsp_filter(Filter *dsp_filter);
   virtual void setup() override;
   virtual void loop() override;
@@ -70,7 +75,7 @@ class SoundLevelMeter : public Component
  protected:
   microphone::MicrophoneSource *microphone_source_{nullptr};
   std::vector<Filter *> dsp_filters_;
-  std::vector<SoundLevelMeterSensor *> sensors_;
+  std::vector<SoundLevelMeterProcessor *> processors_;
   size_t ring_buffer_size_ms_{256};
   uint32_t warmup_interval_ms_{500};
   uint32_t task_stack_size_{1024};
@@ -79,8 +84,18 @@ class SoundLevelMeter : public Component
   optional<float> mic_sensitivity_{};
   optional<float> mic_sensitivity_ref_{};
   optional<float> offset_{};
-  std::deque<std::function<void()>> defer_queue_;
-  std::mutex defer_mutex_;
+  // Guards every hand-off slot between the audio task and loop(): each processor's latest
+  // values and utilisation_ below. Nothing is queued, so nothing is allocated per value.
+  std::mutex publish_mutex_;
+  struct Utilisation {
+    float cpu{0.f};
+    float ring_buffer{0.f};
+    uint8_t core{0};
+    bool pending{false};
+  } utilisation_;
+  // Set by the microphone callback, logged and cleared by loop()
+  std::atomic<bool> ring_buffer_overrun_{false};
+  uint32_t last_overrun_log_{0};
   uint32_t update_interval_ms_{60000};
   bool is_running_{false};
   bool was_running_before_ota_{false};
@@ -95,35 +110,91 @@ class SoundLevelMeter : public Component
 
   audio::AudioStreamInfo get_audio_stream_info() const;
   uint32_t ms_to_frames(uint32_t ms);
-  void sort_sensors();
+  void sort_processors();
   size_t read_samples(std::vector<float> &data, TickType_t ticks_to_wait = portMAX_DELAY);
   void process(BufferStack<float> &buffers);
-  // epshome's scheduler is not thred safe, so we have to use custom thread safe implementation
-  // to execute sensor updates in main loop
-  void defer(std::function<void()> &&f);
   void reset();
 
   static void task(void *param);
 };
 
-class SoundLevelMeterSensor : public sensor::Sensor {
+// Anything fed from the filter chain in the audio task. process() and reset() run in the audio
+// task, publish_pending() in the main loop; they meet only in Slots guarded by the parent's
+// publish_mutex_, so the audio task never touches the scheduler or a sensor's callbacks.
+class SoundLevelMeterProcessor {
   friend SoundLevelMeter;
 
  public:
   void set_parent(SoundLevelMeter *parent);
   void set_update_interval(uint32_t update_interval);
   void add_dsp_filter(Filter *dsp_filter);
+  // Main task, from SoundLevelMeter::setup(): the one place a processor may allocate
+  virtual void setup() {}
   virtual void process(std::vector<float> &buffer) = 0;
-  void defer_publish_state(float state);
+  virtual void publish_pending() = 0;
+  virtual void dump_config() = 0;
 
  protected:
+  // Latest value wins: a value the main loop has not yet published is overwritten
+  struct Slot {
+    float value{NAN};
+    bool pending{false};
+  };
+
   SoundLevelMeter *parent_{nullptr};
   std::vector<Filter *> dsp_filters_;
   uint32_t update_samples_{0};
   uint32_t update_interval_ms_{60000};
   float adjust_dB(float dB, bool is_rms = true);
+  void hand_off_(Slot &slot, float value);
+  bool take_(Slot &slot, float &value);
 
   virtual void reset() = 0;
+};
+
+class SoundLevelMeterSensor : public SoundLevelMeterProcessor, public sensor::Sensor {
+ public:
+  void publish_pending() override;
+  void dump_config() override;
+
+ protected:
+  Slot slot_;
+
+  void defer_publish_state(float state) { this->hand_off_(this->slot_, state); }
+};
+
+// LAeq, LA90, LA10 (and LA05) over a sliding window of block levels, one block per update
+// interval. The window is owned by the audio task alone: it is fed every block and computes the
+// statistics there, handing only the results to the main loop.
+class SoundLevelMeterStats : public SoundLevelMeterProcessor {
+ public:
+  void set_window_blocks(uint16_t window_blocks) { this->window_blocks_ = window_blocks; }
+  void set_send_every(uint16_t send_every) { this->send_every_ = send_every; }
+  void set_send_first_at(uint16_t send_first_at) { this->send_first_at_ = send_first_at; }
+  void set_leq_sensor(sensor::Sensor *sensor) { this->sensors_[STAT_LEQ] = sensor; }
+  void set_l90_sensor(sensor::Sensor *sensor) { this->sensors_[STAT_L90] = sensor; }
+  void set_l10_sensor(sensor::Sensor *sensor) { this->sensors_[STAT_L10] = sensor; }
+  void set_l05_sensor(sensor::Sensor *sensor) { this->sensors_[STAT_L05] = sensor; }
+  void setup() override;
+  void process(std::vector<float> &buffer) override;
+  void publish_pending() override;
+  void dump_config() override;
+
+ protected:
+  enum Stat : uint8_t { STAT_LEQ, STAT_L90, STAT_L10, STAT_L05, STAT_COUNT };
+
+  std::array<sensor::Sensor *, STAT_COUNT> sensors_{};
+  std::array<Slot, STAT_COUNT> slots_{};
+  StatsWindow window_;
+  uint16_t window_blocks_{0};
+  uint16_t send_every_{0};     // blocks between outputs
+  uint16_t send_first_at_{0};  // blocks before the first output
+  uint16_t blocks_to_send_{0};
+  double sum_{0.};
+  uint32_t count_{0};
+
+  void publish_window_();
+  void reset() override;
 };
 
 class SoundLevelMeterSensorEq : public SoundLevelMeterSensor {
@@ -198,9 +269,10 @@ class SOS_Filter : public Filter {
   virtual void reset() override;
 };
 
+// All max_depth + 1 buffers are allocated up front, so push() never allocates
 template<typename T> class BufferStack {
  public:
-  BufferStack(uint32_t buffer_size);
+  BufferStack(uint32_t buffer_size, uint32_t max_depth);
   std::vector<T> &current();
   void push();
   void pop();
@@ -209,7 +281,6 @@ template<typename T> class BufferStack {
 
  private:
   uint32_t buffer_size_;
-  uint32_t max_depth_;
   uint32_t index_{0};
   std::vector<std::vector<T>> buffers_;
 };

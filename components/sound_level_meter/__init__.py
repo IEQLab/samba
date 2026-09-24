@@ -25,8 +25,12 @@ MULTI_CONF = True
 
 sound_level_meter_ns = cg.esphome_ns.namespace("sound_level_meter")
 SoundLevelMeter = sound_level_meter_ns.class_("SoundLevelMeter", cg.Component)
+SoundLevelMeterProcessor = sound_level_meter_ns.class_("SoundLevelMeterProcessor")
 SoundLevelMeterSensor = sound_level_meter_ns.class_(
-    "SoundLevelMeterSensor", sensor.Sensor
+    "SoundLevelMeterSensor", SoundLevelMeterProcessor, sensor.Sensor
+)
+SoundLevelMeterStats = sound_level_meter_ns.class_(
+    "SoundLevelMeterStats", SoundLevelMeterProcessor
 )
 SoundLevelMeterSensorEq = sound_level_meter_ns.class_(
     "SoundLevelMeterSensorEq", SoundLevelMeterSensor, sensor.Sensor
@@ -50,6 +54,15 @@ CONF_EQ = "eq"
 CONF_MAX = "max"
 CONF_MIN = "min"
 CONF_PEAK = "peak"
+CONF_STATS = "stats"
+CONF_WINDOW = "window"
+CONF_SEND_EVERY = "send_every"
+CONF_SEND_FIRST_AT = "send_first_at"
+CONF_LEQ = "leq"
+CONF_L90 = "l90"
+CONF_L10 = "l10"
+CONF_L05 = "l05"
+STATS_SENSORS = (CONF_LEQ, CONF_L90, CONF_L10, CONF_L05)
 CONF_RING_BUFFER_SIZE = "ring_buffer_size"
 CONF_SOS = "sos"
 CONF_COEFFS = "coeffs"
@@ -81,6 +94,35 @@ CONFIG_DSP_FILTER_SCHEMA = cv.typed_schema(
 CONFIG_SENSOR_DSP_FILTER_SCHEMA = cv.ensure_list(
     cv.Any(cv.use_id(Filter), CONFIG_DSP_FILTER_SCHEMA)
 )
+
+STATS_LEVEL_SCHEMA = sensor.sensor_schema(
+    unit_of_measurement=UNIT_DECIBEL,
+    accuracy_decimals=1,
+    state_class=STATE_CLASS_MEASUREMENT,
+    device_class=DEVICE_CLASS_SOUND_PRESSURE,
+    icon=ICON_WAVEFORM,
+)
+
+
+def _blocks(config, key):
+    """A duration as a whole number of update_interval blocks."""
+    block = config[CONF_UPDATE_INTERVAL].total_milliseconds
+    period = config[key].total_milliseconds
+    if period % block != 0:
+        raise cv.Invalid(f"{key} must be a multiple of update_interval ({block}ms)", [key])
+    blocks = period // block
+    if not 1 <= blocks <= 65535:
+        raise cv.Invalid(f"{key} must be 1 to 65535 blocks of update_interval, got {blocks}", [key])
+    return blocks
+
+
+def _validate_stats(config):
+    config = config.copy()
+    config.setdefault(CONF_SEND_FIRST_AT, config[CONF_SEND_EVERY])
+    for key in (CONF_WINDOW, CONF_SEND_EVERY, CONF_SEND_FIRST_AT):
+        _blocks(config, key)
+    return config
+
 
 CONFIG_SENSOR_SCHEMA = cv.typed_schema(
     {
@@ -146,6 +188,27 @@ CONFIG_SENSOR_SCHEMA = cv.typed_schema(
                 ): CONFIG_SENSOR_DSP_FILTER_SCHEMA,
             }
         ),
+        # Leq and level quantiles over a sliding window of update_interval blocks, with fixed
+        # memory: 2 bytes per block plus a 2.8KB histogram, allocated once in setup()
+        CONF_STATS: cv.All(
+            cv.Schema(
+                {
+                    cv.GenerateID(): cv.declare_id(SoundLevelMeterStats),
+                    cv.Optional(
+                        CONF_UPDATE_INTERVAL, default="125ms"
+                    ): cv.positive_time_period_milliseconds,
+                    cv.Required(CONF_WINDOW): cv.positive_time_period_milliseconds,
+                    cv.Required(CONF_SEND_EVERY): cv.positive_time_period_milliseconds,
+                    cv.Optional(CONF_SEND_FIRST_AT): cv.positive_time_period_milliseconds,
+                    cv.Optional(
+                        CONF_DSP_FILTERS, default=[]
+                    ): CONFIG_SENSOR_DSP_FILTER_SCHEMA,
+                    **{cv.Optional(key): STATS_LEVEL_SCHEMA for key in STATS_SENSORS},
+                }
+            ),
+            cv.has_at_least_one_key(*STATS_SENSORS),
+            _validate_stats,
+        ),
     }
 )
 
@@ -201,7 +264,16 @@ async def add_dsp_filter(config, parent):
 
 
 async def add_sensor(config, parent):
-    s = await sensor.new_sensor(config)
+    if config[CONF_TYPE] == CONF_STATS:
+        s = cg.new_Pvariable(config[CONF_ID])
+        cg.add(s.set_window_blocks(_blocks(config, CONF_WINDOW)))
+        cg.add(s.set_send_every(_blocks(config, CONF_SEND_EVERY)))
+        cg.add(s.set_send_first_at(_blocks(config, CONF_SEND_FIRST_AT)))
+        for key in STATS_SENSORS:
+            if (sc := config.get(key)) is not None:
+                cg.add(getattr(s, f"set_{key}_sensor")(await sensor.new_sensor(sc)))
+    else:
+        s = await sensor.new_sensor(config)
     cg.add(s.set_parent(parent))
     if CONF_WINDOW_SIZE in config:
         cg.add(s.set_window_size(config[CONF_WINDOW_SIZE]))
@@ -215,7 +287,7 @@ async def add_sensor(config, parent):
             f = await add_dsp_filter(fc, parent)
         assert f is not None
         cg.add(s.add_dsp_filter(f))
-    cg.add(parent.add_sensor(s))
+    cg.add(parent.add_processor(s))
 
 
 async def to_code(config):

@@ -35,7 +35,7 @@ config/                 # Modular YAML configs (one per function/sensor)
   tvoc.yaml             # Sensirion SGP4x VOC/NOx indices
   illuminance.yaml      # TI OPT3001 lux sensor
   adc.yaml              # ADS1115 analog-to-digital converter
-  spl.yaml              # ICS-43434 I2S microphone with DSP (LAeq, LA90, LA10)
+  spl.yaml              # ICS-43434 I2S microphone with DSP (LAeq, LA90, LA10 over 5min of 125ms blocks)
 components/             # Custom external ESPHome components (C++ and Python)
   sd_spi_card/          # SPI SD card read/write (FAT32, mount at /sd)
   senseair_i2c/         # K30/K33 CO2 sensor over I2C
@@ -52,7 +52,9 @@ pcb/                    # Hardware PCB design files
 
 ### Data Flow (5-minute cycle)
 
-1. Sensors continuously measure at varying intervals (125ms for SPL, up to 60s for VOC).
+1. Sensors continuously measure at varying intervals (125ms blocks for SPL, up to 60s for VOC).
+   SPL statistics come from a fixed 5min window inside `sound_level_meter` (`type: stats`), not
+   from ESPHome `quantile` filters, which heap-allocate their window (see docs/v2-release-plan.md §13).
 2. Raw readings pass through filters (clamp, NaN rejection, median smoothing) then calibration lambdas.
 3. Every 5 minutes, `sensor_sample` script triggers: updates all template sensors, publishes to InfluxDB, appends CSV row to SD card, blinks LED white.
 4. Upload is skipped if device uptime < 2 minutes (warm-up period).

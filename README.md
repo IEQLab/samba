@@ -98,7 +98,7 @@ SAMBA continuously measures environmental parameters, applies quality filters an
 | VOC Index | 30s | moving median |
 | NOx Index | 30s | moving median |
 | Illuminance | 20s | clamp; moving median; linear calibration; clamp |
-| Sound Pressure Level | 125ms | sos (mic EQ, A-weighting); 5min energy average (LAeq); quantile (LA90, LA10) |
+| Sound Pressure Level | 125ms | sos (mic EQ, A-weighting); sliding 5min window of 125ms levels, sent each minute: energy average (LAeq), 0.1dB histogram quantiles (LA90, LA10) |
 
 ### Data
 

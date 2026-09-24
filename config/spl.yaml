@@ -29,7 +29,10 @@ sound_level_meter:
     microphone: samba_mic
     bits_per_sample: 32
   auto_start: true
-  ring_buffer_size: 125ms
+  # Holds four of the mic task's 16ms writes (12288 bytes). Benched at 48kHz: peak fill was one
+  # write through 20 forced TLS update checks and two in a soak, at 2.6% CPU on core 1. An
+  # overrun is a gap in LAeq, so size for margin, not the minimum
+  ring_buffer_size: 64ms
   warmup_interval: 500ms
   use_esp_dsp: true
 
@@ -72,70 +75,33 @@ sound_level_meter:
 #        - [  1.          ,  1.3294908   ,  0.44188643  ,  1.2312505    , 0.37899444 ]
 #        - [  1.          , -2.          ,  1.          , -1.9946145    , 0.9946217  ]
 
-  # Every sample is processed; update_interval only sets the length of the back-to-back
-  # blocks each eq sensor integrates over. Both sensors share the filter chain, which runs once.
+  # Every sample is processed through the shared filter chain. The stats sensor integrates
+  # back-to-back 125ms blocks, the Fast time constant, and keeps the last 5min of block levels
+  # (2400 x 2 bytes, allocated once at boot) with a 0.1dB histogram beside it. Each minute it
+  # sends LAeq, an energy average of the blocks rather than a median of levels, and LA90/LA10
+  # read off the histogram, with no heap allocation, sort or copy at run time
   sensors:
-    # 125ms blocks, the Fast time constant, feed the LA90/LA10 statistics
-    - type: eq
-      id: spl_laeq_raw
+    - type: stats
       update_interval: 125ms
-      internal: true
+      window: 5min
+      send_every: 60s
+      send_first_at: 30s
       dsp_filters: [f_ics43434, f_a]
-      filters:
-        - filter_out: nan
-
-    # LAeq is an energy average, not a median of levels: average 1min blocks in pressure
-    # squared over a sliding 5min window, then convert back to dB
-    - type: eq
-      id: spl_laeq
-      update_interval: 60s
-      internal: true
-      dsp_filters: [f_ics43434, f_a]
-      filters:
-        - filter_out: nan
-        - lambda: return pow(10.0f, x / 10.0f);
-        - sliding_window_moving_average:
-            window_size: 5
-            send_every: 1
-            send_first_at: 1
-        - lambda: return 10.0f * log10(x);
-
-# Derive percentiles over a sliding 5min window (2400 x 125ms), sent every minute
-sensor:
-  - platform: copy
-    source_id: spl_laeq_raw
-    id: spl_la90
-    internal: true
-    filters:
-      - quantile:
-          window_size: 2400
-          quantile: 0.10
-          send_every: 480
-          send_first_at: 240
-
-  - platform: copy
-    source_id: spl_laeq_raw
-    id: spl_la10
-    internal: true
-    filters:
-      - quantile:
-          window_size: 2400
-          quantile: 0.90
-          send_every: 480
-          send_first_at: 240
-
-#  - platform: copy
-#    source_id: spl_laeq_raw
-#    id: spl_la05
-#    internal: true
-#    filters:
-#      - quantile:
-#          window_size: 2400
-#          quantile: 0.95
-#          send_every: 480
-#          send_first_at: 240
+      leq:
+        id: spl_laeq
+        internal: true
+      l90:
+        id: spl_la90
+        internal: true
+      l10:
+        id: spl_la10
+        internal: true
+#      l05:
+#        id: spl_la05
+#        internal: true
 
 # Define SPL measurements
+sensor:
   - platform: template
     id: samba_laeq
     name: "LAeq"
