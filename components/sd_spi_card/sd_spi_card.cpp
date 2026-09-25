@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "ff.h"  // For FATFS type detection
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 namespace esphome {
 namespace sd_spi_card {
@@ -41,9 +43,6 @@ bool SdSpiCard::mount_card_() {
   
   ESP_LOGI(TAG, "Mounting SD card...");
   
-  sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-  host.slot = spi_host_;
-  
   // Only initialize SPI bus once
   if (!spi_initialized_) {
     spi_bus_config_t bus_cfg = {};
@@ -54,7 +53,7 @@ bool SdSpiCard::mount_card_() {
     bus_cfg.quadhd_io_num = -1;
     bus_cfg.max_transfer_sz = 4000;
     
-    esp_err_t ret = spi_bus_initialize((spi_host_device_t)host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
+    esp_err_t ret = spi_bus_initialize(spi_host_, &bus_cfg, SDSPI_DEFAULT_DMA);
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
       ESP_LOGE(TAG, "Failed to initialize SPI bus: %s", esp_err_to_name(ret));
       return false;
@@ -62,17 +61,7 @@ bool SdSpiCard::mount_card_() {
     spi_initialized_ = true;
   }
   
-  sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-  slot_config.gpio_cs = cs_pin_;
-  slot_config.host_id = (spi_host_device_t)host.slot;
-  
-  esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-    .format_if_mount_failed = false,
-    .max_files = 5,
-    .allocation_unit_size = 16 * 1024};
-  
-  esp_err_t ret = esp_vfs_fat_sdspi_mount(mount_point_.c_str(), &host, 
-                                          &slot_config, &mount_config, &card_);
+  esp_err_t ret = this->mount_fs_(false);
   if (ret != ESP_OK) {
     if (ret == ESP_FAIL) {
       ESP_LOGE(TAG, "Failed to mount filesystem.");
@@ -115,6 +104,22 @@ bool SdSpiCard::mount_card_() {
   return true;
 }
 
+esp_err_t SdSpiCard::mount_fs_(bool format) {
+  sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+  host.slot = spi_host_;
+
+  sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
+  slot_config.gpio_cs = cs_pin_;
+  slot_config.host_id = spi_host_;
+
+  esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+    .format_if_mount_failed = format,
+    .max_files = 5,
+    .allocation_unit_size = 16 * 1024};
+
+  return esp_vfs_fat_sdspi_mount(mount_point_.c_str(), &host, &slot_config, &mount_config, &card_);
+}
+
 void SdSpiCard::unmount_card_() {
   if (!mounted_) {
     return;
@@ -130,6 +135,14 @@ void SdSpiCard::unmount_card_() {
 }
 
 void SdSpiCard::loop() {
+  if (erase_done_) {
+    this->finish_erase_();
+  }
+  // The erase task owns the card until it is done
+  if (erase_state_ == EraseState::ERASING) {
+    return;
+  }
+
   // Skip periodic checks if auto_mount is disabled
   if (!auto_mount_) {
     return;
@@ -390,6 +403,74 @@ WriteResult SdSpiCard::append_file(const std::string &path,
   
   failed_writes_ = 0;
   return WriteResult::SUCCESS;
+}
+
+bool SdSpiCard::erase_card() {
+  if (erase_state_ == EraseState::ERASING) {
+    ESP_LOGW(TAG, "Erase already running");
+    return false;
+  }
+  if (!mounted_ || !card_) {
+    ESP_LOGE(TAG, "Card not mounted, cannot erase");
+    erase_state_ = EraseState::FAILED;
+    return false;
+  }
+
+  ESP_LOGW(TAG, "Erasing SD card: every file on it will be lost");
+  mounted_ = false;  // writers and the file server see an absent card from here
+  erase_done_ = false;
+  erase_state_ = EraseState::ERASING;
+  // A whole-card erase and FAT32 format run for seconds, well past the loop watchdog
+  if (xTaskCreate(&SdSpiCard::erase_task_, "sd_erase", 6144, this, tskIDLE_PRIORITY + 1, nullptr) != pdPASS) {
+    ESP_LOGE(TAG, "Failed to start erase task");
+    mounted_ = true;
+    erase_state_ = EraseState::FAILED;
+    return false;
+  }
+  return true;
+}
+
+void SdSpiCard::erase_task_(void *arg) {
+  auto *self = static_cast<SdSpiCard *>(arg);
+  esp_err_t err = sdmmc_full_erase(self->card_);
+  self->erase_ok_ = err == ESP_OK;
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Card-level erase failed (%s); formatting only", esp_err_to_name(err));
+  }
+  // In SDSPI mode the card needs re-initialising after an erase; an erased card fails to mount,
+  // so format_if_mount_failed rebuilds it, while a refused erase left a filesystem to format
+  esp_vfs_fat_sdcard_unmount(self->mount_point_.c_str(), self->card_);
+  self->card_ = nullptr;
+  if (self->erase_ok_) {
+    err = self->mount_fs_(true);
+  } else if ((err = self->mount_fs_(false)) == ESP_OK) {
+    err = esp_vfs_fat_sdcard_format(self->mount_point_.c_str(), self->card_);
+  } else {
+    err = self->mount_fs_(true);
+  }
+  self->erase_mount_err_ = err;
+  self->erase_done_ = true;
+  vTaskDelete(nullptr);
+}
+
+void SdSpiCard::finish_erase_() {
+  erase_done_ = false;
+  if (erase_mount_err_ != ESP_OK) {
+    ESP_LOGE(TAG, "Remount after erase failed: %s", esp_err_to_name(erase_mount_err_));
+    if (card_) {  // mounted, but the format failed
+      esp_vfs_fat_sdcard_unmount(mount_point_.c_str(), card_);
+      card_ = nullptr;
+    }
+    erase_state_ = EraseState::FAILED;
+    last_check_millis_ = millis() - check_interval_ms_ + remount_retry_interval_ms_;
+    return;
+  }
+  erase_state_ = erase_ok_ ? EraseState::ERASED : EraseState::FORMATTED;
+  ESP_LOGI(TAG, "SD card %s and remounted at %s",
+           erase_ok_ ? "erased" : "formatted", mount_point_.c_str());
+  mounted_ = true;
+  failed_writes_ = 0;
+  this->mount_callback_.call();
 }
 
 void SdSpiCard::sync() {

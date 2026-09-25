@@ -55,6 +55,35 @@ script:
       - lambda: 'id(sd_logfile) = id(sd0).file_exists(id(sd_filename));'
 
 
+# Wipe the card over the native API (`samba deploy` gate, after it has copied the logs off)
+# The erase runs on a background task; on_mount then starts a fresh log with the current tags
+api:
+  actions:
+    - action: sd_erase
+      then:
+        - lambda: 'id(sd_logfile) = false;'
+        - sd_spi_card.erase:
+            id: sd0
+        # "erasing" (or "failed") at once, so a client never reads a previous erase's result
+        - component.update: sd_erase_state
+
+text_sensor:
+  - platform: template
+    name: "SD Card Erase"
+    id: sd_erase_state
+    icon: mdi:sd
+    entity_category: "diagnostic"
+    update_interval: 5s
+    lambda: |-
+      switch (id(sd0).erase_state()) {
+        case sd_spi_card::EraseState::ERASING: return std::string("erasing");
+        case sd_spi_card::EraseState::ERASED: return std::string("erased");
+        case sd_spi_card::EraseState::FORMATTED: return std::string("formatted");
+        case sd_spi_card::EraseState::FAILED: return std::string("failed");
+        default: return std::string("idle");
+      }
+
+
 # Store filename as global variable
 globals:
   - id: sd_filename

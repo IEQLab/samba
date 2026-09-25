@@ -129,5 +129,16 @@ protected:
   SdSpiCard *parent_;
 };
 
+template<typename... Ts>
+class EraseAction : public Action<Ts...> {
+public:
+  explicit EraseAction(SdSpiCard *parent) : parent_(parent) {}
+
+  void play(const Ts &...x) override { this->parent_->erase_card(); }
+
+protected:
+  SdSpiCard *parent_;
+};
+
 }  // namespace sd_spi_card
 }  // namespace esphome

@@ -19,7 +19,7 @@ config/                 # Modular YAML configs (one per function/sensor)
   tags.yaml             # InfluxDB building/level/zone tags as native-API text entities
   sample.yaml           # 5-minute sampling loop (sensor update + publish + SD append)
   rtc.yaml              # DS1307 RTC, SNTP sync, sample trigger, firmware check
-  sd.yaml               # SD card mount/write via sd_spi_card component
+  sd.yaml               # SD card mount/write via sd_spi_card, sd_erase action for the deploy gate
   influx.yaml           # InfluxDB v2 upload config + token provisioning over the native API
   homeassistant.yaml    # Native API endpoint (Noise encryption, key provisioned at runtime)
   wifi.yaml             # WiFi and captive portal
@@ -37,7 +37,7 @@ config/                 # Modular YAML configs (one per function/sensor)
   adc.yaml              # ADS1115 analog-to-digital converter
   spl.yaml              # ICS-43434 I2S microphone with DSP (LAeq, LA90, LA10 over 5min of 125ms blocks)
 components/             # Custom external ESPHome components (C++ and Python)
-  sd_spi_card/          # SPI SD card read/write (FAT32, mount at /sd)
+  sd_spi_card/          # SPI SD card read/write/erase (FAT32, mount at /sd)
   senseair_i2c/         # K30/K33 CO2 sensor over I2C
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement

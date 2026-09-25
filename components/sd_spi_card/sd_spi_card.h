@@ -3,6 +3,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
 #include "esphome/core/automation.h"
+#include <atomic>
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
 
@@ -17,6 +18,10 @@ enum class WriteResult {
   FILE_ERROR,
   WRITE_ERROR
 };
+
+// ERASED: card-level erase then format; FORMATTED: the card refused the erase, so only the
+// filesystem was rebuilt and the old sectors may still be readable
+enum class EraseState : uint8_t { IDLE, ERASING, ERASED, FORMATTED, FAILED };
 
 class SdSpiCard : public Component {
 public:
@@ -60,13 +65,21 @@ public:
   
   // Ensure data is flushed to card
   void sync();
+
+  // Erase the whole card and format it FAT32 on a background task; false if unmounted or busy.
+  // The card reads unmounted until it is done, then on_mount fires again.
+  bool erase_card();
+  EraseState erase_state() const { return erase_state_; }
   
 protected:
   bool mount_card_();
   void unmount_card_();
+  esp_err_t mount_fs_(bool format);
+  static void erase_task_(void *arg);
+  void finish_erase_();
   
 private:
-  bool mounted_{false};
+  std::atomic<bool> mounted_{false};  // also read by sd_file_server's httpd task
   bool auto_mount_{true};
   std::string mount_point_{"/sd"};
   sdmmc_card_t *card_{nullptr};
@@ -84,6 +97,11 @@ private:
   
   spi_host_device_t spi_host_{HSPI_HOST};
   bool spi_initialized_{false};
+
+  std::atomic<EraseState> erase_state_{EraseState::IDLE};
+  std::atomic<bool> erase_done_{false};  // set by the erase task, consumed by loop()
+  bool erase_ok_{false};
+  esp_err_t erase_mount_err_{ESP_OK};
   
   CallbackManager<void()> mount_callback_;
 };

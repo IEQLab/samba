@@ -22,6 +22,7 @@ WriteFileAction = sd_ns.class_("WriteFileAction", automation.Action)
 SyncAction = sd_ns.class_("SyncAction", automation.Action)
 CreateFileAction = sd_ns.class_("CreateFileAction", automation.Action)
 MountAction = sd_ns.class_("MountAction", automation.Action)
+EraseAction = sd_ns.class_("EraseAction", automation.Action)
 
 # Define config keys
 CONF_PATH = "path"
@@ -171,6 +172,23 @@ async def create_file_action_to_code(config, action_id, template_arg, args):
     synchronous=True,
 )
 async def mount_action_to_code(config, action_id, template_arg, args):
+    parent = await cg.get_variable(config[CONF_ID])
+    var = cg.new_Pvariable(action_id, template_arg, parent)
+    return var
+
+
+# Erase action: whole-card erase and format, on a background task
+@automation.register_action(
+    "sd_spi_card.erase",
+    EraseAction,
+    cv.Schema(
+        {
+            cv.GenerateID(): cv.use_id(SdSpiCard),
+        }
+    ),
+    synchronous=True,
+)
+async def erase_action_to_code(config, action_id, template_arg, args):
     parent = await cg.get_variable(config[CONF_ID])
     var = cg.new_Pvariable(action_id, template_arg, parent)
     return var
