@@ -103,8 +103,8 @@ files are what decode a crash from these exact binaries.
       "firmware defaults" apart from the hand-set Ta slope. (The line's "takes no coefficients"
       refusal is covered by the test suite; with no processed/ there is nothing to refuse here.)
 - [ ] `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin`
-- [ ] Check: tags survive; the hand-set Ta coefficient survives; the anemometers show the King
-      placeholders; the unit is unkeyed, *InfluxDB Token* `unset`, *OTA Password* `unset`.
+- [ ] Check: tags survive; the hand-set Ta coefficient survives; the anemometers show the
+      default `K` (−6.165) and `Air Speed Model` reads `exp1`; the unit is unkeyed, *InfluxDB Token* `unset`, *OTA Password* `unset`.
 - [ ] Re-provision (`samba deploy`) and the same pairing password.
 
 ## Record

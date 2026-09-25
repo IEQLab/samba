@@ -101,44 +101,17 @@ globals:
     restore_value: yes
     initial_value: '-16.12'
 
-  # Anemometer calibration (King's law: V^2 = (1 - k*Ta) * (A + B*v^n), config/airspeed.yaml)
-  # New ids on purpose: NVS keys hash the id, so the 1.x power-law blobs are never read as these
-  # TODO(v2): PLACEHOLDERS, not a fit. September-batch k=0 medians, which read level 1 ~2x high
-  # and level 7 ~40% low. The real fleet medians come from the section 8 lab sessions
-  # (docs/v2-release-plan.md) and change here and in the client's FIRMWARE_DEFAULTS together
-  - id: calibration_as1_king_a
+  # Anemometer calibration, K in v = exp(K + C1*V + G*(Ta - 22)) (config/airspeed.yaml)
+  # New ids on purpose: NVS keys hash the id, so no older air speed blob is read as these
+  # TODO(v2): the September-batch fleet median; confirm the default with the next batch
+  - id: calibration_as1_k
     type: double
     restore_value: yes
-    initial_value: '0.0'
-  - id: calibration_as1_king_b
+    initial_value: '-6.165'
+  - id: calibration_as2_k
     type: double
     restore_value: yes
-    initial_value: '9.671'
-  - id: calibration_as1_king_n
-    type: double
-    restore_value: yes
-    initial_value: '1.173'
-  - id: calibration_as1_king_k
-    type: double
-    restore_value: yes
-    initial_value: '0.0'
-
-  - id: calibration_as2_king_a
-    type: double
-    restore_value: yes
-    initial_value: '0.0'
-  - id: calibration_as2_king_b
-    type: double
-    restore_value: yes
-    initial_value: '9.671'
-  - id: calibration_as2_king_n
-    type: double
-    restore_value: yes
-    initial_value: '1.173'
-  - id: calibration_as2_king_k
-    type: double
-    restore_value: yes
-    initial_value: '0.0'
+    initial_value: '-6.165'
 
 # Define flash write interval
 # https://esphome.io/components/esphome.html#preferences-component

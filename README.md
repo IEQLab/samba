@@ -92,7 +92,7 @@ SAMBA continuously measures environmental parameters, applies quality filters an
 | Air Temperature | 30s | clamp; moving median; linear calibration |
 | Relative Humidity | 30s | clamp; moving median; linear calibration |
 | Globe Temperature | 30s | clamp; moving median; linear calibration |
-| Air Speed | 2s | clamp; moving median; King's-law calibration with air temperature |
+| Air Speed | 2s | clamp; moving median; exponential calibration with air temperature |
 | CO2 | 30s | filter; clamp; moving median; linear calibration; clamp |
 | PM2.5 | ~1s | clamp; moving median |
 | VOC Index | 30s | moving median |

@@ -20,26 +20,16 @@ sensor:
           send_every: 10
           send_first_at: 10
       - lambda: |-
-            // King's law, V^2 = (1 - k*Ta) * (A + B*v^n), solved for v
+            // v = exp(K + C1*V + G*(Ta - 22)); C1, G are fleet constants (substitutions)
             // Nominal 22 degC so a dead SHT4x does not take air speed with it
             float ta = id(samba_temperature).state;
             if (std::isnan(ta))
               ta = 22.0f;
-            const float a = id(calibration_as1_king_a);
-            const float b = id(calibration_as1_king_b);
-            const float n = id(calibration_as1_king_n);
-            const float k = id(calibration_as1_king_k);
-            if (std::isnan(a) || std::isnan(b) || std::isnan(n) || std::isnan(k) || b <= 0 || n <= 0)
+            const float k = id(calibration_as1_k);
+            if (std::isnan(k))
               return NAN;
-            const float s = 1.0f - k * ta;
-            if (s <= 0)
-              return NAN;
-            const float e = x * x / s - a;
-            // Still air below the fitted floor
-            if (e <= 0)
-              return 0.02f;
-            // A clamp filter would turn NaN into 0.02, so bound it here once v is known finite
-            const float v = powf(e / b, 1.0f / n);
+            // x <= 5 V keeps the exponent under ~9; bound here, as a clamp filter turns NaN into 0.02
+            const float v = expf(k + ${airspeed_c1}f * x + ${airspeed_g}f * (ta - 22.0f));
             return std::min(std::max(v, 0.02f), 1.0f);
 
   - platform: copy
@@ -57,26 +47,16 @@ sensor:
           send_every: 10
           send_first_at: 10
       - lambda: |-
-            // King's law, V^2 = (1 - k*Ta) * (A + B*v^n), solved for v
+            // v = exp(K + C1*V + G*(Ta - 22)); C1, G are fleet constants (substitutions)
             // Nominal 22 degC so a dead SHT4x does not take air speed with it
             float ta = id(samba_temperature).state;
             if (std::isnan(ta))
               ta = 22.0f;
-            const float a = id(calibration_as2_king_a);
-            const float b = id(calibration_as2_king_b);
-            const float n = id(calibration_as2_king_n);
-            const float k = id(calibration_as2_king_k);
-            if (std::isnan(a) || std::isnan(b) || std::isnan(n) || std::isnan(k) || b <= 0 || n <= 0)
+            const float k = id(calibration_as2_k);
+            if (std::isnan(k))
               return NAN;
-            const float s = 1.0f - k * ta;
-            if (s <= 0)
-              return NAN;
-            const float e = x * x / s - a;
-            // Still air below the fitted floor
-            if (e <= 0)
-              return 0.02f;
-            // A clamp filter would turn NaN into 0.02, so bound it here once v is known finite
-            const float v = powf(e / b, 1.0f / n);
+            // x <= 5 V keeps the exponent under ~9; bound here, as a clamp filter turns NaN into 0.02
+            const float v = expf(k + ${airspeed_c1}f * x + ${airspeed_g}f * (ta - 22.0f));
             return std::min(std::max(v, 0.02f), 1.0f);
 
 # Define air speed measurements

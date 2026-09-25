@@ -29,7 +29,7 @@ config/                 # Modular YAML configs (one per function/sensor)
   diagnostics.yaml      # WiFi signal, uptime, restart buttons
   tair.yaml             # SHT4x temperature/RH (linear cal + vapour pressure correction)
   tglobe.yaml           # NTC thermistor globe temperature
-  airspeed.yaml         # 2x thermal anemometers (power function cal)
+  airspeed.yaml         # 2x thermal anemometers (exponential cal, fleet C1 and G)
   co2.yaml              # SenseAir K30 via I2C
   pm25.yaml             # Plantower PMS5003 (piecewise RH-corrected cal)
   tvoc.yaml             # Sensirion SGP4x VOC/NOx indices
@@ -63,7 +63,7 @@ pcb/                    # Hardware PCB design files
 
 All sensor calibrations use persistent global variables (stored in flash, set over the native API by the `samba` client):
 - **Linear (y = mx + b):** CO2, temperature, RH, illuminance, globe temp
-- **King's law (V² = (1 − k·Ta)(A + B·vⁿ)):** Air speed, per anemometer (`config/airspeed.yaml`; values pending, docs/v2-release-plan.md §4)
+- **Exponential (v = exp(K + C1·V + G·(Ta − 22))):** Air speed; one K per anemometer, C1 and G fleet constants in `config/substitutions.yaml` (docs/v2-release-plan.md §4)
 - **Complex:** PM2.5 (piecewise RH-corrected), RH (vapour pressure correction), MRT (radiant heat)
 
 ### Error Recovery

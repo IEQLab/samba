@@ -151,152 +151,60 @@ number:
           id(cal_tg_b).publish_state(x);
       - script.execute: cal_save
 
-  # King's law per anemometer. k keeps 1 - k*Ta > 0 below 50 degC
-  # TODO(v2): the k range is pending. The September batch wants k ~ 0.030 on every tip, which
-  # this range cannot reach (docs/v2-release-plan.md section 4); decided with the section 8 sessions
+  # One K per anemometer; C1 and G are fleet constants (config/substitutions.yaml)
   - platform: template
-    name: "Anemometer 1 [A]"
-    id: cal_as1_king_a
+    name: "Anemometer 1 [K]"
+    id: cal_as1_k
     icon: mdi:weather-windy
     entity_category: "config"
     mode: box
-    min_value: 0
-    max_value: 10
-    step: 0.001
+    min_value: -12
+    max_value: 0
+    step: 0.0001
     update_interval: 60s
     lambda: |-
-      return id(calibration_as1_king_a);
+      return id(calibration_as1_k);
     set_action:
       - lambda: |-
-          id(calibration_as1_king_a) = x;
-          id(cal_as1_king_a).publish_state(x);
+          id(calibration_as1_k) = x;
+          id(cal_as1_k).publish_state(x);
       - script.execute: cal_save
 
   - platform: template
-    name: "Anemometer 1 [B]"
-    id: cal_as1_king_b
+    name: "Anemometer 2 [K]"
+    id: cal_as2_k
     icon: mdi:weather-windy
     entity_category: "config"
     mode: box
-    min_value: 0.01
-    max_value: 20
-    step: 0.001
+    min_value: -12
+    max_value: 0
+    step: 0.0001
     update_interval: 60s
     lambda: |-
-      return id(calibration_as1_king_b);
+      return id(calibration_as2_k);
     set_action:
       - lambda: |-
-          id(calibration_as1_king_b) = x;
-          id(cal_as1_king_b).publish_state(x);
+          id(calibration_as2_k) = x;
+          id(cal_as2_k).publish_state(x);
       - script.execute: cal_save
 
-  - platform: template
-    name: "Anemometer 1 [n]"
-    id: cal_as1_king_n
-    icon: mdi:weather-windy
-    entity_category: "config"
-    mode: box
-    min_value: 0.1
-    max_value: 2
-    step: 0.001
-    update_interval: 60s
-    lambda: |-
-      return id(calibration_as1_king_n);
-    set_action:
-      - lambda: |-
-          id(calibration_as1_king_n) = x;
-          id(cal_as1_king_n).publish_state(x);
-      - script.execute: cal_save
 
+# The fleet constants the firmware was built with; a client refuses a K fitted under another model
+# https://esphome.io/components/text_sensor/template.html
+text_sensor:
   - platform: template
-    name: "Anemometer 1 [k]"
-    id: cal_as1_king_k
+    name: "Air Speed Model"
+    id: cal_airspeed_model
     icon: mdi:weather-windy
-    entity_category: "config"
-    mode: box
-    min_value: -0.019
-    max_value: 0.019
-    step: 0.00001
-    update_interval: 60s
-    lambda: |-
-      return id(calibration_as1_king_k);
-    set_action:
-      - lambda: |-
-          id(calibration_as1_king_k) = x;
-          id(cal_as1_king_k).publish_state(x);
-      - script.execute: cal_save
+    entity_category: "diagnostic"
+    update_interval: never
+    lambda: 'return std::string("${airspeed_model}");'
 
-  - platform: template
-    name: "Anemometer 2 [A]"
-    id: cal_as2_king_a
-    icon: mdi:weather-windy
-    entity_category: "config"
-    mode: box
-    min_value: 0
-    max_value: 10
-    step: 0.001
-    update_interval: 60s
-    lambda: |-
-      return id(calibration_as2_king_a);
-    set_action:
-      - lambda: |-
-          id(calibration_as2_king_a) = x;
-          id(cal_as2_king_a).publish_state(x);
-      - script.execute: cal_save
-
-  - platform: template
-    name: "Anemometer 2 [B]"
-    id: cal_as2_king_b
-    icon: mdi:weather-windy
-    entity_category: "config"
-    mode: box
-    min_value: 0.01
-    max_value: 20
-    step: 0.001
-    update_interval: 60s
-    lambda: |-
-      return id(calibration_as2_king_b);
-    set_action:
-      - lambda: |-
-          id(calibration_as2_king_b) = x;
-          id(cal_as2_king_b).publish_state(x);
-      - script.execute: cal_save
-
-  - platform: template
-    name: "Anemometer 2 [n]"
-    id: cal_as2_king_n
-    icon: mdi:weather-windy
-    entity_category: "config"
-    mode: box
-    min_value: 0.1
-    max_value: 2
-    step: 0.001
-    update_interval: 60s
-    lambda: |-
-      return id(calibration_as2_king_n);
-    set_action:
-      - lambda: |-
-          id(calibration_as2_king_n) = x;
-          id(cal_as2_king_n).publish_state(x);
-      - script.execute: cal_save
-
-  - platform: template
-    name: "Anemometer 2 [k]"
-    id: cal_as2_king_k
-    icon: mdi:weather-windy
-    entity_category: "config"
-    mode: box
-    min_value: -0.019
-    max_value: 0.019
-    step: 0.00001
-    update_interval: 60s
-    lambda: |-
-      return id(calibration_as2_king_k);
-    set_action:
-      - lambda: |-
-          id(calibration_as2_king_k) = x;
-          id(cal_as2_king_k).publish_state(x);
-      - script.execute: cal_save
+esphome:
+  on_boot:
+    - priority: -100
+      then:
+        - component.update: cal_airspeed_model
 
 
 # Identify and on-demand sampling
@@ -332,15 +240,12 @@ script:
           }
           ESP_LOGI("samba",
                    "Calibration saved to flash: CO2 %.3f/%.2f Lux %.3f/%.2f Ta %.3f/%.2f Tg %.3f/%.2f "
-                   "AS1 %.3f/%.3f/%.3f/%.5f AS2 %.3f/%.3f/%.3f/%.5f",
+                   "AS1 K %.4f AS2 K %.4f",
                    id(calibration_co2_m), id(calibration_co2_b),
                    id(calibration_lux_m), id(calibration_lux_b),
                    id(calibration_ta_m1), id(calibration_ta_b),
                    id(calibration_tg_m), id(calibration_tg_b),
-                   id(calibration_as1_king_a), id(calibration_as1_king_b), id(calibration_as1_king_n),
-                   id(calibration_as1_king_k),
-                   id(calibration_as2_king_a), id(calibration_as2_king_b), id(calibration_as2_king_n),
-                   id(calibration_as2_king_k));
+                   id(calibration_as1_k), id(calibration_as2_k));
 
   # Blink the status LED cyan for 6 s so a unit can be picked out on a bench or in a room
   - id: identify_blink
