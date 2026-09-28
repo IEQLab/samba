@@ -11,7 +11,8 @@ sensor:
     i2c_id: bus_a
     address: 0x69
     internal: true
-    update_interval: 30s
+    # 300/11 s: walks every phase of the K30's own 2s NDIR cycle and the SGP4x's 1s sample (adc.yaml)
+    update_interval: 27273ms
     abc_interval: 180h
     read_delay_ms: 80
     retry_delay_ms: 160
@@ -70,7 +71,7 @@ interval:
     then:
       - lambda: |-
           // Failed if the raw read is NaN or stale; the filtered .state never goes NaN
-          // 45s is one 30s poll plus margin
+          // 45s is one 27.3s poll plus margin
           const bool failed = std::isnan(id(k30_co2).get_raw_state())
               || (id(k30_last_ok) != 0 && (millis() - id(k30_last_ok)) > 45000);
 

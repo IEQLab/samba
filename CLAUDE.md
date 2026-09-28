@@ -81,7 +81,7 @@ flag cannot save you here: `sample.yaml` calls `publish_state()` on every templa
 cycle, which re-arms it. So each sensor stamps `<x>_last_ok = millis()` from `on_raw_value`,
 and its template lambda returns `NAN` when that stamp is older than **330000 ms** — one 5min
 sample interval plus margin. Thresholds are uniform on purpose; the poll rates do the work
-(11 consecutive failures for SHT4x/NTC/OPT3001, 165 for the 2s air-speed channels).
+(11 consecutive failures for SHT4x/OPT3001, 12 for the K30, 14 for the NTC, ~140 for air speed).
 
 Guards live in the file that owns the sensor: `sht_last_ok` (tair), `opt_last_ok`
 (illuminance), `pms_last_ok` (pm25), `k30_last_ok` (co2), `sgp_last_ok` (tvoc), and the three
@@ -125,12 +125,23 @@ restart, and both also require `sys_uptime > 3600`, which self-rate-limits to on
   config-register read keeps succeeding, because a real bus fault exits it silently.
 - **System:** safe mode on boot crash, periodic SD card presence check.
 
-**Losing the occasional transaction on `bus_a` is structural, so tolerate a failed read rather
-than latch.** The K30 holds SCL low for ~40ms while it measures and the ESP32 timeout register
-tops out at 13ms, so no `timeout:` value can cover it and no master-side recovery can shorten it —
-a target holding SCL cannot be clocked free, unlike one holding SDA. Expect ~2% of transactions to
-fail, addressed to any device. A component that reacts to a single failure by disabling itself is
-the bug.
+**Losing transactions on `bus_a` is structural, so tolerate a failed read rather than latch.**
+The K30 holds SCL low while its NDIR lamp fires, every 2s on its own clock, for longer than the
+ESP32's 13ms timeout ceiling, so no `timeout:` value can cover it and no master-side recovery can
+shorten it — a target holding SCL cannot be clocked free, unlike one holding SDA. Any transaction to
+any device that lands in that window times out: a unit with its K30 unplugged logged none in 16min,
+against ~14/min with it fitted (2026-09-28). A component that reacts to a single failure by
+disabling itself is the bug.
+
+**Poll `bus_a` at 300/N s with N coprime to 300** (air speed 131 and 127, NTC 13, K30 11). A
+period that is a multiple of 2s keeps one phase against the K30 for the whole boot, so that sensor
+loses every read or none, decided at boot: 2s air-speed polls lost runs of 23 in a row. A coprime
+period walks every phase, so losses come singly and the 5min sample divides exactly. This spreads
+the losses, it does not cut them: A/B over four boots, ~12.6 against ~12.9 timeouts/min, but the
+longest run fell from 34s to 9s. The SGP4x samples at a fixed 1Hz (`sgp4x.cpp`
+`set_interval(1000)`) that its VOC algorithm needs, whatever `update_interval` says, so its phase
+against the K30 is still drawn per boot and it is most of what remains. SHT4x (30s) and OPT3001
+(20s) are still multiples of 2s.
 
 Two non-sensor traps in the same family. `http_request` raises the task WDT once for a whole
 request, then runs `esp_http_client_open` and the body write with no feed between them, so

@@ -19,7 +19,9 @@ sensor:
     multiplexer: 'A0_GND'
     gain: 6.144
     sample_rate: 64
-    update_interval: 2s
+    # 300/N s with N sharing no factor with 150 or 300, so reads walk every phase of the K30's 2s
+    # NDIR cycle and the SGP4x's 1s sample instead of locking onto one: failures spread, never repeat
+    update_interval: 2290ms  # N = 131
     internal: true
     on_value:
       - lambda: 'id(ads_as1_last_ok) = millis();'
@@ -31,7 +33,7 @@ sensor:
     multiplexer: 'A1_GND'
     gain: 6.144
     sample_rate: 64
-    update_interval: 2s
+    update_interval: 2362ms  # N = 127, see ads_as1; apart from as1 so they never fail together
     internal: true
     on_value:
       - lambda: 'id(ads_as2_last_ok) = millis();'
@@ -43,7 +45,7 @@ sensor:
     multiplexer: 'A2_GND'
     gain: 6.144
     sample_rate: 16
-    update_interval: 30s
+    update_interval: 23077ms  # N = 13, see ads_as1
     internal: true
     on_value:
       - lambda: 'id(ads_ntc_last_ok) = millis();'

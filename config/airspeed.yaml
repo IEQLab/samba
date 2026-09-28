@@ -15,8 +15,9 @@ sensor:
           min_value: 0
           max_value: 5
           ignore_out_of_range: true
+      # 26 x 2.29s: a 60s median
       - median:
-          window_size: 30
+          window_size: 26
           send_every: 10
           send_first_at: 10
       - lambda: |-
@@ -42,8 +43,9 @@ sensor:
           min_value: 0
           max_value: 5
           ignore_out_of_range: true
+      # 25 x 2.36s: a 60s median
       - median:
-          window_size: 30
+          window_size: 25
           send_every: 10
           send_first_at: 10
       - lambda: |-

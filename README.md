@@ -91,9 +91,9 @@ SAMBA continuously measures environmental parameters, applies quality filters an
 |:-------:|:---------:|:-------:|
 | Air Temperature | 30s | clamp; moving median; linear calibration |
 | Relative Humidity | 30s | clamp; moving median; linear calibration |
-| Globe Temperature | 30s | clamp; moving median; linear calibration |
-| Air Speed | 2s | clamp; moving median; exponential calibration with air temperature |
-| CO2 | 30s | filter; clamp; moving median; linear calibration; clamp |
+| Globe Temperature | 23s | clamp; moving median; linear calibration |
+| Air Speed | 2.3s | clamp; moving median; exponential calibration with air temperature |
+| CO2 | 27s | filter; clamp; moving median; linear calibration; clamp |
 | PM2.5 | ~1s | clamp; moving median |
 | VOC Index | 30s | moving median |
 | NOx Index | 30s | moving median |
@@ -144,9 +144,9 @@ cannot take the whole unit off the air.
 Every sensor drops out the same way: each stamps the time of its last successful read, and a
 measurand goes `nan` once that stamp is more than 5.5 minutes old — one sample interval plus
 margin. A single failed read never costs a reading, because the sensors poll far faster than
-they are sampled; it takes eleven consecutive failures for temperature, humidity, globe or
-illuminance, and 165 for air speed. What this does *not* catch is a sensor that keeps
-answering with a stuck value.
+they are sampled; it takes eleven consecutive failures for temperature, humidity or illuminance,
+12 for CO2, 14 for globe temperature and about 140 for air speed. What this does *not* catch is
+a sensor that keeps answering with a stuck value.
 
 Amber is the one worth attention in the field: the remote board connects over an RJ45 lead,
 and a marginal cable is the most common cause of it.
