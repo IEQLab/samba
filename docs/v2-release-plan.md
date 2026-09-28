@@ -6,16 +6,20 @@ is for the 100+ units to come.*
 
 2.0 is a deliberate compatibility break, delivered through a second OTA manifest so the field
 units never see it. It bundles three things: the anemometer model changes from a power law to
-King's law; credential provisioning ships without compiled-in fallbacks; and everything kept only
-for 1.x units or old clients goes. The coefficient *values* wait on two lab sessions; the
-firmware and client do not.
+the level-5 fleet model of §4; credential provisioning ships without compiled-in fallbacks; and everything kept only
+for 1.x units or old clients goes. The two lab sessions of §8 are done; the fleet-median `K`
+default still waits on the next batch (§4.2).
+
+*Status 2026-09-28:* §11 steps 1, 2 and 4 are done, step 3 is mostly done and step 5 is down to
+the defaults. What remains is the release candidate (§9.5), the release and the recall. §11
+marks each step.
 
 ## 1. Decisions taken
 
 | Question | Decision |
 |---|---|
 | The 1.x line | Bug fixes only, from a branch off `v1.99.99`; then the ten units are recalled, recalibrated and flashed to 2.0, and the line is retired |
-| Scope of the break | King's-law coefficients, the manifest split, credential provisioning without fallbacks, and the 1.x shims listed in §6 |
+| Scope of the break | The air speed model (§4), the manifest split, credential provisioning without fallbacks, and the 1.x shims listed in §6 |
 | Uncalibrated 2.0 unit | Reports air speed from compiled-in fleet-median defaults; the client already tells default from bespoke by value |
 | Compiled-in InfluxDB token and OTA password | Dropped. Captive portal and USB remain the recovery paths. No `provisioning:` window |
 | The live token and password inside the public v1.99.99 binary | Known exposure, accepted until the ten units are recalled; rotated then |
@@ -55,79 +59,59 @@ after this plan main drops the compiled-in fallbacks that 1.99.99 units rely on.
 
 ## 4. Anemometer calibration in 2.0
 
+*Rewritten 2026-09-25 after the §8 sessions. King's law, the model this section first proposed, is
+removed: it is undefined above about 33 °C once k is free, and no unit ever held its coefficients.
+The model study and its numbers are in samba_calibration `docs/calibration.md`.*
+
 ### 4.1 The model
 
-Per anemometer, with V the median filtered anemometer voltage and Ta the calibrated air
+Per anemometer, with V the median filtered anemometer voltage (volts) and Ta the calibrated air
 temperature (22 °C when Ta is NaN, as today):
 
 ```
-s = 1 − k·Ta
-e = V²/s − A
-v = (e / B)^(1/n)
+v = exp(K + C1·V + G·(Ta − 22))        clamped to [0.02, 1.0] m/s
 ```
 
-A is in V², B in V²·(m/s)^−n, n dimensionless, k per °C. k = 0 gives a temperature-free King's
-law, so the firmware carries the general form and the fit decides how much temperature it uses.
-Evidence for the form: on the September batch and on the March/July runs the fixed-exponent power
-law leaves the same concave residual on every tip (+20–35 % at levels 3–5, −25 % at level 1);
-King's law per session removes it; the overheat-scaled form with one k per tip cuts in-sample RMSE
-0.069 → 0.027 m/s. See samba_calibration `docs/audit-2026-09-23.md` D5 and the memory note on
-the air speed model.
+- `C1` and `G` are **fleet constants**, compiled in as the substitutions `airspeed_c1` (3.0043 V⁻¹)
+  and `airspeed_g` (0.2321 °C⁻¹). They are fitted by samba_calibration's `analysis/airspeed_fleet.R`
+  and change only with a flash.
+- `K` is the **one per-tip coefficient**, measured at level 5 of a calibration run.
+- The model has an id, `airspeed_model: "exp1"`, published as the `Air Speed Model` text sensor.
+  `samba deploy` refuses a `K` fitted under a different id, so refitting the constants means a new
+  id here and in the client together.
 
 ### 4.2 Entities and globals
 
-New ids and new names, both deliberately. NVS keys are hashed from the global id, so reusing
-`calibration_as1_a` would load a power-law value into King's A on a unit reflashed from 1.x. The
-client falls back to matching on object_id, so "Air speed 1 [A]" would collide with "[a]".
-
 | Entity name | id | global | default | range | step |
 |---|---|---|---|---|---|
-| Anemometer 1 [A] | `cal_as1_king_a` | `calibration_as1_king_a` | fleet median | 0–10 | 0.001 |
-| Anemometer 1 [B] | `cal_as1_king_b` | `calibration_as1_king_b` | fleet median | 0.01–20 | 0.001 |
-| Anemometer 1 [n] | `cal_as1_king_n` | `calibration_as1_king_n` | fleet median | 0.1–2 | 0.001 |
-| Anemometer 1 [k] | `cal_as1_king_k` | `calibration_as1_king_k` | fleet median or 0 | −0.019–0.019 | 0.00001 |
-| Anemometer 2 [A] … [k] | `cal_as2_king_*` | `calibration_as2_king_*` | same | same | same |
+| Anemometer 1 [K] | `cal_as1_k` | `calibration_as1_k` | −6.165 | −12–0 | 0.0001 |
+| Anemometer 2 [K] | `cal_as2_k` | `calibration_as2_k` | −6.165 | −12–0 | 0.0001 |
+| Air Speed Model (text sensor) | `cal_airspeed_model` | — | `exp1` | — | — |
 
 - `double`, `restore_value: yes`, template numbers with the 60 s update interval, saved through
   `cal_save`, exactly as the existing coefficients.
-- The k range keeps `1 − k·Ta` strictly positive below 50 °C (at k = 0.02 it reaches zero at
-  exactly 50 °C, hence 0.019). The fitting scripts' ±0.05 bound does not; the fit adopts the
-  firmware's range.
-- **Open (found 2026-09-23): the September batch does not fit inside that range.** Pooled per
-  tip over its three sessions (28.2, 22.5, 18.3 °C), every tip wants k ≈ 0.028–0.031. At the
-  0.019 cap k pins on all ten tips and RMSE is 0.14–0.17 m/s, worse than the power law's
-  0.060–0.076. With k free, RMSE is 0.021–0.039, but `1 − k·Ta` reaches zero at 33.5 °C, so every
-  unit reads NaN above about 33 °C, and with n ≈ 0.4 a shared default is poor (pooled RMSE
-  0.26 m/s). A pins at 0 on every tip and is not identified. The §8 sessions decide between
-  widening k (with a documented hot-room cutoff) and a different temperature form; the `v2`
-  branch carries the structure with placeholder values until then.
-- Units agree: the `as*` columns of `raw/thermal.csv` are volts (0.47–2.66 in the September
-  batch, filtered 0.3–4.7 in `models.R`), the same quantity as the lambda's `x`.
-- The fleet-median defaults are computed from the confirmed batch (§8) and written into
-  `globals.yaml` and the client's `FIRMWARE_DEFAULTS` in the same commit. Until then the
-  defaults are placeholders marked `TODO(v2)`: the September k = 0 medians (A 0, B 9.671,
-  n 1.173, k 0), which read level 1 about 2× high and level 7 about 40 % low.
-- The old `[a] [b] [d0] [d1]` entities and their globals are removed outright. Their NVS blobs are
-  orphaned on a reflashed unit and read by nothing.
+- New ids on purpose: NVS keys are hashed from the global id, so no power-law or King's-law blob is
+  ever read as a `K`. The old entities and globals are removed outright.
+- The default is the September batch's fleet median (as1 −6.095, as2 −6.388), marked `TODO(v2)`
+  until the next batch confirms it. It changes here and in the client's `K_DEFAULT` together.
+- Units agree: the `as*` columns of `raw/thermal.csv` are volts, the same quantity as the lambda's `x`.
 
 ### 4.3 The lambda
 
-Replaces the current `airspeed.yaml` lambda and its trailing `clamp`, which would turn NaN into
-0.02:
-
 ```cpp
-float t = isnan(ta) ? 22.0f : ta;
-if (isnan(A) || isnan(B) || B <= 0 || n <= 0) return NAN;
-float s = 1.0f - k * t;
-if (s <= 0) return NAN;
-float e = x * x / s - A;
-if (e <= 0) return 0.02f;                     // still air below the fitted floor
-float v = powf(e / B, 1.0f / n);
-return v < 0.02f ? 0.02f : (v > 1.0f ? 1.0f : v);
+float ta = id(samba_temperature).state;
+if (std::isnan(ta))
+  ta = 22.0f;
+const float k = id(calibration_as1_k);
+if (std::isnan(k))
+  return NAN;
+const float v = expf(k + ${airspeed_c1}f * x + ${airspeed_g}f * (ta - 22.0f));
+return std::min(std::max(v, 0.02f), 1.0f);
 ```
 
-`samba_airspeed` takes `max(as_1, as_2)`; `std::max` is asymmetric with NaN, so it gets explicit
-`isnan` handling: both NaN → NaN, one NaN → the other. `tglobe.yaml` already guards a NaN air speed.
+`x` is at most 5 V, so the exponent stays under about 9 and cannot overflow. `samba_airspeed` takes
+`max(as_1, as_2)`; `std::max` is asymmetric with NaN, so it gets explicit `isnan` handling: both
+NaN → NaN, one NaN → the other. `tglobe.yaml` already guards a NaN air speed.
 
 ## 5. Credentials in 2.0
 
@@ -141,8 +125,10 @@ captive portal as the WiFi onboarding path; `samba flash serial` with the calibr
 
 ### 5.2 What goes
 
-- The compiled-in InfluxDB token: `token: ""` (the component already accepts it) and delete the
-  `compiled-in` status branch in `influxdb.cpp`; "no token" is reported until one is provisioned.
+- The compiled-in InfluxDB token: samba's config sets `token: ""`, so "no token" is reported
+  until one is provisioned. The component keeps its optional `token:` and the `compiled-in`
+  status branch (b942cdf) for open-source builds that upload to their own InfluxDB; a
+  provisioned token still takes precedence. The published binaries carry none.
 - The compiled-in OTA password: `password: ""` stays in the YAML so `set_auth_password`
   compiles; the "clear reverts to compiled" branch of `ota_set_password` becomes "clear leaves it
   empty".
@@ -204,25 +190,19 @@ fallback access point (onboarding), and the Home Assistant API name, which the c
 
 ## 8. What the coefficient values wait on
 
-Neither of these blocks the firmware or client work; both block writing values to anything that
-ships.
-
-1. **In-channel probe sweep.** The Innova 1221 probe at a head position in each tunnel channel,
-   stepped through the seven calibration setpoints plus zero, on the day of a SAMBA run. Levels 1
-   and 2 of the current reference are extrapolated below the 09-21 sweep, and the still-air
-   reading on the King curve reads as 0.06–0.08 m/s; this measurement pins both.
-2. **Confirmation session.** Same five units and channels, both tips: a 22 °C pair with the
-   Dysons fan-only at speed 3, then a 22 °C pair with them off, then a gated 28 °C pair, every pair
-   through the room gate without override and with no lost flush hold; RPMs recorded with a
-   no-append sweep. It decides whether the 28 °C gain drop is temperature (k carries it) or air
-   movement (k ≈ 0 and the 28 °C session is excluded).
-
-Then, together: `analysis/models.R`, the numpy port, the goldens, the per-level gate, the
-population check on A, B, n, k, the fleet-median defaults, and `FIRMWARE_DEFAULTS`.
+*Done 2026-09-25.* The in-channel probe sweep and the confirmation session ran, and the model
+study that followed them replaced King's law with the level-5 fleet model (§4). The model, the
+exclusions, the gate and the numbers are in samba_calibration `docs/calibration.md`.
 
 ## 9. Release gates
 
-1. **Safe mode on the bench unit.** *Desk result, 2026-09-23:* the boot survives and the OTA
+1. **Safe mode on the bench unit.** *Confirmed on hardware 2026-09-24, recorded as a known
+   issue* (`docs/v2-bench-checklist.md`, on F8:B3:B7:C7:D0:6C): the safe-mode boot survived over
+   60 s, and `samba flash ota` crashed it at the handshake with `LoadProhibited`, `EXCVADDR
+   0x00000048` (the field offset; the desk reading said 0x4c), in `NoiseContext::has_psk()`
+   inlined into `handle_handshake_` (`ota_esphome.cpp:310`). It rebooted into normal firmware.
+   Not a release blocker; the upstream guard below is still not in ESPHome as of 2026-09-28.
+   *Desk result, 2026-09-23:* the boot survives and the OTA
    crashes. `global_api_server` is null in safe mode (it is set only in the `APIServer`
    constructor, emitted after the early return), and `ota_esphome.cpp:34-36`
    `noise_context_()` dereferences it with no null check. It is reached from `dump_config`,
@@ -254,31 +234,27 @@ population check on A, B, n, k, the fleet-median defaults, and `FIRMWARE_DEFAULT
    non-anemometer coefficients survive, the anemometers report the defaults, and the unit is
    unkeyed and tokenless until provisioned; re-provision the same pairing password.
 4. `esphome config` clean and the calibration repo's suite green; samba's new CI green.
-5. The two lab sessions of §8 complete and the coefficient set committed on both sides, then
-   gates 2 and 3 re-run on the release candidate, since the defaults and ranges changed after
-   the first pass.
+5. The release candidate: the `K` default confirmed from the next batch's fleet median and
+   committed on both sides (no `TODO(v2)`), then gates 2 and 3 re-run on it, since the air speed
+   model, defaults and ranges changed after the 2026-09-24 pass. Gate 3 runs from the
+   **published** v1.99.99 binary this time; the first pass started from a main build that already
+   carried provisioning. The 24 h free-heap and largest-free-block watch of §13 runs on the same
+   build.
 
 ## 10. Client changes (samba_calibration)
 
 - `deploy/mapping.py`: `COEFFICIENTS`, `FIRMWARE_DEFAULTS`, `CSV_COEFFICIENTS` and
   `CALIBRATED_COEFFICIENTS` per firmware line, chosen by entity presence alone (a
   `project_version` cross-check only adds a disagreement state). Not a new flavour. Drop the RH
-  pair and the below-1.9 aliases. `CALIBRATED_COEFFICIENTS` for the King line is A, B and n; k
-  is excluded the way the exponents are today, because if §8 fixes it at zero its value says
-  nothing about whether the unit was calibrated.
+  pair and the below-1.9 aliases. The 2.x line's air speed group is `K` per tip (§4).
 - `api/client.py`: `capabilities.coefficients` per line rather than all eighteen names.
 - `deploy/updates.py`: the coefficient group per line. A v1.99.99 unit takes tags only: it has no
   token, password or key actions and no `encryption:`, so credentials cannot be pushed to it and no
   power-law rows will ever be written again. `has_group` keys on the new names.
-- `data/schemas.py`: the air speed processed table becomes `as{1,2}_king_a, _king_b, _king_n,
-  _king_k, _samples, _rmse, _rel_max`, matching the entity ids and never differing from the old
-  names by case alone. `processed/` does not exist yet, so nothing migrates.
-  *Moved to step 5 (2026-09-23):* the table is written by the numpy port, which must agree with
-  `models.R` and the goldens, so it changes with them. Until then deploy reads the King columns
-  as absent and writes no air speed coefficients.
-- `models/`: King's-law fit per tip over all its sessions on levels 1–7 (A, B, n, k by nonlinear
-  least squares within the firmware ranges), the RMSE and per-level gates, population check on the
-  four; `analysis/models.R` first, port second, goldens third.
+- `data/schemas.py`: the air speed processed table is `as{1,2}_k, _samples, _rmse, _rel_max` and
+  `airspeed_model`. `processed/` does not exist yet, so nothing migrates.
+- `models/`: `K` per tip from level 5 of the included runs, scored on levels 1–7 against RMSE ≤ 0.20
+  and every point within max(25 %, 0.05 m/s); `analysis/models.R` first, port second, goldens third.
 - `deploy/live.py`: default detection unchanged in mechanism, keyed by line.
 - `docs/deployment.md`: the "credential-provisioning branch" paragraph is stale now; the
   compiled-in-fallback warnings go when 1.x closes.
@@ -287,15 +263,17 @@ population check on A, B, n, k, the fleet-median defaults, and `FIRMWARE_DEFAULT
 
 ## 11. Sequence
 
-1. Bench: the safe-mode gate (§9.1). Half a day, and it decides whether 2.0 starts from main.
-2. Firmware branch `v2`: manifest split, version 2.0.0, credential removals, shim removals
-   (with the `senseair_i2c` refresh into the calibration repo), King's-law entities with
+1. *Done 2026-09-24.* Bench: the safe-mode gate (§9.1). Half a day, and it decides whether 2.0
+   starts from main.
+2. *Done (PR #24, then 60ab521 for the `exp1` model).* Firmware branch `v2`: manifest split, version 2.0.0, credential removals, shim removals
+   (with the `senseair_i2c` refresh into the calibration repo), the air speed entities with
    provisional defaults, lambda. `esphome config` clean. `/bump` changes and the new CI.
-3. Client: mapping, capabilities, updates, schema, live, tests. Suite green against the `v2`
+3. *Mostly done;* samba_calibration `docs/roadmap.md` R26–R28 remain. Client: mapping, capabilities, updates, schema, live, tests. Suite green against the `v2`
    checkout; the calibration image is unaffected and stays as the unconditional check it is.
-4. Bench: the factory-fresh and reflash-from-1.x flows (§9.2–9.3) on the provisional build, to
+4. *Done 2026-09-24.* Bench: the factory-fresh and reflash-from-1.x flows (§9.2–9.3) on the provisional build, to
    shake out the flows themselves.
-5. Lab: the probe sweep and the confirmation session (§8). Model, port, goldens, defaults, and
+5. *Done except the defaults* (`config/globals.yaml` `TODO(v2)`, roadmap R30/R32). Lab: the probe
+   sweep and the confirmation session (§8). Model, port, goldens, defaults, and
    the ranges if the fit needs them.
 6. Bench again on the release candidate (§9.5), then release 2.0.0 through `/bump` to
    `manifest_v2.json`. Tag. The first batch is calibrated and deployed on 2.0.
