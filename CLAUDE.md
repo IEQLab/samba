@@ -42,6 +42,7 @@ components/             # Custom external ESPHome components (C++ and Python)
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
   sd_file_server/       # Read-only HTTP service over the SD log, digest auth (docs/home-sync.md)
+  sgp4x/                # Local copy of ESPHome 2026.9.0 sgp4x with setup retries; re-diff on every upgrade
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
 .claude/skills/bump.md   # /bump skill: version bump and release procedure
@@ -109,7 +110,12 @@ restart, and both also require `sys_uptime > 3600`, which self-rate-limits to on
   down. Restart only at `k30_error_count >= 4` **and** `k30_unhealthy > 2400` (67% of the hour),
   so a flaky sensor rides it out and only a near-dead one reboots.
 - **VOC/NOx (SGP4x):** **never restarts the device** — see `config/tvoc.yaml`. `sgp4x` only
-  `mark_failed()`s in `setup()` and the self test; every runtime read failure is
+  `mark_failed()`s in `setup()` and the self test, and upstream did so on the first lost
+  transaction, so one K30 stretch during setup cost VOC and NOx for the whole boot (2 of 7 bench
+  boots). `components/sgp4x` is upstream plus retries: up to 5 attempts at each setup read and at
+  the whole self-test, 100ms apart; only a self-test reply reporting a pixel fault fails at once.
+  Re-running `setup()` from YAML is not a substitute: the 1Hz sampler is registered before the
+  self-test result, so it would double. Every runtime read failure is
   `status_set_warning()` and the component clears it itself on the next good read. A reboot would
   also discard the `learning_time_offset_hours: 720` gas baseline. Error counting skips the first
   150s warmup. `sgp_unhealthy` is diagnostic only.

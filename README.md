@@ -38,18 +38,21 @@ ESPHome devices are configured using [YAML](https://yaml.org). This repository i
 |   ├── sd_file_server/     # read-only HTTP access to the SD log
 |   ├── sd_spi_card/        # SPI SD card read/write
 |   ├── senseair_i2c/       # K30/K33 CO2 over I2C
+|   ├── sgp4x/              # ESPHome's SGP4x, with setup retries
 |   └── sound_level_meter/  # I2S audio DSP for SPL
 ├── firmware/               # compiled binaries for OTA
 └── pcb/                    # hardware design files (Altium)
 ```
 
-The `components/` directory contains five [external components](https://esphome.io/components/external_components.html) that extend ESPHome:
+The `components/` directory contains six [external components](https://esphome.io/components/external_components.html) that extend ESPHome:
 
 1. `sound_level_meter` — audio DSP for sound pressure level (LAeq, LA90, LA10)
 2. `senseair_i2c` — I2C driver for the [K30 CO2 sensor](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module)
 3. `influxdb` — HTTP upload to an InfluxDB v2 bucket
 4. `sd_spi_card` — FAT32 SD card logging via SPI
 5. `sd_file_server` — read-only HTTP service over the SD card log for the SAMBA Home app
+6. `sgp4x` — ESPHome's own SGP4x driver, overridden locally so a transaction lost during setup is
+   retried instead of disabling VOC and NOx until the next reboot
 
 ### Sensors
 

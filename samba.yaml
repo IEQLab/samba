@@ -36,7 +36,7 @@ logger:
     sd_spi_card: INFO
     senseair_i2c: ERROR
     sensirion_i2c: ERROR
-    sgp4x: ERROR
+    sgp4x: WARN
     sensor: NONE
     sound_level_meter: ERROR
     sntp: INFO
