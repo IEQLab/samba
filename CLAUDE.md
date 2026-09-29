@@ -373,7 +373,11 @@ EOF
 - **Only `sensor_sample` runs `sd_create`**, just before the first row. It used to run on time
   sync and on mount, so a unit in a boot loop left one empty log per boot (per minute, given the
   filename's resolution) until the card's directory slowed the unit down. Now a file exists only
-  if a row is going into it, and a card inserted late or erased is picked up at the next sample
+  if a row is going into it, and a card inserted late or erased is picked up at the next sample.
+  A tag change only clears `sd_logfile`, for the same reason
+- `on_mount` keeps `sd_logfile` only if `sd_filename` exists on the card just mounted. The
+  component remounts on its own (removal detected by the 5min `sdmmc_get_status` check, or two
+  failed writes), and a swapped card would otherwise get the old name recreated headerless
 - Filenames use MAC address + UTC timestamp from DS1307, taken at the first sample, not at boot
 - `sd_logfile` global flag prevents duplicate file creation per boot
 - `sensor_sample` appends only while `sd_logfile` is set: `append_file` creates a missing file,

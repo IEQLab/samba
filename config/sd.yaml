@@ -11,6 +11,11 @@ sd_spi_card:
   miso_pin: GPIO19
   cs_pin: GPIO5
   auto_mount: true
+  # A remount of the same card keeps its log; a different card, or none, gets a new one at the next sample,
+  # since append_file would otherwise create the old name on it headerless
+  on_mount:
+    then:
+      - lambda: 'id(sd_logfile) = id(sd_logfile) && id(sd0).file_exists(id(sd_filename));'
 
 # Script to create the log; sensor_sample runs it before the first row, never at boot or mount
 script:
