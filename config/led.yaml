@@ -17,8 +17,7 @@ light:
     # Linear: at the default 2.8, anything under ~12% brightness quantises to zero
     gamma_correct: 1.0
 
-    # Visible through the case without distracting a desk in a dark room; identify stays bright to find a unit
-    # Alarms stay at 4%: amber is red plus half green, and lower than that it drifts to red
+    # Dim for a dark office; alarms floor at 4% so amber stays amber, identify stays bright
     # Define LED effects
     effects:
       # Used for all sensor WARNING states
