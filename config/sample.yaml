@@ -20,7 +20,7 @@ script:
             - light.turn_on:
                 id: samba_led
                 transition_length: 250ms
-                brightness: 8%
+                brightness: 2%
                 red: 100%
                 green: 100%
                 blue: 100%
@@ -56,7 +56,7 @@ script:
                 id(samba_la10).publish_state(id(samba_la10).state);
 #                id(samba_la05).publish_state(id(samba_la05).state);
             - delay: 200ms
-            # A mount or time sync whose sd_create was skipped (RTC invalid) gets another go here
+            # The log is made here, at the first sample, so a unit in a boot loop never litters the card with empty ones
             - if:
                 condition:
                   lambda: 'return id(sd0).is_mounted() && !id(sd_logfile) && id(ds1307_time).now().is_valid();'

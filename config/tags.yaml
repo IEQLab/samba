@@ -129,11 +129,5 @@ script:
           }
           ESP_LOGI("samba", "Tags saved to flash: building=%s level=%s zone=%s",
                    id(building_tag).c_str(), id(level_tag).c_str(), id(zone_tag).c_str());
-      # The SD header records tags at creation, so start a new file when they change
+      # The SD header records tags at creation, so the next sample starts a new file
       - lambda: 'id(sd_logfile) = false;'
-      - if:
-          condition:
-            time.has_time:
-              id: ds1307_time
-          then:
-            - script.execute: sd_create

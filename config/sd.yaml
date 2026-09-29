@@ -11,18 +11,12 @@ sd_spi_card:
   miso_pin: GPIO19
   cs_pin: GPIO5
   auto_mount: true
-  # A card absent at boot mounts later, long after on_time_sync has gone
+  # Keep the log only if this card has it, else append_file would recreate it headerless
   on_mount:
     then:
-      - if:
-          condition:
-            and:
-              - lambda: 'return !id(sd_logfile);'
-              - lambda: 'return id(ds1307_time).now().is_valid();'
-          then:
-            - script.execute: sd_create
-  
-# Script to create file after initial time sync
+      - lambda: 'id(sd_logfile) = id(sd_logfile) && id(sd0).file_exists(id(sd_filename));'
+
+# Script to create the log; sensor_sample runs it before the first row, never at boot or mount
 script:
   - id: sd_create
     mode: single
@@ -32,7 +26,7 @@ script:
           std::string mac = get_mac_address_pretty();
           mac.erase(std::remove(mac.begin(), mac.end(), ':'), mac.end());
           
-          // Get boot timestamp
+          // Get first-sample timestamp
           auto t = id(ds1307_time).utcnow();
           char timestamp[32];
           t.strftime(timestamp, sizeof(timestamp), "%y%m%d_%H%M");
@@ -56,7 +50,7 @@ script:
 
 
 # Wipe the card over the native API (`samba deploy` gate, after it has copied the logs off)
-# The erase runs on a background task; on_mount then starts a fresh log with the current tags
+# The erase runs on a background task; the next sample then starts a fresh log with the current tags
 api:
   actions:
     - action: sd_erase
