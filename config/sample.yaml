@@ -56,12 +56,20 @@ script:
                 id(samba_la10).publish_state(id(samba_la10).state);
 #                id(samba_la05).publish_state(id(samba_la05).state);
             - delay: 200ms
+            # A mount or time sync whose sd_create was skipped (RTC invalid) gets another go here
+            - if:
+                condition:
+                  lambda: 'return id(sd0).is_mounted() && !id(sd_logfile) && id(ds1307_time).now().is_valid();'
+                then:
+                  - script.execute: sd_create
+                  - script.wait: sd_create
             # Write the SD row first: it must not depend on the upload succeeding
+            # Only into a log sd_create made on this mount: after an erase, append would recreate the old name headerless
             - if:
                 condition:
                   and:
                     - switch.is_on: switch_sdcard
-                    - lambda: 'return id(sd0).is_mounted();'
+                    - lambda: 'return id(sd0).is_mounted() && id(sd_logfile);'
                 then:
                   - sd_spi_card.append_file:
                       id: sd0

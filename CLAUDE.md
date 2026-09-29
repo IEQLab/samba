@@ -373,6 +373,9 @@ EOF
   `on_mount` re-runs it for a card inserted after the first time sync
 - Filenames use MAC address + UTC timestamp from DS1307
 - `sd_logfile` global flag prevents duplicate file creation per boot
+- `sensor_sample` appends only while `sd_logfile` is set, and retries `sd_create` when it is not:
+  `append_file` creates a missing file, so after `sd_erase` with an invalid RTC (on_mount skips
+  `sd_create`) it recreated the pre-erase log headerless and the deploy gate refused the card
 - `script.execute` is async — code after it runs before the script completes
 
 ### Logger
