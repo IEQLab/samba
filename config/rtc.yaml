@@ -12,15 +12,6 @@ time:
     update_interval: 1h
     # Pin this explicitly - the default is the build machine's timezone, and the last platform wins
     timezone: "Etc/GMT"
-    
-# Only create log file on sd card after time has been synced
-    on_time_sync:
-      then:
-        - if:
-            condition:
-              lambda: 'return !id(sd_logfile);'
-            then:
-              - script.execute: sd_create
 
 # Define loop for sensor measurements
 # https://esphome.io/guides/automations.html#component-update-action

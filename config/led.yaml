@@ -17,6 +17,8 @@ light:
     # Linear: at the default 2.8, anything under ~12% brightness quantises to zero
     gamma_correct: 1.0
 
+    # Visible through the case without distracting a desk in a dark room; identify stays bright to find a unit
+    # Alarms stay at 4%: amber is red plus half green, and lower than that it drifts to red
     # Define LED effects
     effects:
       # Used for all sensor WARNING states
@@ -24,14 +26,14 @@ light:
           name: "pulse_slow"
           transition_length: 2s
           update_interval: 3s
-          max_brightness: 0.15
+          max_brightness: 0.04
       - strobe:
           name: "strobe_g"
           colors:
             - state: true
-              brightness: 10%
+              brightness: 3%
               red: 0%
-              green: 50%
+              green: 100%
               blue: 0%
               duration: 250ms
             - state: false
@@ -114,7 +116,7 @@ interval:
           }
           if (want >= 4) {
             call.set_effect("none");
-            call.set_brightness(0.25f);
+            call.set_brightness(0.04f);
           } else {
             // The effect drives brightness itself, so setting it here would be overridden
             call.set_effect("pulse_slow");
