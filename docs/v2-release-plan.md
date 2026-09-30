@@ -142,11 +142,11 @@ upload, and anyone on its LAN can key it, set its OTA password and flash it. The
 logging. This is the same state a factory-fresh unit is in, and the same state every 1.99.99 unit
 is in today (§12).
 
-Safe mode is not a recovery path on current main (§9.1): the API server is never constructed
-there, and the OTA component dereferences it on `dump_config` and on every OTA handshake, so an
-OTA in safe mode crashes the unit rather than being merely unauthenticated. Until that is fixed,
-USB is the only way back from safe mode, which the removal of the compiled-in fallbacks does not
-change.
+Safe mode is a recovery path again from ESPHome 2026.9.1 (§9.1). On 2026.9.0 the OTA component
+dereferenced the API server, which safe mode never constructs, and crashed at every handshake.
+esphome#19349 guards it and loads the provisioned API key from NVS instead, so a keyed unit in
+safe mode takes an OTA encrypted under its building key. The OTA password is still not applied
+there (`on_boot` never runs), so a client that declines encryption is not asked for one.
 
 ### 5.3 The captive-portal upload
 
@@ -196,12 +196,17 @@ exclusions, the gate and the numbers are in samba_calibration `docs/calibration.
 
 ## 9. Release gates
 
-1. **Safe mode on the bench unit.** *Confirmed on hardware 2026-09-24, recorded as a known
-   issue* (`docs/v2-bench-checklist.md`, on F8:B3:B7:C7:D0:6C): the safe-mode boot survived over
+1. **Safe mode on the bench unit.** *Fixed upstream in ESPHome 2026.9.1 (esphome#19349) and
+   passed on hardware 2026-09-30* on F8:B3:B7:C7:C4:18: normal-mode OTA to the 2026.9.1 build,
+   *Restart SAMBA (Safe Mode)*, API port closed and OTA port open for over 90 s, then an OTA
+   with encryption required completed (`Encrypted connection established`) and the unit came
+   back in normal mode on the new build with key, token, OTA password and tags unchanged.
+   `min_version` is 2026.9.1 so no build can regress it.
+   *First run, 2026-09-24, ESPHome 2026.9.0* (`docs/v2-bench-checklist.md`, on
+   F8:B3:B7:C7:D0:6C): the safe-mode boot survived over
    60 s, and `samba flash ota` crashed it at the handshake with `LoadProhibited`, `EXCVADDR
    0x00000048` (the field offset; the desk reading said 0x4c), in `NoiseContext::has_psk()`
    inlined into `handle_handshake_` (`ota_esphome.cpp:310`). It rebooted into normal firmware.
-   Not a release blocker; the upstream guard below is still not in ESPHome as of 2026-09-28.
    *Desk result, 2026-09-23:* the boot survives and the OTA
    crashes. `global_api_server` is null in safe mode (it is set only in the `APIServer`
    constructor, emitted after the early return), and `ota_esphome.cpp:34-36`
@@ -212,7 +217,7 @@ exclusions, the gate and the numbers are in samba_calibration `docs/calibration.
    run is therefore a confirmation. Expect `LoadProhibited`, `EXCVADDR 0x0000004c`, PC in
    `ESPHomeOTAComponent::handle_handshake_`. The fix is upstream: a null guard in
    `noise_context_()` returning a keyless context, so safe mode falls back to the password
-   path. Until it ships, captive-portal upload or USB recovers a unit from safe mode.
+   path. (Upstream went further: the context falls back to the key saved in NVS.)
    Original procedure: on F8:B3:B7:C7:C4:18 running a main build, press
    `Restart SAMBA (Safe Mode)`, wait past the point where `dump_config` runs (a minute), then push
    a `samba flash ota` while it is in safe mode and watch the upload complete and the unit boot
@@ -286,8 +291,9 @@ exclusions, the gate and the numbers are in samba_calibration `docs/calibration.
   in step 7.
 - A 1.99.99 unit is plaintext-API: anyone on its LAN can key it and then flash it without the
   password. A 2.0 unit that loses NVS is in the same state until redeployed.
-- The captive-portal upload (§5.3) is unauthenticated in every version. Safe mode is not an OTA
-  path at all on current main (§9.1); once fixed, OTA there is unauthenticated plaintext.
+- The captive-portal upload (§5.3) is unauthenticated in every version. Safe mode is an OTA path
+  from 2026.9.1 (§9.1): encrypted under the building key when the client offers it, but with no
+  password, so a client that declines encryption can flash a unit in safe mode.
 
 ## 13. Open items not decided here
 

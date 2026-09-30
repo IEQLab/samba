@@ -52,22 +52,22 @@ files are what decode a crash from these exact binaries.
       (`samba-xxxxxx`). The calibration image's WiFi is compiled in, and neither 2.0 nor 1.99.99
       carries networks, so onboard it through the captive portal with a phone.
 
-## §9.1 Safe mode (expected to crash at the OTA handshake)
+## §9.1 Safe mode (crashed on 2026.9.0; passes on 2026.9.1)
 
 - [ ] Unit running 2.0 (or main), on WiFi, serial monitor open. Note its IP.
 - [ ] `samba ui` → the unit's Device page → *Restart SAMBA (Safe Mode)*.
 - [ ] Serial shows `SAFE MODE IS ACTIVE`. Wait over 60 s: **no reboot** means the boot survives.
 - [ ] `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin --no-verify`
       (`--no-verify` is required: without it the command stops at the API connect.)
-- [ ] **Confirmed** if the serial log shows `Guru Meditation Error ... LoadProhibited`,
-      `EXCVADDR: 0x00000048` (0x4c was predicted; 0x48 on the bench), with a backtrace in `ESPHomeOTAComponent::handle_handshake_`,
-      then the unit reboots into normal firmware. Save the raw `Backtrace:` line; decode it
-      wherever an Xtensa toolchain exists (any machine that has built ESPHome):
-      `xtensa-esp32-elf-addr2line -pfiaC -e $B/samba_v2.0.0.elf <PC> <addrs...>`
-- [ ] **Refuted** if the upload runs to completion. Record which one happened.
+- [ ] **Passes** if the upload runs to completion and the unit comes back in normal mode on the
+      pushed build (`samba info`). Safe mode can be told from normal mode without serial: port
+      6053 (API) closed, 3232 (OTA) open.
+- [ ] A `Guru Meditation Error ... LoadProhibited` at the handshake (`EXCVADDR: 0x00000048`,
+      backtrace in `ESPHomeOTAComponent::handle_handshake_`) is the 2026.9.0 bug: the binary was
+      built with ESPHome older than 2026.9.1. Save the raw `Backtrace:` line and decode it with
+      `xtensa-esp32-elf-addr2line -pfiaC -e <elf> <PC> <addrs...>`.
 - [ ] Captive-portal upload as the recovery route is optional; USB always works:
       `uv run samba flash serial --bin $B/samba_v2.0.0.factory.bin`.
-- Confirmed → submit the upstream patch (the `noise_context_()` null guard).
 
 ## §9.2 Factory-fresh flow
 
@@ -170,3 +170,16 @@ and `Anemometer [A]…[k]` sat at the placeholders (54 → 51 entities). Ta slop
 
 Also seen: `manifest_v2.json` returns 404 until the first 2.x `/bump`, so a 2.0 unit logs an
 update-check error at boot and every 12 h and does not update itself. Both units stay on 2.0.0.
+
+### 2026-09-30, main + `min_version: 2026.9.1` (build 2026-09-30 14:25:32), ESPHome 2026.9.1
+
+**§9.1: passed.** On F8:B3:B7:C7:C4:18 (wilkinson / 4 / bench, uploads off), over WiFi only, no
+serial monitor. `samba flash ota --require-encryption` from 2.0.0 on 2026.9.0 verified encrypted.
+*Restart SAMBA (Safe Mode)* pressed over the API; for 90 s port 6053 stayed closed and 3232
+open, so the unit was in safe mode and stayed up. Pushed the same `.ota.bin` with `push_ota`
+directly (`samba flash ota --no-verify` has no API session, so no building key, and refuses
+`--require-encryption`), wilkinson key, encryption required: `Encrypted connection established`,
+`OTA successful`. The unit came back on 6053 and `samba info` read esphome 2026.9.1, the new
+build, key a6f02ba9, OTA ba978482, token 7c11d363, tags and uploads unchanged. The encrypted
+session in safe mode is the proof the key came from NVS: there is no API server to borrow it
+from. Not tested: a plaintext client in safe mode, which by the code is not asked for a password.

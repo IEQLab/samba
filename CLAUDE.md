@@ -5,7 +5,7 @@
 SAMBA is an ESPHome-based firmware for indoor environmental quality (IEQ) monitoring, developed by the IEQ Lab at The University of Sydney. It runs on an ESP32 WROOM-32E (16MB flash) using the ESP-IDF framework (not Arduino). The device measures temperature, humidity, globe temperature, air speed, CO2, PM2.5, VOC/NOx, illuminance, and sound pressure level, logging data to InfluxDB, Home Assistant, and SD card.
 
 **Current version:** Check `samba.yaml` for the latest version.
-**Min ESPHome version:** 2026.8.1
+**Min ESPHome version:** 2026.9.1
 
 ## Repository Structure
 
@@ -42,7 +42,7 @@ components/             # Custom external ESPHome components (C++ and Python)
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
   sd_file_server/       # Read-only HTTP service over the SD log, digest auth (docs/home-sync.md)
-  sgp4x/                # Local copy of ESPHome 2026.9.0 sgp4x with setup retries; re-diff on every upgrade
+  sgp4x/                # Local copy of ESPHome 2026.9.0 sgp4x (unchanged in 9.1) with setup retries; re-diff on every upgrade
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
 .claude/skills/bump.md   # /bump skill: version bump and release procedure
@@ -175,7 +175,7 @@ purple are retired. See the Status LED table in README.md.
 
 ### Prerequisites
 
-- ESPHome 2026.8.1+ installed
+- ESPHome 2026.9.1+ installed
 - `secrets.yaml` copied from `secrets.yaml.example` (InfluxDB host, port, org and bucket only)
 - USB-C cable for initial flash
 
@@ -471,9 +471,11 @@ travels encrypted.
    api key is provisioned at run time — so a client that skips the noise offer still reaches
    the data phase and this password is the only thing gating it. **Safe mode never reaches `on_boot`** (the
    trigger registers after the early return), so a unit in safe mode would serve OTA with no
-   password. In practice it serves none: on 2026.9.0 the OTA handshake dereferences the API
-   server, which safe mode never constructs, and crashes the unit (docs/v2-release-plan.md
-   §9.1). Recover from safe mode over the captive portal or USB until upstream guards it.
+   password. Since 2026.9.1 (esphome#19349) OTA works there: with no API server the OTA
+   component loads the provisioned API key from NVS itself, so a keyed unit still offers an
+   encrypted session under the building key (benched 2026-09-30, docs/v2-release-plan.md
+   §9.1), but a client that declines it reaches the data phase with no password at all. On
+   2026.9.0 the handshake dereferenced the absent API server and crashed the unit.
 
 4. **SD file server pairing password** (`config/fileserver.yaml`, docs/home-sync.md). Same
    shape again: `fileserver_password` global (`max_restore_data_length: 32`),

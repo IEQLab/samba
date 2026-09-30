@@ -169,10 +169,10 @@ samba info <BENCH_IP>     # project version must be <VERSION>
 
 Then the safe-mode check (docs/v2-release-plan.md §9.1): press `Restart SAMBA (Safe Mode)`, wait
 a minute, push the same binary with `samba flash ota` while the unit is in safe mode, and confirm
-the upload completes and the unit boots normally. On ESPHome 2026.9.0 this is expected to crash
-the unit at the OTA handshake until the upstream `noise_context_()` null guard lands; say so in
-the summary rather than skipping it. The boot counter is already cleared by then, so the crash
-should reboot the unit into its normal firmware; if it does not, recover over USB (step 5b).
+the upload completes and the unit boots normally. `samba flash ota` needs `--no-verify` there
+(safe mode has no API), which also loses the building key, so `--require-encryption` cannot be
+combined with it. Passed on 2026.9.1 (2026-09-30); a crash at the handshake means the ESPHome
+used is older than `min_version` allows. If the unit does not come back, recover over USB (step 5b).
 
 `samba flash ota` waits for the device to reconnect and exits 1 if its build time did not
 change. Without samba_app, `esphome upload samba.yaml --device <BENCH_IP> --file firmware/samba_v<VERSION>.bin`
