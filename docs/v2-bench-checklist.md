@@ -57,8 +57,9 @@ files are what decode a crash from these exact binaries.
 - [ ] Unit running 2.0 (or main), on WiFi, serial monitor open. Note its IP.
 - [ ] `samba ui` → the unit's Device page → *Restart SAMBA (Safe Mode)*.
 - [ ] Serial shows `SAFE MODE IS ACTIVE`. Wait over 60 s: **no reboot** means the boot survives.
-- [ ] `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin --no-verify`
-      (`--no-verify` is required: without it the command stops at the API connect.)
+- [ ] `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin --no-verify --require-encryption --building wilkinson`
+      (`--no-verify` is required: without it the command stops at the API connect. `--building`
+      supplies the key and password no session can name; samba_calibration 67cac74 and later.)
 - [ ] **Passes** if the upload runs to completion and the unit comes back in normal mode on the
       pushed build (`samba info`). Safe mode can be told from normal mode without serial: port
       6053 (API) closed, 3232 (OTA) open.
@@ -183,3 +184,6 @@ directly (`samba flash ota --no-verify` has no API session, so no building key, 
 build, key a6f02ba9, OTA ba978482, token 7c11d363, tags and uploads unchanged. The encrypted
 session in safe mode is the proof the key came from NVS: there is no API server to borrow it
 from. Not tested: a plaintext client in safe mode, which by the code is not asked for a password.
+Repeated the same day with the CLI once it gained `--building` (samba_calibration 67cac74):
+`samba flash ota --no-verify --require-encryption --building wilkinson` in safe mode, encrypted,
+unit back on the new build.
