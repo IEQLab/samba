@@ -13,6 +13,6 @@ jobs:
         with:
           python-version: "3.12"
       # Pinned to samba.yaml's min_version so CI validates what the fleet is built with
-      - run: pip install esphome==2026.9.0
+      - run: pip install esphome==2026.9.1
       - run: cp secrets.yaml.example secrets.yaml
       - run: esphome config samba.yaml > /dev/null
