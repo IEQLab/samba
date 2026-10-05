@@ -14,6 +14,6 @@ substitutions:
   influx_bucket: !secret influx_bucket
 
   # Air speed fleet constants, v = exp(K + C1*V + G*(Ta - 22)), from samba_calibration's analysis/airspeed_fleet.R
-  airspeed_model: "exp1"
-  airspeed_c1: "3.0043"
-  airspeed_g: "0.2321"
+  airspeed_model: "exp2"
+  airspeed_c1: "2.9487"
+  airspeed_g: "0.2745"

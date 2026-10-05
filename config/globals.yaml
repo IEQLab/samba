@@ -103,15 +103,15 @@ globals:
 
   # Anemometer calibration, K in v = exp(K + C1*V + G*(Ta - 22)) (config/airspeed.yaml)
   # New ids on purpose: NVS keys hash the id, so no older air speed blob is read as these
-  # TODO(v2): the September-batch fleet median; confirm the default with the next batch
+  # TODO(v2): the fleet median under exp2 (15 units, 2026-10-05); confirm with the next batch
   - id: calibration_as1_k
     type: double
     restore_value: yes
-    initial_value: '-6.165'
+    initial_value: '-6.576'
   - id: calibration_as2_k
     type: double
     restore_value: yes
-    initial_value: '-6.165'
+    initial_value: '-6.576'
 
 # Define flash write interval
 # https://esphome.io/components/esphome.html#preferences-component

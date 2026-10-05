@@ -72,11 +72,12 @@ temperature (22 °C when Ta is NaN, as today):
 v = exp(K + C1·V + G·(Ta − 22))        clamped to [0.02, 1.0] m/s
 ```
 
-- `C1` and `G` are **fleet constants**, compiled in as the substitutions `airspeed_c1` (3.0043 V⁻¹)
-  and `airspeed_g` (0.2321 °C⁻¹). They are fitted by samba_calibration's `analysis/airspeed_fleet.R`
+- `C1` and `G` are **fleet constants**, compiled in as the substitutions `airspeed_c1` (2.9487 V⁻¹)
+  and `airspeed_g` (0.2745 °C⁻¹). They are fitted by samba_calibration's `analysis/airspeed_fleet.R`
   and change only with a flash.
 - `K` is the **one per-tip coefficient**, measured at level 5 of a calibration run.
-- The model has an id, `airspeed_model: "exp1"`, published as the `Air Speed Model` text sensor.
+- The model has an id, `airspeed_model: "exp2"` (`exp1`, 3.0043 and 0.2321, was fitted before the
+  Ta reference was corrected for the tunnel channel's warmer air), published as the `Air Speed Model` text sensor.
   `samba deploy` refuses a `K` fitted under a different id, so refitting the constants means a new
   id here and in the client together.
 
@@ -84,9 +85,9 @@ v = exp(K + C1·V + G·(Ta − 22))        clamped to [0.02, 1.0] m/s
 
 | Entity name | id | global | default | range | step |
 |---|---|---|---|---|---|
-| Anemometer 1 [K] | `cal_as1_k` | `calibration_as1_k` | −6.165 | −12–0 | 0.0001 |
-| Anemometer 2 [K] | `cal_as2_k` | `calibration_as2_k` | −6.165 | −12–0 | 0.0001 |
-| Air Speed Model (text sensor) | `cal_airspeed_model` | — | `exp1` | — | — |
+| Anemometer 1 [K] | `cal_as1_k` | `calibration_as1_k` | −6.576 | −12–0 | 0.0001 |
+| Anemometer 2 [K] | `cal_as2_k` | `calibration_as2_k` | −6.576 | −12–0 | 0.0001 |
+| Air Speed Model (text sensor) | `cal_airspeed_model` | — | `exp2` | — | — |
 
 - `double`, `restore_value: yes`, template numbers with the 60 s update interval, saved through
   `cal_save`, exactly as the existing coefficients.
