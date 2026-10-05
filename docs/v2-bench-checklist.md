@@ -105,7 +105,7 @@ files are what decode a crash from these exact binaries.
       refusal is covered by the test suite; with no processed/ there is nothing to refuse here.)
 - [ ] `uv run samba flash ota <IP> --bin $B/samba_v2.0.0.ota.bin`
 - [ ] Check: tags survive; the hand-set Ta coefficient survives; the anemometers show the
-      default `K` (−6.576) and `Air Speed Model` reads `exp2`; the unit is unkeyed, *InfluxDB Token* `unset`, *OTA Password* `unset`.
+      default `K` (−6.559 / −6.809) and `Air Speed Model` reads `exp2`; the unit is unkeyed, *InfluxDB Token* `unset`, *OTA Password* `unset`.
 - [ ] Re-provision (`samba deploy`) and the same pairing password.
 
 ## Record

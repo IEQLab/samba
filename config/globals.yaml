@@ -71,47 +71,47 @@ globals:
     restore_value: yes
     initial_value: '20.0'
 
-  # Illuminance calibration
+  # Illuminance calibration; the defaults below are samba_calibration's fleet medians (2026-10-05)
   - id: calibration_lux_m
     type: double
     restore_value: yes
-    initial_value: '6.80'
+    initial_value: '6.669'
   - id: calibration_lux_b
     type: double
     restore_value: yes
     initial_value: '0.0'
 
-  # Air temperature calibration
+  # Air temperature calibration: the median slope, offset reading 22 C at the median unit's raw 22 C
   - id: calibration_ta_m1
     type: double
     restore_value: yes
-    initial_value: '1.506'
+    initial_value: '1.034'
   - id: calibration_ta_b
     type: double
     restore_value: yes
-    initial_value: '-20.82'
+    initial_value: '-6.78'
 
-  # Globe temperature calibration
+  # Globe temperature calibration, as Ta
   - id: calibration_tg_m
     type: double
     restore_value: yes
-    initial_value: '1.472'
+    initial_value: '1.010'
   - id: calibration_tg_b
     type: double
     restore_value: yes
-    initial_value: '-16.12'
+    initial_value: '-3.25'
 
   # Anemometer calibration, K in v = exp(K + C1*V + G*(Ta - 22)) (config/airspeed.yaml)
   # New ids on purpose: NVS keys hash the id, so no older air speed blob is read as these
-  # TODO(v2): the fleet median under exp2 (15 units, 2026-10-05); confirm with the next batch
+  # Each tip's median under exp2 (14 units, 2026-10-05): as2 sits about 0.25 below as1
   - id: calibration_as1_k
     type: double
     restore_value: yes
-    initial_value: '-6.576'
+    initial_value: '-6.559'
   - id: calibration_as2_k
     type: double
     restore_value: yes
-    initial_value: '-6.576'
+    initial_value: '-6.809'
 
 # Define flash write interval
 # https://esphome.io/components/esphome.html#preferences-component

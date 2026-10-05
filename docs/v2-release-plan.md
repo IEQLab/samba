@@ -85,8 +85,8 @@ v = exp(K + C1·V + G·(Ta − 22))        clamped to [0.02, 1.0] m/s
 
 | Entity name | id | global | default | range | step |
 |---|---|---|---|---|---|
-| Anemometer 1 [K] | `cal_as1_k` | `calibration_as1_k` | −6.576 | −12–0 | 0.0001 |
-| Anemometer 2 [K] | `cal_as2_k` | `calibration_as2_k` | −6.576 | −12–0 | 0.0001 |
+| Anemometer 1 [K] | `cal_as1_k` | `calibration_as1_k` | −6.559 | −12–0 | 0.0001 |
+| Anemometer 2 [K] | `cal_as2_k` | `calibration_as2_k` | −6.809 | −12–0 | 0.0001 |
 | Air Speed Model (text sensor) | `cal_airspeed_model` | — | `exp2` | — | — |
 
 - `double`, `restore_value: yes`, template numbers with the 60 s update interval, saved through
