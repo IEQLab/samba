@@ -39,6 +39,11 @@ globals:
     restore_value: yes
     initial_value: 'true'
 
+  - id: led_enable
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
+
   # InfluxDB token provisioned over the native API; empty = no upload
   # v2 tokens are 88 characters, which max_restore_data_length must cover
   - id: influx_token

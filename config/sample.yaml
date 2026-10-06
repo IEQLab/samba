@@ -17,13 +17,17 @@ script:
             lambda: |-
               return id(sys_uptime).state > 119;
           then:
-            - light.turn_on:
-                id: samba_led
-                transition_length: 250ms
-                brightness: 2%
-                red: 100%
-                green: 100%
-                blue: 100%
+            - if:
+                condition:
+                  lambda: 'return id(led_enable);'
+                then:
+                  - light.turn_on:
+                      id: samba_led
+                      transition_length: 250ms
+                      brightness: 2%
+                      red: 100%
+                      green: 100%
+                      blue: 100%
             - lambda: |-
                 id(samba_temperature).update();
                 id(samba_globe).update();
@@ -114,9 +118,13 @@ script:
                       format: "Influx upload skipped"
                       level: INFO
                       tag: "samba"
-            - light.turn_off:
-                id: samba_led
-                transition_length: 250ms
+            - if:
+                condition:
+                  lambda: 'return id(led_enable);'
+                then:
+                  - light.turn_off:
+                      id: samba_led
+                      transition_length: 250ms
           else:
             - component.update: sys_uptime
             - component.update: samba_temperature

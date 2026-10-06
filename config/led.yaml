@@ -49,6 +49,28 @@ light:
             - state: false
               duration: 250ms
 
+# Master switch for every status indication; Identify SAMBA still blinks
+switch:
+  - platform: template
+    name: "Status LED"
+    id: switch_led
+    icon: mdi:led-on
+    entity_category: "config"
+    restore_mode: DISABLED
+    lambda: |-
+      return id(led_enable);
+    turn_on_action:
+      # -1 makes the arbiter re-apply any current alarm on its next tick
+      - lambda: |-
+          id(led_enable) = true;
+          id(led_alarm) = -1;
+    turn_off_action:
+      - lambda: |-
+          id(led_enable) = false;
+          id(led_alarm) = 0;
+      - light.turn_off:
+          id: samba_led
+
 # Alarm indication
 globals:
   # -1 until the arbiter has run once, so its first tick always applies a state
@@ -74,7 +96,9 @@ interval:
           }
 
           int want = 0;
-          if (id(ads_error_detected).state) {
+          if (!id(led_enable)) {
+            want = 0;                             // Status LED switch off: stay dark
+          } else if (id(ads_error_detected).state) {
             want = 6;                             // amber solid
           } else if (id(k30_error_count) >= 4) {
             want = 5;                             // blue solid

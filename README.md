@@ -122,6 +122,12 @@ is sustained. Only the ADS1115 and K30 escalate to a restart, and only after an 
 Brightness is deliberately low throughout so a rack of units is not distracting in an occupied
 office.
 
+For a bedroom or any space that should stay dark, turn off the *Status LED* switch (native API,
+persists across reboots and updates). Every indication below is then suppressed, including the
+boot flash, the sample heartbeat and the fault colours; faults are still logged and still
+restart the unit as described. *Identify SAMBA* still blinks the LED, since it is only ever
+pressed on purpose.
+
 | LED | Meaning | What to do |
 |-----|---------|------------|
 | Green, flashing | Booting | Nothing — clears after startup |
