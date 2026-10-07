@@ -6,7 +6,6 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "ff.h"  // For FATFS type detection
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -78,26 +77,8 @@ bool SdSpiCard::mount_card_() {
   ESP_LOGI(TAG, "SD card mounted at %s", mount_point_.c_str());
   mounted_ = true;
   failed_writes_ = 0;
-  
-  // Detect and log filesystem type
-  FATFS *fs;
-  DWORD free_clusters;
-  if (f_getfree("0:", &free_clusters, &fs) == FR_OK) {
-    const char *fs_type = "Unknown";
-    switch (fs->fs_type) {
-    case FS_FAT12: fs_type = "FAT12"; break;
-    case FS_FAT16: fs_type = "FAT16"; break;
-    case FS_FAT32: fs_type = "FAT32"; break;
-    case FS_EXFAT: fs_type = "exFAT (unsupported)"; break;
-    }
-    ESP_LOGI(TAG, "Filesystem type: %s", fs_type);
-    
-    if (fs->fs_type == FS_EXFAT) {
-      ESP_LOGW(TAG, "exFAT detected! This may cause issues.");
-      ESP_LOGW(TAG, "Consider reformatting as FAT32 for best compatibility.");
-    }
-  }
-  
+  // No f_getfree here: with a stale FSINFO it scans the whole FAT over SPI, past the loop watchdog
+
   // Trigger on_mount callbacks
   this->mount_callback_.call();
   

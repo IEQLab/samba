@@ -163,8 +163,8 @@ void SdFileServer::handle_list_(httpd_req_t *req, bool head) {
   }
   // FatFs directly rather than readdir()+stat(): the VFS dirent carries no size, and a stat()
   // per file rescans the root directory each time, which made 90 files take seconds. FatFs is
-  // built re-entrant, so this is safe beside the 5-minute append. Same drive as sd_spi_card's
-  // f_getfree("0:").
+  // built re-entrant, so this is safe beside the 5-minute append. "0:" is the one volume,
+  // sd_spi_card's /sd.
   FF_DIR dir;
   if (f_opendir(&dir, "0:/") != FR_OK) {
     this->send_status_(req, "503 Service Unavailable", "30");
