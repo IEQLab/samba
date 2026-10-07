@@ -1,14 +1,15 @@
-# Bench checklist: SAMBA 2.0.0 candidate (samba v2 @ 26cb36d)
+# Bench checklist: SAMBA 2.0.0 release candidate (samba main @ `<commit>`)
 
-Bench unit F8:B3:B7:C7:C4:18 (locations.csv: wilkinson / 4 / chamber2). Run `samba` from the
-samba_calibration checkout. Plan: `docs/v2-release-plan.md` §9.1–9.3.
+Bench unit F8:B3:B7:C7:C4:18 (locations.csv: wilkinson / 4 / bench). Run `samba` from the
+samba_calibration checkout. Plan: `docs/v2-release-plan.md` §9.1–9.3 and §9.5. The candidate
+is built from main at or after `9be537c` (no `f_getfree` after mount); fill in the commit above.
 
 ## Setup on the bench laptop
 
 ```bash
-cd <samba>             && git fetch && git switch v2 && git pull
-cd <samba_calibration> && git fetch && git switch v2 && git pull && uv sync --extra dev
-B=~/samba-bench && gh release download v2.0.0-bench -R IEQLab/samba -D $B
+cd <samba>             && git fetch && git switch main && git pull
+cd <samba_calibration> && git fetch && git switch main && git pull && uv sync --extra dev
+B=~/samba-bench-rc && gh release download v2.0.0-rc1 -R IEQLab/samba -D $B
 cd $B && md5 -r *.bin | diff - md5.txt && echo MD5 OK     # Linux: md5sum *.bin | awk '{print $1"  "$2}'
 cd <samba_calibration>   # every `uv run samba ...` below runs from here
 uv run samba buildings list   # does this laptop hold wilkinson's key, OTA password and token?
@@ -20,8 +21,8 @@ files are what decode a crash from these exact binaries.
 
 | File | md5 |
 |---|---|
-| `samba_v2.0.0.ota.bin` | 59d1b0af52ba0dbdcfe9246064f768c9 |
-| `samba_v2.0.0.factory.bin` | 4b5f61ee37c42cd53bf19be9bec61d6b |
+| `samba_v2.0.0.ota.bin` | `<fill in at build>` |
+| `samba_v2.0.0.factory.bin` | `<fill in at build>` |
 | `samba_v1.99.99.bin` (published) | 8d9356725174bbff9655deaa6a2743ca |
 | `calibration_v1.13.factory.bin` | see `md5.txt` |
 
@@ -79,14 +80,15 @@ files are what decode a crash from these exact binaries.
 - [ ] Onboard WiFi through the captive portal if it comes up as an AP.
 - [ ] `uv run samba info <IP> --entities`: production 2.0.0, API not keyed, *InfluxDB Token*
       `unset`, *InfluxDB Status* `unknown` (it reads `no token` only once a sample has tried to
-      upload), *OTA Password* `unset`, anemometer entities
-      `Anemometer 1 [A]…[k]` at the placeholders (A 0, B 9.671, n 1.173, k 0).
+      upload), *OTA Password* `unset`, `Anemometer 1 [K]` −6.559 and `Anemometer 2 [K]` −6.809
+      (the fleet defaults), *Air Speed Model* `exp2`.
 - [ ] `uv run samba deploy --mac F8:B3:B7:C7:C4:18 --dry-run`, then without `--dry-run`: key,
-      OTA password, tags, token, each readback-verified. **No coefficients**: `data/v2` has no
-      `processed/` and the bench unit has no raw calibration rows, so deploy writes credentials
-      and tags only (it says "nothing to deploy" if this laptop holds no wilkinson credentials).
-- [ ] Coefficient persistence by hand instead: on the Device page, Set `Air temperature slope [m1]`
-      to 1.600 and `Anemometer 1 [B]` to 9.000; both should read back.
+      OTA password, tags, token, each readback-verified, and C4:18's coefficients if it has a
+      processed row in `data/v2`; without one it writes credentials and tags only until R33 lands.
+      Note which happened. (It says "nothing to deploy" if this laptop holds no wilkinson credentials.)
+- [ ] Coefficient persistence by hand: on the Device page, Set `Air temperature slope [m1]`
+      to 1.600 and `Anemometer 1 [K]` to −6.000; both should read back. Note the values they
+      replaced, to restore afterwards.
 - [ ] `uv run samba home password <IP>` with the **existing** pairing password (Desktop label).
 - [ ] *InfluxDB Status* reads `HTTP 204` within seconds of the token landing.
 - [ ] Power-cycle, then `uv run samba status --live --mac F8:B3:B7:C7:C4:18`: same fingerprints,
@@ -98,7 +100,7 @@ files are what decode a crash from these exact binaries.
 
 - [ ] `uv run samba flash serial --erase --bin $B/calibration_v1.13.factory.bin`
 - [ ] `uv run samba flash ota <IP> --bin $B/samba_v1.99.99.bin`; onboard WiFi if needed.
-- [ ] `uv run samba tag <IP> --building wilkinson --level 4 --zone chamber2`, plus one non-anemometer
+- [ ] `uv run samba tag <IP> --building wilkinson --level 4 --zone bench`, plus one non-anemometer
       coefficient by hand on the Device page (e.g. Ta slope), and note it.
 - [ ] The Device page shows `Air speed 1 [a]…[d1]` (the power-law line) and the unit reads
       "firmware defaults" apart from the hand-set Ta slope. (The line's "takes no coefficients"
@@ -108,12 +110,27 @@ files are what decode a crash from these exact binaries.
       default `K` (−6.559 / −6.809) and `Air Speed Model` reads `exp2`; the unit is unkeyed, *InfluxDB Token* `unset`, *OTA Password* `unset`.
 - [ ] Re-provision (`samba deploy`) and the same pairing password.
 
+## §9.5 24 h heap watch
+
+- [ ] **Method not decided yet.** Production 2.0 has no heap sensors (roadmap R45), so the
+      candidate cannot report free heap or largest free block on its own. Choose one before the run
+      and record it here: a heap variant built from the same commit with ESPHome `debug:` sensors
+      added (this is not the candidate binary), or a serial log of the candidate at DEBUG.
+- [ ] Run 24 h on C4:18 with uploads on, so the TLS upload and the 12 h firmware check both run.
+- [ ] **Passes** if there is no reboot, the lowest free heap stays at or above the 6 KB floor seen
+      before `spl-class2-prep` (plan §13; the crash-looping build reached 0.4 KB), and the largest free block does not trend down across the day.
+
 ## Record
 
 Crash confirmed or refuted (with PC and EXCVADDR); any step that deviated; the fingerprints after
-the power cycle. Then gates 9.2 and 9.3 are re-run on the release candidate after §8.
+the power cycle; the heap minimum and largest-block minimum over 24 h. On a pass, `/bump 2.0.0 --tag --no-compile`
+in the build directory the candidate came from, so the released binary is the benched one; builds are not reproducible.
 
-### 2026-09-24, bench binaries above (samba 26cb36d), ESPHome 2026.9.0
+### Release candidate, `<date>`, samba `<commit>`, ESPHome 2026.9.1
+
+*Not run yet.*
+
+### 2026-09-24, `v2.0.0-bench` draft binaries (samba 26cb36d), ESPHome 2026.9.0
 
 §9.1 and §9.2 ran on **F8:B3:B7:C7:D0:6C** (tunnel channel 5, just calibrated), not the bench
 unit, which was away as a home test unit. It will be deployed at wilkinson / 4 / chamber1.

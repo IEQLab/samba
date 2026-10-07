@@ -7,12 +7,12 @@ is for the 100+ units to come.*
 2.0 is a deliberate compatibility break, delivered through a second OTA manifest so the field
 units never see it. It bundles three things: the anemometer model changes from a power law to
 the level-5 fleet model of §4; credential provisioning ships without compiled-in fallbacks; and everything kept only
-for 1.x units or old clients goes. The two lab sessions of §8 are done; the fleet-median `K`
-default still waits on the next batch (§4.2).
+for 1.x units or old clients goes. The two lab sessions of §8 are done, and the fleet-median
+defaults are committed (§4.2).
 
-*Status 2026-09-28:* §11 steps 1, 2 and 4 are done, step 3 is mostly done and step 5 is down to
-the defaults. What remains is the release candidate (§9.5), the release and the recall. §11
-marks each step.
+*Status 2026-10-07:* §11 steps 1 to 5 are done: the defaults are the 15-unit fleet medians of
+2026-10-05 (`630cb24`) and no `TODO(v2)` remains. What remains is the release candidate (§9.5),
+built from main at or after `9be537c`, the release and the recall. §11 marks each step.
 
 ## 1. Decisions taken
 
@@ -93,8 +93,9 @@ v = exp(K + C1·V + G·(Ta − 22))        clamped to [0.02, 1.0] m/s
   `cal_save`, exactly as the existing coefficients.
 - New ids on purpose: NVS keys are hashed from the global id, so no power-law or King's-law blob is
   ever read as a `K`. The old entities and globals are removed outright.
-- The default is the September batch's fleet median (as1 −6.095, as2 −6.388), marked `TODO(v2)`
-  until the next batch confirms it. It changes here and in the client's `K_DEFAULT` together.
+- The default is the fleet median of the 14 units that pass exp2 (2026-10-05, roadmap R32),
+  replacing the September batch's −6.095 / −6.388. It changes here and in the client's
+  `mapping.py` together.
 - Units agree: the `as*` columns of `raw/thermal.csv` are volts, the same quantity as the lambda's `x`.
 
 ### 4.3 The lambda
@@ -241,7 +242,7 @@ exclusions, the gate and the numbers are in samba_calibration `docs/calibration.
    unkeyed and tokenless until provisioned; re-provision the same pairing password.
 4. `esphome config` clean and the calibration repo's suite green; samba's new CI green.
 5. The release candidate: the `K` default confirmed from the next batch's fleet median and
-   committed on both sides (no `TODO(v2)`), then gates 2 and 3 re-run on it, since the air speed
+   committed on both sides (no `TODO(v2)`; *done 2026-10-05*, `630cb24`), then gates 2 and 3 re-run on it, since the air speed
    model, defaults and ranges changed after the 2026-09-24 pass. Gate 3 runs from the
    **published** v1.99.99 binary this time; the first pass started from a main build that already
    carried provisioning. The 24 h free-heap and largest-free-block watch of §13 runs on the same
@@ -274,11 +275,11 @@ exclusions, the gate and the numbers are in samba_calibration `docs/calibration.
 2. *Done (PR #24, then 60ab521 for the `exp1` model).* Firmware branch `v2`: manifest split, version 2.0.0, credential removals, shim removals
    (with the `senseair_i2c` refresh into the calibration repo), the air speed entities with
    provisional defaults, lambda. `esphome config` clean. `/bump` changes and the new CI.
-3. *Mostly done;* samba_calibration `docs/roadmap.md` R26–R28 remain. Client: mapping, capabilities, updates, schema, live, tests. Suite green against the `v2`
+3. *Done* (samba_calibration `docs/roadmap.md` R26–R28). Client: mapping, capabilities, updates, schema, live, tests. Suite green against the `v2`
    checkout; the calibration image is unaffected and stays as the unconditional check it is.
 4. *Done 2026-09-24.* Bench: the factory-fresh and reflash-from-1.x flows (§9.2–9.3) on the provisional build, to
    shake out the flows themselves.
-5. *Done except the defaults* (`config/globals.yaml` `TODO(v2)`, roadmap R30/R32). Lab: the probe
+5. *Done 2026-10-05* (`630cb24`, roadmap R30/R32). Lab: the probe
    sweep and the confirmation session (§8). Model, port, goldens, defaults, and
    the ranges if the fit needs them.
 6. Bench again on the release candidate (§9.5), then release 2.0.0 through `/bump` to
