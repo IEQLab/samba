@@ -131,7 +131,8 @@ in the build directory the candidate came from, so the released binary is the be
 ### Release candidate, 2026-10-09, samba `5a0d102`, ESPHome 2026.9.1
 
 *§9.2 and §9.3 not run yet.* Flashed OTA, encrypted, to chamber2 (6A:78) and researchers_area
-(C8:70) on 2026-10-09; chamber1 (CC:84) was off the network (no ARP) and is not yet flashed.
+(C8:70) on 2026-10-09, and chamber1 (CC:84) once it was plugged back in (someone had unplugged it
+after the heap watch ended; it answered every poll to 11:40 on 10-08).
 
 ### 2026-10-07/08, §9.5 heap watch: heap variant of samba 81bdf65, ESPHome 2026.9.1
 
