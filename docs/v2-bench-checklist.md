@@ -134,6 +134,20 @@ in the build directory the candidate came from, so the released binary is the be
 (C8:70) on 2026-10-09, and chamber1 (CC:84) once it was plugged back in (someone had unplugged it
 after the heap watch ended; it answered every poll to 11:40 on 10-08).
 
+**§9.2: passed** on F8:B3:B7:C7:C4:18, 2026-10-09. `--erase` + calibration 1.13, OTA to the
+candidate with the lab password, captive portal. Fresh state as expected: production 2.0.0, API
+open and unkeyed, token / OTA password `unset`, file server off, `K` −6.559 / −6.809, `exp2`, Ta
+slope 1.034, 48 entities. Deploy 6/6 with readback (no processed row, so credentials and tags only:
+key a6f02ba9, OTA ba978482, token 7c11d363, wilkinson / 4 / bench). Hand-set Ta slope 1.600 and
+`Anemometer 1 [K]` −6.000 read back. Pairing password reapplied from `home_pairing.csv`
+(56afa0b7). *InfluxDB Status* `HTTP 204` after the token (checked for the first time; uploads were
+on, as the erase leaves them). After a power cycle: encrypted, all four fingerprints, tags and both
+hand-set values unchanged; `status --live` reads tags and credentials `match`, calibration "partly
+custom". Authenticated OTA with `--require-encryption` succeeded (same build stamp, same bytes).
+
+**§9.3: in progress.** `--erase` + calibration 1.13, then OTA to the published v1.99.99 (md5
+8d9356…) succeeded; paused at the captive portal.
+
 ### 2026-10-07/08, §9.5 heap watch: heap variant of samba 81bdf65, ESPHome 2026.9.1
 
 **Passed, on a shortened run.** Heap variant (`samba_heap.yaml`, built 2026-10-07 15:44:18, md5
