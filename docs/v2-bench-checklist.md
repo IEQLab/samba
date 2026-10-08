@@ -112,12 +112,12 @@ files are what decode a crash from these exact binaries.
 
 ## §9.5 24 h heap watch
 
-- [ ] **Method not decided yet.** Production 2.0 has no heap sensors (roadmap R45), so the
-      candidate cannot report free heap or largest free block on its own. Choose one before the run
-      and record it here: a heap variant built from the same commit with ESPHome `debug:` sensors
-      added (this is not the candidate binary), or a serial log of the candidate at DEBUG.
-- [ ] Run 24 h on C4:18 with uploads on, so the TLS upload and the 12 h firmware check both run.
-- [ ] **Passes** if there is no reboot, the lowest free heap stays at or above the 6 KB floor seen
+- [x] **Method:** a heap variant, `samba.yaml` plus ESPHome `debug:` sensors (*Heap Free*,
+      *Heap Largest Block*, *Heap Min Free*, 60 s) as API entities only, polled from a laptop every
+      5 min. Production 2.0 has no heap sensors (roadmap R45), so this is not the candidate binary.
+- [x] Run 24 h with uploads on, so the TLS upload and the 12 h firmware check both run. Run on the
+      three production units instead of C4:18, and cut to ~19.6 h (record below).
+- [x] **Passes** if there is no reboot, the lowest free heap stays at or above the 6 KB floor seen
       before `spl-class2-prep` (plan §13; the crash-looping build reached 0.4 KB), and the largest free block does not trend down across the day.
 
 ## Record
@@ -128,7 +128,28 @@ in the build directory the candidate came from, so the released binary is the be
 
 ### Release candidate, `<date>`, samba `<commit>`, ESPHome 2026.9.1
 
-*Not run yet.*
+*§9.2 and §9.3 not run yet.*
+
+### 2026-10-07/08, §9.5 heap watch: heap variant of samba 81bdf65, ESPHome 2026.9.1
+
+**Passed, on a shortened run.** Heap variant (`samba_heap.yaml`, built 2026-10-07 15:44:18, md5
+`7a69caae4c5782a3c052f8f17c6fc728`) flashed OTA, encrypted, to the three production units in
+place at wilkinson / 4, uploads on: chamber1 (CC:84) 15:47, chamber2 (6A:78) 15:58,
+researchers_area (C8:70) 16:05 AEDT. Polled every 5 min to 2026-10-08 11:40 AEDT, ~19.6 h from
+the last flash, and stopped there because the logging laptop had to leave the network, not
+because of a fault. That is not the full 24 h, and it caught one 12 h firmware check, not two.
+
+| Unit | Polls | Uptime at end | Lowest free | *Heap Min Free* | Largest block |
+|---|---|---|---|---|---|
+| chamber1 | 239 | 71490 s | 123948 B | 77124 B | 45056 B every poll |
+| chamber2 | 237 | 70796 s | 122912 B | 76944 B | 45056 B (81920 B before the first upload) |
+| researchers_area | 236 | 70630 s | 122844 B | 76844 B | 45056 B every poll |
+
+No reboot (uptime never fell), no failed poll. *Heap Min Free* sits ~13x above the 6 KB floor,
+against 0.4 KB on the crash-looping `spl-class2-prep` build. It stepped down ~1.2 KB once per unit
+about 12 h after boot (the TLS firmware check, which returns 404 until 2.0.0 is released) and not
+otherwise. The largest block was flat all night, so no fragmentation trend. The three units still
+run the variant, reporting 2.0.0, and take the tagged build with the R35 reflash.
 
 ### 2026-09-24, `v2.0.0-bench` draft binaries (samba 26cb36d), ESPHome 2026.9.0
 
