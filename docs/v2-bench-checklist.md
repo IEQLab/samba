@@ -145,8 +145,23 @@ on, as the erase leaves them). After a power cycle: encrypted, all four fingerpr
 hand-set values unchanged; `status --live` reads tags and credentials `match`, calibration "partly
 custom". Authenticated OTA with `--require-encryption` succeeded (same build stamp, same bytes).
 
-**§9.3: in progress.** `--erase` + calibration 1.13, then OTA to the published v1.99.99 (md5
-8d9356…) succeeded; paused at the captive portal.
+**§9.3: passed**, from the **published** v1.99.99 this time (md5 8d9356…, ESPHome 2026.8.1).
+`--erase` + calibration 1.13, OTA to v1.99.99 with the lab password, captive portal. On 1.99.99:
+plaintext API, `Air speed 1/2 [a]…[d1]`, the RH pair and *Factory Restore SAMBA* present (50
+entities). `samba tag` wilkinson / 4 / bench and Ta slope 1.600 by API, both read back. Deviation:
+`status --live` shows calibration `-`, not "firmware defaults", for 1.99.99 (the client no longer
+reads the power-law line, R26) and flags it "needs the 2.0 flash" (R27). The OTA to the candidate
+was first refused, `Authentication invalid`: once the tags name wilkinson the client offers the
+building's password, which 1.99.99 does not hold. Passing the config's fleet `ota_password`
+(1.99.99's compiled-in one) with `--password` worked, in plaintext as 1.99.99 offers no encryption.
+On 2.0: tags and the Ta slope kept, `K` −6.559 / −6.809, `exp2`, unkeyed, token / OTA password
+`unset`, file server off, power-law, RH and factory-restore entities gone (48). `samba deploy` 6/6
+with readback and the pairing password (56afa0b7) restored it; `status --live` then reads
+encrypted, `HTTP 204`, tags and credentials `match`. Left at the fleet-default Ta slope (1.034)
+with *InfluxDB Upload* off, as before the erase.
+
+**§9.5 release candidate gates complete:** 9.2 and 9.3 passed on `5a0d102`, 9.5's heap watch
+passed on its heap variant. Next: `/bump 2.0.0 --tag --no-compile` from this build.
 
 ### 2026-10-07/08, §9.5 heap watch: heap variant of samba 81bdf65, ESPHome 2026.9.1
 
