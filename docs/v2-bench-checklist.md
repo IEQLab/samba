@@ -1,8 +1,10 @@
-# Bench checklist: SAMBA 2.0.0 release candidate (samba main @ `<commit>`)
+# Bench checklist: SAMBA 2.0.0 release candidate (samba main @ `5a0d102`)
 
 Bench unit F8:B3:B7:C7:C4:18 (locations.csv: wilkinson / 4 / bench). Run `samba` from the
 samba_calibration checkout. Plan: `docs/v2-release-plan.md` §9.1–9.3 and §9.5. The candidate
-is built from main at or after `9be537c` (no `f_getfree` after mount); fill in the commit above.
+is built from main at or after `9be537c` (no `f_getfree` after mount). It reports build time
+2026-10-07 14:58:37: ESPHome only renews that stamp when the config hash changes, and nothing
+after that build touched the config. Built 2026-10-09; binaries and `.elf` in `~/samba-rc/2.0.0-rc1-5a0d102`.
 
 ## Setup on the bench laptop
 
@@ -21,8 +23,8 @@ files are what decode a crash from these exact binaries.
 
 | File | md5 |
 |---|---|
-| `samba_v2.0.0.ota.bin` | `<fill in at build>` |
-| `samba_v2.0.0.factory.bin` | `<fill in at build>` |
+| `samba_v2.0.0.ota.bin` | 8c68a355264c1c35d45a57460c19ae86 |
+| `samba_v2.0.0.factory.bin` | ade04b3a14cb0fa660ab4839b6ca9e74 |
 | `samba_v1.99.99.bin` (published) | 8d9356725174bbff9655deaa6a2743ca |
 | `calibration_v1.13.factory.bin` | see `md5.txt` |
 
@@ -126,9 +128,10 @@ Crash confirmed or refuted (with PC and EXCVADDR); any step that deviated; the f
 the power cycle; the heap minimum and largest-block minimum over 24 h. On a pass, `/bump 2.0.0 --tag --no-compile`
 in the build directory the candidate came from, so the released binary is the benched one; builds are not reproducible.
 
-### Release candidate, `<date>`, samba `<commit>`, ESPHome 2026.9.1
+### Release candidate, 2026-10-09, samba `5a0d102`, ESPHome 2026.9.1
 
-*§9.2 and §9.3 not run yet.*
+*§9.2 and §9.3 not run yet.* Flashed OTA, encrypted, to chamber2 (6A:78) and researchers_area
+(C8:70) on 2026-10-09; chamber1 (CC:84) was off the network (no ARP) and is not yet flashed.
 
 ### 2026-10-07/08, §9.5 heap watch: heap variant of samba 81bdf65, ESPHome 2026.9.1
 
