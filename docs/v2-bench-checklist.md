@@ -11,15 +11,18 @@ after that build touched the config. Built 2026-10-09; binaries and `.elf` in `~
 ```bash
 cd <samba>             && git fetch && git switch main && git pull
 cd <samba_calibration> && git fetch && git switch main && git pull && uv sync --extra dev
-B=~/samba-bench-rc && gh release download v2.0.0-rc1 -R IEQLab/samba -D $B
-cd $B && md5 -r *.bin | diff - md5.txt && echo MD5 OK     # Linux: md5sum *.bin | awk '{print $1"  "$2}'
+B=~/samba-rc/2.0.0-rc1-5a0d102     # the candidate: .ota.bin, .factory.bin, .elf
+C=~/samba-bench                     # calibration_v1.13.factory.bin and the published samba_v1.99.99.bin
+(cd $B && md5 -r *.bin | diff - md5.txt) && echo MD5 OK     # Linux: md5sum *.bin | awk '{print $1"  "$2}'
 cd <samba_calibration>   # every `uv run samba ...` below runs from here
 uv run samba buildings list   # does this laptop hold wilkinson's key, OTA password and token?
 ```
 
-The binaries come from a **draft** release (collaborators only, no tag, read by no manifest).
-Do not rebuild samba for this session: builds are not reproducible, and the stashed `.elf`
-files are what decode a crash from these exact binaries.
+The candidate was never put on a release: it lives on the bench laptop only, and the commands
+below that use `$B/calibration_v1.13.factory.bin` or `$B/samba_v1.99.99.bin` took them from `$C`.
+The 2026-09-24 binaries came from the `v2.0.0-bench` draft release, deleted 2026-10-09 once 2.0.0
+shipped; copies are in `$C`. Do not rebuild samba for a session: builds are not reproducible, and the
+stashed `.elf` files are what decode a crash from these exact binaries.
 
 | File | md5 |
 |---|---|
@@ -187,7 +190,7 @@ about 12 h after boot (the TLS firmware check, which returns 404 until 2.0.0 is 
 otherwise. The largest block was flat all night, so no fragmentation trend. The three units still
 run the variant, reporting 2.0.0, and take the tagged build with the R35 reflash.
 
-### 2026-09-24, `v2.0.0-bench` draft binaries (samba 26cb36d), ESPHome 2026.9.0
+### 2026-09-24, `v2.0.0-bench` draft binaries (samba 26cb36d; draft deleted, copies in `~/samba-bench`), ESPHome 2026.9.0
 
 §9.1 and §9.2 ran on **F8:B3:B7:C7:D0:6C** (tunnel channel 5, just calibrated), not the bench
 unit, which was away as a home test unit. It will be deployed at wilkinson / 4 / chamber1.
