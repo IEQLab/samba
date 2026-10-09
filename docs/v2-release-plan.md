@@ -282,7 +282,7 @@ exclusions, the gate and the numbers are in samba_calibration `docs/calibration.
 5. *Done 2026-10-05* (`630cb24`, roadmap R30/R32). Lab: the probe
    sweep and the confirmation session (§8). Model, port, goldens, defaults, and
    the ranges if the fit needs them.
-6. Bench again on the release candidate (§9.5), then release 2.0.0 through `/bump` to
+6. *Done 2026-10-09* (`f1dda8a`, tag `v2.0.0`, md5 8c68a355…). Bench again on the release candidate (§9.5), then release 2.0.0 through `/bump` to
    `manifest_v2.json`. Tag. The first batch is calibrated and deployed on 2.0.
 7. Recall the ten field units over the following batches; rotate the InfluxDB token and the OTA
    password when the last one is in; retire `release/1.x` and `manifest.json`.

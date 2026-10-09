@@ -161,7 +161,10 @@ encrypted, `HTTP 204`, tags and credentials `match`. Left at the fleet-default T
 with *InfluxDB Upload* off, as before the erase.
 
 **§9.5 release candidate gates complete:** 9.2 and 9.3 passed on `5a0d102`, 9.5's heap watch
-passed on its heap variant. Next: `/bump 2.0.0 --tag --no-compile` from this build.
+passed on its heap variant. Released as v2.0.0 (`f1dda8a`) with `--no-compile`: `firmware/samba_v2.0.0.bin`
+is this build (md5 8c68a355…). Bump step 5 on C4:18 with that file: an encrypted OTA, then *Restart
+SAMBA (Safe Mode)*, API closed and OTA open for over 90 s, an encrypted `--no-verify --building
+wilkinson` OTA into safe mode, and back in normal mode on 2.0.0 within 5 s, settings unchanged.
 
 ### 2026-10-07/08, §9.5 heap watch: heap variant of samba 81bdf65, ESPHome 2026.9.1
 
