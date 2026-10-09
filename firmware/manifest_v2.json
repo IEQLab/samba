@@ -1,0 +1,15 @@
+{
+  "name": "SAMBA Indoor Environmental Monitor",
+  "version": "2.0.0",
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "ota": {
+        "md5": "8c68a355264c1c35d45a57460c19ae86",
+        "path": "https://raw.githubusercontent.com/IEQLab/samba/main/firmware/samba_v2.0.0.bin",
+        "release_url": "https://github.com/IEQLab/samba/releases/tag/v2.0.0",
+        "summary": "Fleet air speed model with a fleet-median default; credentials provisioned at runtime with no compiled-in fallbacks; LAeq as a true energy average; a dead sensor costs only its own measurands"
+      }
+    }
+  ]
+}
