@@ -35,7 +35,7 @@ ESPHome devices are configured using [YAML](https://yaml.org). This repository i
 |   └── wifi.yaml           # wireless networking
 ├── components/             # custom ESPHome components
 |   ├── influxdb/           # InfluxDB v2 HTTP upload
-|   ├── sd_file_server/     # read-only HTTP access to the SD log
+|   ├── sd_file_server/     # HTTP access to the SD log and settings
 |   ├── sd_spi_card/        # SPI SD card read/write
 |   ├── senseair_i2c/       # K30/K33 CO2 over I2C
 |   ├── sgp4x/              # ESPHome's SGP4x, with setup retries
@@ -50,7 +50,7 @@ The `components/` directory contains six [external components](https://esphome.i
 2. `senseair_i2c` — I2C driver for the [K30 CO2 sensor](https://www.co2meter.com/en-au/products/k-30-co2-sensor-module)
 3. `influxdb` — HTTP upload to an InfluxDB v2 bucket
 4. `sd_spi_card` — FAT32 SD card logging via SPI
-5. `sd_file_server` — read-only HTTP service over the SD card log for the SAMBA Home app
+5. `sd_file_server` — HTTP service over the SD card log for the SAMBA Home app, plus four on/off settings and three actions
 6. `sgp4x` — ESPHome's own SGP4x driver, overridden locally so a transaction lost during setup is
    retried instead of disabling VOC and NOx until the next reboot
 
@@ -188,7 +188,7 @@ SAMBA devices are shipped pre-calibrated, with their location tags (building, le
 
 The location tags, the *InfluxDB Upload* / *SD Card Write* / *Automatic Updates* switches and the calibration coefficients are exposed over the [ESPHome native API](https://esphome.io/components/api.html), so they can be viewed and changed from [Home Assistant](https://www.home-assistant.io/integrations/esphome/) or with the IEQ Lab's `samba` laptop client from [samba_calibration](https://github.com/IEQLab/samba_calibration) (its *Identify SAMBA* button blinks the LED to pick one unit out of a batch). If you need a SAMBA recalibrated or re-tagged, please reach out — see [Project Maintenance](#project-maintenance) below.
 
-The API is [encrypted](https://esphome.io/components/api.html#configuration-variables) with a key that is set on the device by the IEQ Lab during deployment rather than compiled into the firmware, so the published binaries carry no key; until one is set, the device accepts unencrypted connections so it can be provisioned. The same is true of the InfluxDB token and the OTA password (see `config/influx.yaml` and `config/ota.yaml`): each is stored on the device, survives updates, and the device only ever reports a fingerprint of it (*InfluxDB Token*, *OTA Password*) together with the result of its last upload (*InfluxDB Status*). The published firmware has no compiled-in fallbacks: a unit that has not been provisioned does not upload to InfluxDB and takes OTA updates without a password, so provision it before it leaves a network you trust. To upload to your own InfluxDB instead, set `token:` in `config/influx.yaml` in your build; a provisioned token still takes precedence. A unit going into a home gets a fourth credential, a pairing password that turns on a read-only HTTP service over the SD card log for the SAMBA Home app (see `config/fileserver.yaml` and [docs/home-sync.md](docs/home-sync.md)); without one the service is off and the unit behaves exactly as a building unit.
+The API is [encrypted](https://esphome.io/components/api.html#configuration-variables) with a key that is set on the device by the IEQ Lab during deployment rather than compiled into the firmware, so the published binaries carry no key; until one is set, the device accepts unencrypted connections so it can be provisioned. The same is true of the InfluxDB token and the OTA password (see `config/influx.yaml` and `config/ota.yaml`): each is stored on the device, survives updates, and the device only ever reports a fingerprint of it (*InfluxDB Token*, *OTA Password*) together with the result of its last upload (*InfluxDB Status*). The published firmware has no compiled-in fallbacks: a unit that has not been provisioned does not upload to InfluxDB and takes OTA updates without a password, so provision it before it leaves a network you trust. To upload to your own InfluxDB instead, set `token:` in `config/influx.yaml` in your build; a provisioned token still takes precedence. A unit going into a home gets a fourth credential, a pairing password that turns on an HTTP service for the SAMBA Home app: read access to the SD card log, the SD, InfluxDB, status LED and automatic update switches, and the identify, sample and restart buttons (see `config/fileserver.yaml` and [docs/home-sync.md](docs/home-sync.md)); without one the service is off and the unit behaves exactly as a building unit.
 
 ### Project Maintenance
 

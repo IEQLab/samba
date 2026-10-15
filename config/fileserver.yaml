@@ -1,12 +1,27 @@
 # SAMBA v2 FIRMWARE
-# read-only file service over the SD log for the SAMBA Home app (docs/home-sync.md)
+# file service over the SD log, and the unit's on/off settings, for the SAMBA Home app (docs/home-sync.md)
 # written by Thomas Parkinson, September 2026
 
 
 # Lists the card and streams logs on port 80 behind digest auth, user "samba"
+# The keys below are the wire names of home-sync.md section 2; the app shows only these
 sd_file_server:
   id: sd_files
   sd_spi_card_id: sd0
+  # GET /settings, POST /settings?<key>=true|false
+  settings:
+    sd: switch_sdcard
+    # Reads off, and refuses to turn on (409), until the unit has a token and its tags
+    influx:
+      switch: switch_influx
+      available: 'return id(influx_ready);'
+    led: switch_led
+    updates: switch_updates
+  # POST /action/<key>. Erase, shutdown and safe mode are left out on purpose
+  actions:
+    identify: cal_identify
+    sample: cal_sample_now
+    restart: sys_restart
 
 # Provision the pairing password over the native API (`samba home password`), one per unit
 # Lives in the fileserver_password global and gates the listener

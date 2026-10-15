@@ -41,7 +41,7 @@ components/             # Custom external ESPHome components (C++ and Python)
   senseair_i2c/         # K30/K33 CO2 sensor over I2C
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
-  sd_file_server/       # Read-only HTTP service over the SD log, digest auth (docs/home-sync.md)
+  sd_file_server/       # HTTP service over the SD log + /settings and /action for the home app, digest auth (docs/home-sync.md)
   sgp4x/                # Local copy of ESPHome 2026.9.0 sgp4x (unchanged in 9.1) with setup retries; re-diff on every upgrade
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)

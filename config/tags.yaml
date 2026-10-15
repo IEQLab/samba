@@ -114,6 +114,7 @@ script:
             id(zone_tag) = out;
             id(text_zone).publish_state(out);
           }
+      - script.execute: influx_ready_update
       - script.execute: tags_save
 
   # Flush tags to flash rather than waiting out flash_write_interval (10 min)

@@ -3,15 +3,17 @@
 *Drafted 2026-09-10 against samba firmware 1.99.99, ESPHome 2026.8.1 on ESP-IDF, ESP32-WROOM-32E
 (no PSRAM). Target app: iOS 17+, Swift 6, with an Android pathway.*
 
-A read-only file service on the SAMBA firmware, gated behind a per-unit password, and an iPhone
-app that discovers the unit on the home WiFi, syncs the SD log incrementally, and charts it
-locally. No Home Assistant, no InfluxDB, no cloud.
+A file service on the SAMBA firmware, gated behind a per-unit password, and an iPhone app that
+discovers the unit on the home WiFi, syncs the SD log incrementally, and charts it locally. The
+same service carries four on/off settings and three one-shot actions so the household can manage
+the unit without the native API. No Home Assistant, no InfluxDB, no cloud.
 
 ## 1. What gets built, and what deliberately does not
 
 | Concern | Decision |
 |---|---|
 | Live reading | The last row of the SD log. Template sensors only change in the 5-minute sample script, so the newest CSV row *is* the live value. No native API client and no stock `web_server` on the phone. |
+| Controls | Four switches (SD logging, Influx upload, status LED, automatic updates) and three buttons (identify, sample now, restart) on the same port, the same auth and the same task as the file service. Calibration, tags, credentials and anything that erases or cannot be undone from the app stay with the `samba` CLI. |
 | History | Range requests on the log files. They are append-only and time-ordered; the app keeps a byte offset per file and fetches only what was appended. |
 | Firmware footprint | One new component, one new package, one include line. Zero edits to `sd_spi_card`, `sample.yaml` or the CSV format. The server starts only when a password is provisioned. |
 | Build | Single binary, single manifest. The code ships in the fleet build but stays inert. A second build variant would double every release step for a rare deployment type. |
@@ -35,7 +37,7 @@ rather than against the other side's source (see section 6).
 
 Discovery is unchanged firmware behaviour: mDNS `_esphomelib._tcp`, TXT record carrying `mac`,
 `project_name`, `project_version` (the firmware's own version, the same string as the log's
-`# version:` line) and `version` (the ESPHome release). Only the two HTTP endpoints below are new.
+`# version:` line) and `version` (the ESPHome release). Only the HTTP endpoints below are new.
 Port 80.
 
 | Request | Response | Notes |
@@ -45,9 +47,50 @@ Port 80.
 | `GET /sd/<name>` with `Range: bytes=183000-` | `206`, `Content-Range: bytes 183000-183425/183426` | Open-ended ranges only. An offset at or past the current size returns `416`, which the app reads as "card replaced or file truncated". |
 | `HEAD /sd/<name>` | `200` + `X-File-Size` | Optional cheap size probe for one file. The app normally uses the listing. |
 | any, no or bad credentials | `401`, `WWW-Authenticate: Digest` | Username is always `samba`. Digest keeps the password off the wire on an unencrypted LAN. |
-| any, card not mounted | `503`, `Retry-After: 30` | Mirrors the 30 s remount retry in `sd_spi_card`. |
+| `/sd` routes, card not mounted | `503`, `Retry-After: 30` | Mirrors the 30 s remount retry in `sd_spi_card`. The settings and action routes below do not need the card. |
 | second request during a download | waits | The IDF server is one task serving one request at a time, so a second connection queues rather than being refused. The app keeps one connection anyway. |
 | name with `/`, `..`, no `.txt`, or over 40 chars | `404` | Path validation before any filesystem call. |
+
+### Settings and actions
+
+[`home-sync/fixtures/settings.json`](home-sync/fixtures/settings.json) holds these rows as cases.
+
+| Request | Response | Notes |
+|---|---|---|
+| `GET /settings` | `200 application/json` — `{"sd":true,"influx":true,"led":true,"updates":true}` | Every setting the unit offers, in that order. A client ignores a key it does not know and treats a missing one as not offered. |
+| `POST /settings?led=false&updates=true`, `Content-Length: 0` | `200 application/json`, the whole object as above, with the change applied | Any non-empty subset of the keys, each `true` or `false`. The values go in the query string and the body is empty, so the unit parses into a stack buffer and allocates nothing. ESPHome's server refuses a `POST` without `Content-Length` (`411`). |
+| `POST /settings` with an unknown key, a key twice, a value other than `true`/`false`, or no keys | `400` | Nothing is applied: every pair is checked before any is acted on. |
+| `POST /settings?influx=true` on a unit that cannot upload | `409` | Nothing is applied, including any other keys in the request. The app tells the user uploads are not set up on this unit and to contact the IEQ Lab. |
+| `POST /action/identify` | `204` | Blinks the status LED cyan for 6 s, even with the LED switched off. |
+| `POST /action/sample` | `204` | Runs the 5-minute sample now: a new row lands on the card within a second or two, and the next sample is still at its usual time. |
+| `POST /action/restart` | `204`, then the unit reboots | The response is sent before the reboot. The unit is back on the network in about 30 s. |
+| `POST /action/<other>` | `404` | |
+| `/settings` other than `GET`/`POST`, `/action/<name>` other than `POST` | `405` | |
+
+- **The settings are the unit's existing switches,** not new state. `sd` is *SD Card Write*,
+  `influx` *InfluxDB Upload*, `led` *Status LED*, `updates` *Automatic Updates*. A change from the
+  app runs the switch's own turn-on or turn-off action, so it is published to the native API and
+  Home Assistant like any other change. The value survives a reboot, as it already does, and is
+  flushed to flash two seconds after the change, not at the next 10-minute `flash_write_interval`.
+- **Applied on the main loop.** Requests are served on the httpd task, so the switch is turned on
+  the next loop iteration, not in the request. The `200` body is the state with the change
+  applied, which is what a `GET` returns once the loop has run, a few milliseconds later.
+- **`influx` reads `false` on a unit that cannot upload,** whatever its switch says: one with no
+  InfluxDB token, or whose building, level or zone tag is still the setup firmware's default
+  (`building`, `level`, `zone`). Such a unit uploads nothing, or would upload under tags nobody
+  can find, so the honest answer to "is this uploading?" is no. Turning it on is a `409` until
+  `samba deploy` has provisioned the token and tags. The test is the `influx_ready` bool in
+  `config/influx.yaml`, recomputed on the main loop whenever the token or a tag changes, so the
+  httpd task reads a bool rather than a string the loop may be rewriting.
+- **Turning `sd` off stops the log the app syncs from.** No rows are written while it is off, and
+  the record has a hole for that time (the second fixture log shows one). The app says so before
+  it turns the switch off.
+- **Turning `updates` off stops the Monday OTA check** for this unit, fixes included. The app
+  asks before it does it.
+- **Not offered:** calibration coefficients, the air speed model, CO2 ABC calibration, the
+  building/level/zone tags (they label the unit's series in InfluxDB), credentials, SD erase,
+  shutdown and safe mode. Each either corrupts data silently, cannot be undone from the app, or
+  takes the unit off the network until someone is there in person.
 
 ### The file the app parses (already what the firmware writes)
 
@@ -143,6 +186,16 @@ CLAUDE.md, README.md                        credential #4
 - **HEAD.** ESPHome's server registers only GET, POST and OPTIONS with the IDF server; the
   component registers HEAD through the same dispatcher after each start so it meets the same
   middleware and handlers.
+- **Settings and actions are entity pointers from YAML.** `settings:` maps a key to a `switch`
+  and `actions:` a key to a `button`, at most eight of each, kept in fixed arrays. The component
+  knows nothing about SD, Influx or the LED; adding a setting is a YAML line and a row in the
+  contract. The pointers are handed over before the component is registered, so safe mode's
+  early return can leave it unregistered but never half-wired.
+- **The change is deferred to the main loop.** The handler validates every pair, answers, then
+  queues one `defer()` per change (the scheduler is mutex-guarded on ESP32, and a lambda
+  capturing two pointers fits `std::function`'s inline storage). The switch's own action runs
+  there, then a 2 s timeout calls `global_preferences->sync()`, the same flush `cal_save` does.
+  A restart is deferred the same way, so its `204` is on the wire before the reboot.
 - **No `loop()`.** The component is a handler plus a setup hook.
 
 ### The package, `config/fileserver.yaml`
@@ -158,8 +211,10 @@ immediately.
   matching the existing pattern.
 - "File Server" text sensor, diagnostic, publishing `off` or the 8-digit FNV-1 fingerprint.
   Never the password. `samba home password` verifies against it.
-- The component block itself: `sd_file_server: {id: sd_files, sd_spi_card_id: sd0}`. Port stays
-  at 80 from `web_server_base`.
+- The component block itself: `sd_file_server: {id: sd_files, sd_spi_card_id: sd0}`, plus the
+  `settings:` and `actions:` maps naming the switches and buttons that already exist
+  (`switch_sdcard`, `switch_influx`, `switch_led`, `switch_updates`; `cal_identify`,
+  `cal_sample_now`, `sys_restart`). Port stays at 80 from `web_server_base`.
 
 Nothing in `on_safe_mode` changes, and the component takes its base pointer through its
 constructor, so there is no post-registration wiring to drift past the early return. The
@@ -180,7 +235,8 @@ half-wiring check in CLAUDE.md still runs as part of `/bump`.
 
 `docs/home-sync/bench.py HOST --password PW` runs the contract checks below that a client can
 see (auth, listing, chunked and ranged transfers, `416`, `HEAD`, bad names, two downloads at
-once) and `--soak MINUTES` polls the listing every 10 s; the heap figures it cannot see are on
+once, and every case in `fixtures/settings.json`, putting the switches back afterwards; the
+restart case only with `--restart`) and `--soak MINUTES` polls the listing every 10 s; the heap figures it cannot see are on
 the serial log, printed whenever the listener starts or stops.
 
 - Fleet behaviour first: with no password set, confirm port 80 is closed after WiFi connects and
@@ -203,7 +259,7 @@ I2S audio and DSP. The additions are small, but they must be measured, not assum
 | Item | When paid | Estimate | Basis |
 |---|---|---|---|
 | Flash, component code | Every unit, every build | 10–15 KB | Handler, listing; digest auth already compiled for captive portal. OTA image is 1.29 MB in a 7.75 MB app partition. |
-| Static RAM, component object | Every unit | ~1.6 KB | 1460-byte buffer plus pointers and flags. Present whether or not the server runs. |
+| Static RAM, component object | Every unit | ~1.7 KB | 1460-byte buffer plus pointers and flags, and the seven setting and action entries (key and entity pointer, about 100 bytes). Present whether or not the server runs. |
 | httpd task stack | Home units only, while listener runs | 4.35 KB | ESPHome sets IDF's 4096 default plus 256. |
 | httpd control block and header scratch | Home units only | ~3 KB | `CONFIG_HTTPD_MAX_REQ_HDR_LEN` is 1024 in this build; socket table sized for the default 7 sockets. |
 | Per open connection, lwIP | Home units, during a sync | 2–4 KB | The app keeps one keep-alive connection. LRU purge is on, so a stale phone connection cannot pin sockets. |

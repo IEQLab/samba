@@ -1,0 +1,368 @@
+{
+ "note": "Settings and action cases, home-sync.md section 2. Each case starts from `initial`, with every setting available unless the case's `available` says otherwise.",
+ "initial": {
+  "sd": true,
+  "influx": true,
+  "led": true,
+  "updates": true
+ },
+ "actions": [
+  "identify",
+  "sample",
+  "restart"
+ ],
+ "cases": [
+  {
+   "name": "read",
+   "request": {
+    "method": "GET",
+    "path": "/settings"
+   },
+   "response": {
+    "status": 200,
+    "content_type": "application/json",
+    "body": "{\"sd\":true,\"influx\":true,\"led\":true,\"updates\":true}"
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "set-one",
+   "request": {
+    "method": "POST",
+    "path": "/settings?led=false",
+    "content_length": 0
+   },
+   "response": {
+    "status": 200,
+    "content_type": "application/json",
+    "body": "{\"sd\":true,\"influx\":true,\"led\":false,\"updates\":true}"
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": false,
+    "updates": true
+   }
+  },
+  {
+   "name": "set-several",
+   "request": {
+    "method": "POST",
+    "path": "/settings?sd=false&updates=false",
+    "content_length": 0
+   },
+   "response": {
+    "status": 200,
+    "content_type": "application/json",
+    "body": "{\"sd\":false,\"influx\":true,\"led\":true,\"updates\":false}"
+   },
+   "state_after": {
+    "sd": false,
+    "influx": true,
+    "led": true,
+    "updates": false
+   }
+  },
+  {
+   "name": "set-to-current",
+   "request": {
+    "method": "POST",
+    "path": "/settings?influx=true",
+    "content_length": 0
+   },
+   "response": {
+    "status": 200,
+    "content_type": "application/json",
+    "body": "{\"sd\":true,\"influx\":true,\"led\":true,\"updates\":true}"
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   },
+   "why": "Setting a switch to the state it is in is a 200 and changes nothing."
+  },
+  {
+   "name": "unknown-key",
+   "request": {
+    "method": "POST",
+    "path": "/settings?led=false&colour=red",
+    "content_length": 0
+   },
+   "response": {
+    "status": 400
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   },
+   "why": "Every pair is checked before any is applied, so led stays on."
+  },
+  {
+   "name": "bad-value",
+   "request": {
+    "method": "POST",
+    "path": "/settings?led=off",
+    "content_length": 0
+   },
+   "response": {
+    "status": 400
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   },
+   "why": "Only the literals true and false."
+  },
+  {
+   "name": "empty-value",
+   "request": {
+    "method": "POST",
+    "path": "/settings?led=",
+    "content_length": 0
+   },
+   "response": {
+    "status": 400
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "duplicate-key",
+   "request": {
+    "method": "POST",
+    "path": "/settings?led=false&led=true",
+    "content_length": 0
+   },
+   "response": {
+    "status": 400
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "no-keys",
+   "request": {
+    "method": "POST",
+    "path": "/settings",
+    "content_length": 0
+   },
+   "response": {
+    "status": 400
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "settings-wrong-method",
+   "request": {
+    "method": "HEAD",
+    "path": "/settings"
+   },
+   "response": {
+    "status": 405
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "read-influx-unavailable",
+   "available": {
+    "influx": false
+   },
+   "request": {
+    "method": "GET",
+    "path": "/settings"
+   },
+   "response": {
+    "status": 200,
+    "content_type": "application/json",
+    "body": "{\"sd\":true,\"influx\":false,\"led\":true,\"updates\":true}"
+   },
+   "state_after": {
+    "sd": true,
+    "influx": false,
+    "led": true,
+    "updates": true
+   },
+   "why": "No token, or tags still building/level/zone: reads off whatever the switch says."
+  },
+  {
+   "name": "enable-influx-unavailable",
+   "available": {
+    "influx": false
+   },
+   "request": {
+    "method": "POST",
+    "path": "/settings?influx=true",
+    "content_length": 0
+   },
+   "response": {
+    "status": 409
+   },
+   "state_after": {
+    "sd": true,
+    "influx": false,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "enable-influx-unavailable-with-others",
+   "available": {
+    "influx": false
+   },
+   "request": {
+    "method": "POST",
+    "path": "/settings?influx=true&led=false",
+    "content_length": 0
+   },
+   "response": {
+    "status": 409
+   },
+   "state_after": {
+    "sd": true,
+    "influx": false,
+    "led": true,
+    "updates": true
+   },
+   "why": "A 409 applies nothing, so led stays on."
+  },
+  {
+   "name": "disable-influx-unavailable",
+   "available": {
+    "influx": false
+   },
+   "request": {
+    "method": "POST",
+    "path": "/settings?influx=false",
+    "content_length": 0
+   },
+   "response": {
+    "status": 200,
+    "content_type": "application/json",
+    "body": "{\"sd\":true,\"influx\":false,\"led\":true,\"updates\":true}"
+   },
+   "state_after": {
+    "sd": true,
+    "influx": false,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "action-identify",
+   "request": {
+    "method": "POST",
+    "path": "/action/identify",
+    "content_length": 0
+   },
+   "response": {
+    "status": 204
+   },
+   "action": "identify",
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "action-sample",
+   "request": {
+    "method": "POST",
+    "path": "/action/sample",
+    "content_length": 0
+   },
+   "response": {
+    "status": 204
+   },
+   "action": "sample",
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "action-restart",
+   "request": {
+    "method": "POST",
+    "path": "/action/restart",
+    "content_length": 0
+   },
+   "response": {
+    "status": 204
+   },
+   "action": "restart",
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   }
+  },
+  {
+   "name": "action-unknown",
+   "request": {
+    "method": "POST",
+    "path": "/action/erase",
+    "content_length": 0
+   },
+   "response": {
+    "status": 404
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   },
+   "why": "Erase, shutdown and safe mode are deliberately not actions."
+  },
+  {
+   "name": "action-wrong-method",
+   "request": {
+    "method": "GET",
+    "path": "/action/identify"
+   },
+   "response": {
+    "status": 405
+   },
+   "state_after": {
+    "sd": true,
+    "influx": true,
+    "led": true,
+    "updates": true
+   }
+  }
+ ]
+}

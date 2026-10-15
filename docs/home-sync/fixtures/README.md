@@ -18,6 +18,7 @@ it handles every case in `ranges.json`.
 | `listing.json` | The `GET /sd` body listing those three files, with their real sizes. |
 | `expected/<log>.json` | Every row of that log as parsed: `ts` in Unix seconds, `null` for each `nan`. |
 | `ranges.json` | Fetch cases: cold, incremental, resumed mid-row, chunked, and `416`. |
+| `settings.json` | `/settings` and `/action/<name>` cases: request, status, exact body, and the state each leaves. |
 | `make_fixtures.py` | Regenerates all of the above. |
 
 The measurements are synthetic. No home unit has shipped yet, so there is no real log to cut
@@ -72,6 +73,18 @@ gives, and what the store should hold afterwards. `state_before` is a file's row
 table: `bytes_synced` and `fragment`. The `resume-mid-row` case is the one worth reading twice —
 the bookmark sits inside a row and the fragment holds that row's opening bytes, which is exactly
 what a fetch interrupted by a dropped WiFi link leaves behind.
+
+## Settings and actions
+
+`settings.json` is the control half of the contract. Every case starts from `initial` (all four
+switches on) and gives the request, the status, the exact body for a `200`, and `state_after`,
+the switches as a following `GET` reads them. A `400` leaves `state_after` equal to `initial`:
+the unit checks every pair before it applies any, which `unknown-key` tests. Cases with an
+`available` object run on a unit that cannot honour those settings — `{"influx": false}` is a
+unit with no InfluxDB token or default tags — where the setting reads `false` and turning it on
+is a `409` that applies nothing. The body is compact
+JSON in a fixed key order because the unit writes it with `snprintf`, so a client may compare it
+byte for byte, but should decode it as JSON and ignore keys it does not know.
 
 ## Regenerating
 

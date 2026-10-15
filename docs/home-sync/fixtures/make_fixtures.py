@@ -269,6 +269,87 @@ def ranges(name: str, text: str) -> list:
     return cases
 
 
+# GET /settings, in the order the unit lists them. The body is written by one snprintf per key on
+# the unit, so it is compact JSON in this key order, byte for byte.
+SETTINGS = {"sd": True, "influx": True, "led": True, "updates": True}
+ACTIONS = ["identify", "sample", "restart"]
+
+
+def settings_body(state: dict) -> str:
+    return "{" + ",".join(f'"{k}":{"true" if v else "false"}' for k, v in state.items()) + "}"
+
+
+def settings_cases() -> list:
+    """Every case starts from SETTINGS on a unit where every setting is available, unless the case
+    names an `available` override. A 400 or 409 changes nothing, which `state_after` says outright."""
+    def post(name, query, changes=None, why=None):
+        after = {**SETTINGS, **(changes or {})}
+        case = {"name": name, "request": {"method": "POST", "path": "/settings" + query,
+                                          "content_length": 0}}
+        if changes is None:
+            case["response"] = {"status": 400}
+        else:
+            case["response"] = {"status": 200, "content_type": "application/json",
+                                "body": settings_body(after)}
+        case["state_after"] = after
+        if why:
+            case["why"] = why
+        return case
+
+    cases = [
+        {"name": "read", "request": {"method": "GET", "path": "/settings"},
+         "response": {"status": 200, "content_type": "application/json", "body": settings_body(SETTINGS)},
+         "state_after": SETTINGS},
+        post("set-one", "?led=false", {"led": False}),
+        post("set-several", "?sd=false&updates=false", {"sd": False, "updates": False}),
+        post("set-to-current", "?influx=true", {},
+             why="Setting a switch to the state it is in is a 200 and changes nothing."),
+        post("unknown-key", "?led=false&colour=red",
+             why="Every pair is checked before any is applied, so led stays on."),
+        post("bad-value", "?led=off", why="Only the literals true and false."),
+        post("empty-value", "?led="),
+        post("duplicate-key", "?led=false&led=true"),
+        post("no-keys", ""),
+        {"name": "settings-wrong-method", "request": {"method": "HEAD", "path": "/settings"},
+         "response": {"status": 405}, "state_after": SETTINGS},
+    ]
+    # A unit with no InfluxDB token, or with default tags: the switch may be on, but influx reads
+    # off and cannot be turned on
+    unready = {"influx": False}
+    cases += [
+        {"name": "read-influx-unavailable", "available": unready,
+         "request": {"method": "GET", "path": "/settings"},
+         "response": {"status": 200, "content_type": "application/json",
+                      "body": settings_body({**SETTINGS, "influx": False})},
+         "state_after": {**SETTINGS, "influx": False},
+         "why": "No token, or tags still building/level/zone: reads off whatever the switch says."},
+        {"name": "enable-influx-unavailable", "available": unready,
+         "request": {"method": "POST", "path": "/settings?influx=true", "content_length": 0},
+         "response": {"status": 409}, "state_after": {**SETTINGS, "influx": False}},
+        {"name": "enable-influx-unavailable-with-others", "available": unready,
+         "request": {"method": "POST", "path": "/settings?influx=true&led=false", "content_length": 0},
+         "response": {"status": 409}, "state_after": {**SETTINGS, "influx": False},
+         "why": "A 409 applies nothing, so led stays on."},
+        {"name": "disable-influx-unavailable", "available": unready,
+         "request": {"method": "POST", "path": "/settings?influx=false", "content_length": 0},
+         "response": {"status": 200, "content_type": "application/json",
+                      "body": settings_body({**SETTINGS, "influx": False})},
+         "state_after": {**SETTINGS, "influx": False}},
+    ]
+    for action in ACTIONS:
+        cases.append({"name": f"action-{action}",
+                      "request": {"method": "POST", "path": f"/action/{action}", "content_length": 0},
+                      "response": {"status": 204}, "action": action, "state_after": SETTINGS})
+    cases += [
+        {"name": "action-unknown", "request": {"method": "POST", "path": "/action/erase", "content_length": 0},
+         "response": {"status": 404}, "state_after": SETTINGS,
+         "why": "Erase, shutdown and safe mode are deliberately not actions."},
+        {"name": "action-wrong-method", "request": {"method": "GET", "path": "/action/identify"},
+         "response": {"status": 405}, "state_after": SETTINGS},
+    ]
+    return cases
+
+
 def main() -> None:
     (HERE / "expected").mkdir(exist_ok=True)
     listing = {"mac": MAC, "files": []}
@@ -296,6 +377,13 @@ def main() -> None:
                               "kept with it. The next listing reports an equal size, so the "
                               "file is skipped and the partial row is never stored."}}]},
         indent=1) + "\n")
+
+    (HERE / "settings.json").write_text(json.dumps({
+        "note": "Settings and action cases, home-sync.md section 2. Each case starts from `initial`, "
+                "with every setting available unless the case's `available` says otherwise.",
+        "initial": SETTINGS,
+        "actions": ACTIONS,
+        "cases": settings_cases()}, indent=1) + "\n")
 
     for name, text, _ in FILES:
         p = parse(text)

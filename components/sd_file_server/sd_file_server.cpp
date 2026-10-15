@@ -14,6 +14,7 @@
 
 #include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
+#include "esphome/core/preferences.h"
 #include "esphome/core/string_ref.h"
 
 namespace esphome::sd_file_server {
@@ -21,6 +22,12 @@ namespace esphome::sd_file_server {
 static const char *const TAG = "sd_file_server";
 static const char *const USERNAME = "samba";
 static const char *const ROOT = "/sd";
+static const char *const SETTINGS_PATH = "/settings";
+static const char *const ACTION_PREFIX = "/action/";
+static constexpr size_t ACTION_PREFIX_LEN = 8;
+static constexpr size_t QUERY_MAX_LEN = 128;  // every key set at once is under 70 characters
+static constexpr uint32_t ACTION_DELAY_MS = 200;  // lets the 204 leave before a restart
+static constexpr uint32_t SAVE_DELAY_MS = 2000;   // as cal_save: the globals stage the change first
 static constexpr size_t NAME_MAX_LEN = 40;
 static constexpr size_t YIELD_INTERVAL_BYTES = 16 * 1024;  // let the idle task run during a long stream
 
@@ -50,6 +57,16 @@ SdFileServer::SdFileServer(web_server_base::WebServerBase *base, sd_spi_card::Sd
   this->base_->set_auth_username(USERNAME);
 }
 
+void SdFileServer::add_setting(const char *key, switch_::Switch *sw, std::function<bool()> available) {
+  if (this->settings_count_ < MAX_ENTRIES)
+    this->settings_[this->settings_count_++] = {key, sw, std::move(available)};
+}
+
+void SdFileServer::add_action(const char *key, button::Button *button) {
+  if (this->actions_count_ < MAX_ENTRIES)
+    this->actions_[this->actions_count_++] = {key, button};
+}
+
 void SdFileServer::setup() {
   this->base_->add_handler(this);
   this->setup_done_ = true;
@@ -61,8 +78,10 @@ void SdFileServer::dump_config() {
   ESP_LOGCONFIG(TAG,
                 "SD File Server:\n"
                 "  Listening: %s\n"
-                "  Port: %u",
-                YESNO(this->running_), this->base_->get_port());
+                "  Port: %u\n"
+                "  Settings: %u\n"
+                "  Actions: %u",
+                YESNO(this->running_), this->base_->get_port(), this->settings_count_, this->actions_count_);
 }
 
 void SdFileServer::set_password(const std::string &password) {
@@ -107,11 +126,14 @@ void SdFileServer::register_head_() {
 bool SdFileServer::canHandle(AsyncWebServerRequest *request) const {
   if (!this->running_)
     return false;
+  char url[AsyncWebServerRequest::URL_BUF_SIZE];
+  StringRef u = request->url_to(url);
+  // Any method on the control routes, so a wrong one gets the contract's 405 rather than a 404
+  if (u == SETTINGS_PATH || (u.size() > ACTION_PREFIX_LEN && memcmp(u.c_str(), ACTION_PREFIX, ACTION_PREFIX_LEN) == 0))
+    return true;
   const auto method = request->method();
   if (method != HTTP_GET && method != HTTP_HEAD)
     return false;
-  char url[AsyncWebServerRequest::URL_BUF_SIZE];
-  StringRef u = request->url_to(url);
   return u == ROOT || (u.size() > 4 && memcmp(u.c_str(), "/sd/", 4) == 0);
 }
 
@@ -123,6 +145,15 @@ void SdFileServer::handleRequest(AsyncWebServerRequest *request) {
   const bool head = request->method() == HTTP_HEAD;
   char url[AsyncWebServerRequest::URL_BUF_SIZE];
   StringRef u = request->url_to(url);
+  // The control routes do not need the card
+  if (u == SETTINGS_PATH) {
+    this->handle_settings_(req, request->method());
+    return;
+  }
+  if (u.size() > ACTION_PREFIX_LEN && memcmp(u.c_str(), ACTION_PREFIX, ACTION_PREFIX_LEN) == 0) {
+    this->handle_action_(req, request->method(), u.c_str() + ACTION_PREFIX_LEN);
+    return;
+  }
   if (!this->card_->is_mounted()) {
     this->send_status_(req, "503 Service Unavailable", "30");  // sd_spi_card retries the mount every 30 s
     return;
@@ -146,6 +177,121 @@ bool SdFileServer::valid_name_(const char *name) {
   if (strcmp(name + len - 4, ".txt") != 0)
     return false;
   return strchr(name, '/') == nullptr && strstr(name, "..") == nullptr;
+}
+
+void SdFileServer::handle_settings_(httpd_req_t *req, http_method method) {
+  if (method == HTTP_GET) {
+    this->send_settings_(req, 0, 0);
+    return;
+  }
+  if (method != HTTP_POST) {
+    this->send_status_(req, "405 Method Not Allowed");
+    return;
+  }
+  // The values are in the query string and the body is empty, so this parses a stack copy and
+  // allocates nothing. Every pair is checked before any is applied: a 400 changes nothing.
+  char query[QUERY_MAX_LEN];
+  const size_t len = httpd_req_get_url_query_len(req);
+  if (len == 0 || len >= sizeof(query) || httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK) {
+    this->send_status_(req, "400 Bad Request");
+    return;
+  }
+  uint8_t set = 0;
+  uint8_t on = 0;
+  char *save = nullptr;
+  for (char *pair = strtok_r(query, "&", &save); pair != nullptr; pair = strtok_r(nullptr, "&", &save)) {
+    char *eq = strchr(pair, '=');
+    if (eq == nullptr) {
+      this->send_status_(req, "400 Bad Request");
+      return;
+    }
+    *eq = 0;
+    const char *value = eq + 1;
+    size_t i = 0;
+    while (i < this->settings_count_ && strcmp(this->settings_[i].key, pair) != 0)
+      i++;
+    const uint8_t bit = 1u << i;
+    const bool is_true = strcmp(value, "true") == 0;
+    if (i == this->settings_count_ || (set & bit) || (!is_true && strcmp(value, "false") != 0)) {
+      this->send_status_(req, "400 Bad Request");
+      return;
+    }
+    set |= bit;
+    if (is_true)
+      on |= bit;
+  }
+  if (set == 0) {
+    this->send_status_(req, "400 Bad Request");
+    return;
+  }
+  // A setting the unit cannot honour (uploads with no token) cannot be turned on: 409, nothing
+  // applied, so the app can say why instead of showing a switch that does nothing
+  for (size_t i = 0; i < this->settings_count_; i++) {
+    if ((on & (1u << i)) && !this->available_(i)) {
+      this->send_status_(req, "409 Conflict");
+      return;
+    }
+  }
+  this->send_settings_(req, set, on);
+  // This is the httpd task. The switches' actions run on the main loop; the scheduler takes its
+  // lock for a defer from another task, and two bytes and a pointer fit std::function inline.
+  this->defer([this, set, on]() { this->apply_settings_(set, on); });
+}
+
+void SdFileServer::apply_settings_(uint8_t set, uint8_t on) {
+  for (size_t i = 0; i < this->settings_count_; i++) {
+    const uint8_t bit = 1u << i;
+    if (!(set & bit))
+      continue;
+    ESP_LOGI(TAG, "Setting %s %s", this->settings_[i].key, ONOFF(on & bit));
+    if (on & bit) {
+      this->settings_[i].sw->turn_on();
+    } else {
+      this->settings_[i].sw->turn_off();
+    }
+  }
+  // Flush rather than wait out flash_write_interval, so a power cut does not undo the change
+  this->set_timeout("save", SAVE_DELAY_MS, []() {
+    if (!global_preferences->sync())
+      ESP_LOGE(TAG, "Failed to save settings to flash; they will revert on power cycle");
+  });
+}
+
+void SdFileServer::send_settings_(httpd_req_t *req, uint8_t set, uint8_t on) {
+  // The state as a GET will read it once the change is applied: the requested value for each key
+  // being set, the switch's own state for the rest, and off for one that is not available,
+  // whatever its switch says. Keys are at most 15 characters.
+  char body[2 + MAX_ENTRIES * 26];
+  size_t used = 0;
+  body[used++] = '{';
+  for (size_t i = 0; i < this->settings_count_; i++) {
+    const uint8_t bit = 1u << i;
+    const bool state = ((set & bit) ? (on & bit) != 0 : this->settings_[i].sw->state) && this->available_(i);
+    used += snprintf(body + used, sizeof(body) - used, R"(%s"%s":%s)", i == 0 ? "" : ",", this->settings_[i].key,
+                     state ? "true" : "false");
+  }
+  body[used++] = '}';
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_send(req, body, used);
+}
+
+void SdFileServer::handle_action_(httpd_req_t *req, http_method method, const char *key) {
+  if (method != HTTP_POST) {
+    this->send_status_(req, "405 Method Not Allowed");
+    return;
+  }
+  size_t i = 0;
+  while (i < this->actions_count_ && strcmp(this->actions_[i].key, key) != 0)
+    i++;
+  if (i == this->actions_count_) {
+    this->send_status_(req, "404 Not Found");
+    return;
+  }
+  this->send_status_(req, "204 No Content");
+  ESP_LOGI(TAG, "Action %s", key);
+  button::Button *button = this->actions_[i].button;
+  // Main loop, as for settings, and late enough that the 204 is on the wire before a restart
+  this->set_timeout(ACTION_DELAY_MS, [button]() { button->press(); });
 }
 
 void SdFileServer::send_status_(httpd_req_t *req, const char *status, const char *retry_after) {

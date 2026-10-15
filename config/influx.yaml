@@ -71,6 +71,7 @@ esphome:
     - priority: 600
       then:
         - lambda: 'id(influx).set_token_override(id(influx_token));'
+        - script.execute: influx_ready_update
 
 api:
   actions:
@@ -96,6 +97,7 @@ api:
             ESP_LOGI("samba", "InfluxDB token %s (fingerprint %s)",
                      token.empty() ? "cleared" : "set", id(influx_token_fp).get_state().c_str());
         - script.execute: influx_token_save
+        - script.execute: influx_ready_update
 
 text_sensor:
   # Fingerprint of the provisioned token, or "unset" when none
@@ -120,7 +122,24 @@ text_sensor:
     entity_category: "diagnostic"
     update_interval: never
 
+# Whether this unit can upload at all: a token, and tags moved off the setup firmware's defaults
+# Read by the home app's /settings route on the httpd task, so it is a bool kept up to date here
+# on the main loop rather than a lambda over the std::string globals
+globals:
+  - id: influx_ready
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
 script:
+  # Re-run whenever the token or a tag changes
+  - id: influx_ready_update
+    mode: restart
+    then:
+      - lambda: |-
+          id(influx_ready) = id(influx).has_token() && id(building_tag) != "building" &&
+                             id(level_tag) != "level" && id(zone_tag) != "zone";
+
   # Flush the token to flash, then prove it with a real write
   - id: influx_token_save
     mode: restart

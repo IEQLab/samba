@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bench test of a unit's SD file server against the wire contract (home-sync.md section 2).
 
-    python3 docs/home-sync/bench.py HOST --password PW [--all] [--soak MINUTES]
+    python3 docs/home-sync/bench.py HOST --password PW [--all] [--restart] [--soak MINUTES]
 
 Standard library only. Every request goes over one keep-alive connection with digest auth, the
 way the app does it. Exit status is the number of failed checks. What it cannot see -- free heap,
@@ -19,10 +19,12 @@ import sys
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 USERNAME = "samba"
 HEADER = "time,ta,tg,rh,as,mrt,co2,lux,pm25,tvoc,nox,laeq,la90,la10"
 ROW = re.compile(r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(,(-?nan|-?\d+(\.\d+)?)){13}$")
+SETTINGS_CASES = Path(__file__).resolve().parent / "fixtures" / "settings.json"
 LOG_NAME = re.compile(r"[0-9A-F]{12}_\d{6}_\d{4}\.txt")  # what config/sd.yaml names a log
 
 
@@ -115,7 +117,67 @@ def parse_rows(body: bytes) -> tuple[list[str], list[str], str]:
     return comments, rows, fragment
 
 
-def bench(host: str, password: str, everything: bool) -> int:
+def check_settings(unit: Unit, ck: Checks, restart: bool) -> None:
+    """Run settings.json against the unit, each case from the fixture's initial state, then put
+    the switches back the way they were. Restart only with --restart."""
+    fixture = json.loads(SETTINGS_CASES.read_text())
+    initial = fixture["initial"]
+    r = unit.request("GET", "/settings")
+    if not ck.ok(r.status == 200, "GET /settings is 200", f"got {r.status}"):
+        return
+    original = json.loads(r.body)
+    ck.ok(list(original) == list(initial), "keys in contract order", ", ".join(original))
+    post = {"Content-Length": "0"}
+
+    def put(state: dict) -> int:
+        query = "&".join(f"{k}={'true' if v else 'false'}" for k, v in state.items())
+        status = unit.request("POST", f"/settings?{query}", headers=post).status
+        time.sleep(0.3)  # applied on the main loop; let it run
+        return status
+
+    # A unit with no InfluxDB token or default tags refuses influx=true. Run the cases written for
+    # the kind of unit this is: the plain ones, or those whose `available` matches it.
+    unavailable = {"influx": False} if put({"influx": True}) == 409 else {}
+    print(f"  unit {'cannot' if unavailable else 'can'} upload to InfluxDB; running the cases for that")
+    initial = {k: v for k, v in initial.items() if k not in unavailable}
+    restore = {k: v for k, v in original.items() if k not in unavailable}
+
+    for case in fixture["cases"]:
+        if case.get("available", {}) != unavailable and "action" not in case:
+            continue
+        if unavailable and "influx=false" in case["request"]["path"]:
+            # It could not be turned back on, and the unit would stay silent once provisioned
+            print(f"  skip {case['name']} (would leave the upload switch off)")
+            continue
+        if case.get("action") == "restart" and not restart:
+            print(f"  skip {case['name']} (pass --restart)")
+            continue
+        put(initial)
+        req, want = case["request"], case["response"]
+        r = unit.request(req["method"], req["path"], headers=post if "content_length" in req else None)
+        detail = f"got {r.status}" + (f" {r.body.decode()[:60]}" if r.body else "")
+        ck.ok(r.status == want["status"], f"{req['method']} {req['path']} is {want['status']}", detail)
+        if "body" in want:
+            ck.ok(r.body.decode() == want["body"], "  body byte for byte", r.body.decode()[:70])
+        if case.get("action") == "restart":
+            t0 = time.monotonic()
+            time.sleep(5)
+            back = False
+            while time.monotonic() - t0 < 120 and not back:
+                try:
+                    back = unit.request("GET", "/settings").status == 200
+                except OSError:
+                    time.sleep(2)
+            ck.ok(back, "  unit answers again after the restart", f"{time.monotonic() - t0:.0f}s")
+            continue
+        time.sleep(0.3)
+        after = json.loads(unit.request("GET", "/settings").body)
+        ck.ok(after == case["state_after"], "  GET afterwards reads state_after", json.dumps(after))
+    put(restore)
+    ck.ok(json.loads(unit.request("GET", "/settings").body) == original, "switches restored", json.dumps(original))
+
+
+def bench(host: str, password: str, everything: bool, restart: bool = False) -> int:
     ck = Checks()
     unit = Unit(host, password)
 
@@ -127,6 +189,8 @@ def bench(host: str, password: str, everything: bool) -> int:
           r.headers.get("www-authenticate", "-")[:60])
     r = anon.request("GET", "/sd/F8B3B7C65CDC_260910_0412.txt", auth=False)
     ck.ok(r.status == 401, "GET /sd/<name> without credentials is 401", f"got {r.status}")
+    r = anon.request("POST", "/settings?led=false", headers={"Content-Length": "0"}, auth=False)
+    ck.ok(r.status == 401, "POST /settings without credentials is 401", f"got {r.status}")
     anon.close()
     wrong = Unit(host, password + "x")
     r = wrong.request("GET", "/sd")
@@ -229,6 +293,9 @@ def bench(host: str, password: str, everything: bool) -> int:
           f"{[r.status for r in results.values()]} in {elapsed:.2f}s")
     ck.ok(len({r.body[:4096] for r in results.values()}) == 1, "both bodies start the same")
 
+    print("Settings and actions")
+    check_settings(unit, ck, restart)
+
     unit.close()
     print(f"\n{ck.passed} passed, {ck.failed} failed")
     return ck.failed
@@ -260,11 +327,12 @@ def main() -> None:
     p.add_argument("host")
     p.add_argument("--password", required=True, help="the unit's pairing password")
     p.add_argument("--all", action="store_true", help="transfer every file, not just the largest")
+    p.add_argument("--restart", action="store_true", help="also run the restart action and wait for the unit")
     p.add_argument("--soak", type=float, metavar="MINUTES", help="poll the listing every 10 s for this long")
     args = p.parse_args()
     if args.soak:
         sys.exit(min(soak(args.host, args.password, args.soak), 255))
-    sys.exit(min(bench(args.host, args.password, args.all), 255))
+    sys.exit(min(bench(args.host, args.password, args.all, args.restart), 255))
 
 
 if __name__ == "__main__":
