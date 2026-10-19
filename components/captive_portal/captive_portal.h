@@ -13,6 +13,7 @@
 #include "esphome/core/helpers.h"
 #include "esphome/core/preferences.h"
 #include "esphome/components/web_server_base/web_server_base.h"
+#include "esphome/components/wifi/wifi_component.h"
 
 namespace esphome::captive_portal {
 
@@ -25,7 +26,7 @@ struct SavedEapSettings {
   uint8_t ttls_phase_2;
 } PACKED;  // NOLINT
 
-class CaptivePortal final : public AsyncWebHandler, public Component {
+class CaptivePortal final : public AsyncWebHandler, public Component, public wifi::WiFiConnectStateListener {
  public:
   CaptivePortal(web_server_base::WebServerBase *base);
   void setup() override;
@@ -66,6 +67,8 @@ class CaptivePortal final : public AsyncWebHandler, public Component {
   void handle_wifisave(AsyncWebServerRequest *request);
 
   void handleRequest(AsyncWebServerRequest *req) override;
+
+  void on_wifi_connect_state(StringRef ssid, std::span<const uint8_t, 6> bssid) override;
 
  protected:
   void apply_eap_();

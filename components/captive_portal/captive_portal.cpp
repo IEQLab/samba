@@ -131,10 +131,19 @@ void CaptivePortal::apply_eap_() {
   ESP_LOGI(TAG, "Enterprise credentials applied to " LOG_SECRET("'%s'"), save.ssid);
 }
 
+void CaptivePortal::on_wifi_connect_state(StringRef ssid, std::span<const uint8_t, 6> bssid) {
+  // Empty SSID is a disconnect
+  wifi::global_wifi_component->set_keep_scan_results(ssid.empty());
+}
+
 void CaptivePortal::setup() {
   // Disable loop by default - will be enabled when captive portal starts
   this->disable_loop();
   this->eap_pref_ = global_preferences->make_preference<SavedEapSettings>(fnv1_hash("captive_portal_eap"), true);
+  // Scans are filtered to the saved SSID unless results are wanted, so a unit whose saved network is out of range
+  // opened the portal with an empty list until a full scan 2-3 min later. Keep every scan whole while offline.
+  wifi::global_wifi_component->set_keep_scan_results(true);
+  wifi::global_wifi_component->add_connect_state_listener(this);
   // WiFi loads its saved network in its own setup, after this one, and connects only after a scan
   this->defer([this]() { this->apply_eap_(); });
 #ifdef USE_PROVISIONING

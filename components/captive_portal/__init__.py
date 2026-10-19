@@ -90,6 +90,8 @@ async def to_code(config: ConfigType) -> None:
     # The portal reads wifi scan results from the web server task; this makes the
     # wifi component guard them with a lock on multi-threaded platforms.
     wifi.request_wifi_scan_results_lock()
+    # Keeps scan results whole while the unit is offline (captive_portal.cpp setup)
+    wifi.request_wifi_connect_state_listener()
 
     # captive_index.h is built from captive_index.html by build_index.py, gzip only
     cg.add_define("USE_CAPTIVE_PORTAL_GZIP")
