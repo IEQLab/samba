@@ -122,3 +122,15 @@ globals:
 # https://esphome.io/components/esphome.html#preferences-component
 preferences:
   flash_write_interval: 10min
+
+script:
+  # Flush a config switch to flash rather than waiting out flash_write_interval (10 min)
+  # The delay lets the globals component stage the change before sync()
+  - id: switches_save
+    mode: restart
+    then:
+      - delay: 2s
+      - lambda: |-
+          if (!global_preferences->sync()) {
+            ESP_LOGE("samba", "Failed to save switch state to flash; it will revert on power cycle");
+          }

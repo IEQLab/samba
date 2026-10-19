@@ -64,10 +64,12 @@ switch:
       - lambda: |-
           id(led_enable) = true;
           id(led_alarm) = -1;
+      - script.execute: switches_save
     turn_off_action:
       - lambda: |-
           id(led_enable) = false;
           id(led_alarm) = 0;
+      - script.execute: switches_save
       - light.turn_off:
           id: samba_led
 

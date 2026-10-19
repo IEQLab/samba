@@ -163,5 +163,7 @@ switch:
       return id(updates_enable);
     turn_on_action:
       - lambda: 'id(updates_enable) = true;'
+      - script.execute: switches_save
     turn_off_action:
       - lambda: 'id(updates_enable) = false;'
+      - script.execute: switches_save

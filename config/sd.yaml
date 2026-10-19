@@ -102,8 +102,10 @@ switch:
       return id(sd_enable);
     turn_on_action:
       - lambda: 'id(sd_enable) = true;'
+      - script.execute: switches_save
     turn_off_action:
       - lambda: 'id(sd_enable) = false;'
+      - script.execute: switches_save
 
 # Manually mount SD card
 button:
