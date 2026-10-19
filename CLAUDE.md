@@ -42,6 +42,7 @@ components/             # Custom external ESPHome components (C++ and Python)
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
   sd_file_server/       # HTTP service over the SD log + /settings and /action for the home app, digest auth (docs/home-sync.md)
+  captive_portal/       # Local copy of ESPHome 2026.9.1 captive_portal plus WPA2-Enterprise fields; re-diff on every upgrade
   sgp4x/                # Local copy of ESPHome 2026.9.0 sgp4x (unchanged in 9.1) with setup retries; re-diff on every upgrade
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
@@ -485,6 +486,17 @@ travels encrypted.
    scans. The password gates the listener: no password, no port 80 outside the captive
    portal, so a building unit is unchanged. With one set, every authenticated route on port
    80 needs it, including the captive portal's firmware upload.
+
+WiFi is the exception: it is entered in the captive portal, never over the API.
+`components/captive_portal` adds a WPA2-Enterprise option (username, password, TTLS phase 2) to
+the stock form. WiFi's own record keeps the SSID with an empty password, so it cannot match the
+network until `apply_eap_()` reattaches the enterprise half from a second NVS record
+(`captive_portal_eap`, fixed key); saving a PSK network blanks that record. The enterprise code
+is compiled in by the component (`USE_WIFI_WPA2_EAP`, `CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT`),
+never by a YAML network: any `networks:` entry keys WiFi's saved record to the config hash, so
+every OTA would forget the portal network. The login crosses the open AP in a GET query, the
+server certificate is not checked, and NVS is not encrypted, so use a device account, not a
+person's own.
 
 Nothing publishes a credential back. A text entity was rejected for this on purpose: a text
 entity's state goes to every connected API client.
