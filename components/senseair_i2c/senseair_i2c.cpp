@@ -30,12 +30,20 @@ static const int16_t CO2_MAX_VALID = 10000;  // Sensor max range
 // ABC interval limits (16-bit register, units in hours)
 static const uint32_t ABC_INTERVAL_MAX_HOURS = 65535;  // Max value for 16-bit register
 
+static constexpr uint32_t SETUP_RETRY_TIMEOUT_ID = 0;
+
 void SenseairI2CSensor::setup() {
   ESP_LOGCONFIG(TAG, "Setting up Senseair I2C sensor");
+  this->abc_config_pending_ = false;
+  this->setup_attempt_ = 0;
+  this->start_setup_();
+}
+
+void SenseairI2CSensor::start_setup_() {
+  this->setup_attempt_++;
   this->setup_step_ = SETUP_READ_METER;
   this->setup_retry_count_ = 0;
   this->setup_success_ = false;
-  this->abc_config_pending_ = false;
   this->setup_read_meter_control_();
 }
 
@@ -55,9 +63,19 @@ void SenseairI2CSensor::handle_retry_(std::function<void()> operation, uint8_t& 
 }
 
 void SenseairI2CSensor::setup_failed_() {
-  this->setup_step_ = SETUP_DONE;
   this->setup_success_ = false;
-  ESP_LOGE(TAG, "Sensor setup failed - measurements will be skipped");
+  // The K30 can stay off the bus for a second or more, longer than the per-transaction retries
+  // cover, so start the whole sequence again a few seconds later before giving up. update()
+  // publishes NaN meanwhile, which is what it did after a failed setup anyway.
+  if (this->setup_attempt_ < SETUP_ATTEMPTS) {
+    ESP_LOGW(TAG, "Setup attempt %u/%u failed, retrying in %" PRIu32 "ms", this->setup_attempt_, SETUP_ATTEMPTS,
+             SETUP_RETRY_MS);
+    this->setup_step_ = SETUP_IDLE;
+    this->set_timeout(SETUP_RETRY_TIMEOUT_ID, SETUP_RETRY_MS, [this]() { this->start_setup_(); });
+    return;
+  }
+  this->setup_step_ = SETUP_DONE;
+  ESP_LOGE(TAG, "Sensor setup failed after %u attempts - measurements will be skipped", this->setup_attempt_);
 }
 
 void SenseairI2CSensor::setup_read_meter_control_() {
@@ -836,10 +854,8 @@ void SenseairI2CSensor::dump_config() {
 void SenseairI2CSensor::reinitialize() {
   ESP_LOGI(TAG, "Attempting sensor re-initialization");
 
-  // Reset setup state machine
-  this->setup_step_ = SETUP_READ_METER;
-  this->setup_retry_count_ = 0;
-  this->setup_success_ = false;
+  // A setup retry still waiting would otherwise run a second sequence alongside this one
+  this->cancel_timeout(SETUP_RETRY_TIMEOUT_ID);
   this->abc_config_pending_ = false;
 
   // Reset measurement state
@@ -854,8 +870,9 @@ void SenseairI2CSensor::reinitialize() {
   // Clear diagnostics
   this->diagnostic_data_.valid = false;
 
-  // Restart setup sequence
-  this->setup_read_meter_control_();
+  // Restart setup sequence with a fresh set of attempts
+  this->setup_attempt_ = 0;
+  this->start_setup_();
 }
 
 }  // namespace senseair_i2c

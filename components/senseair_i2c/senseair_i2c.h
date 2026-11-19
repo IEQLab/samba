@@ -61,6 +61,12 @@ protected:
   bool setup_success_{false};  // Track if setup actually succeeded
   bool abc_config_pending_{false};  // Track if ABC changes need power cycle
   uint8_t setup_data_[3];
+  // Whole-setup attempts: one lost transaction used to leave the sensor off until the next 5min
+  // re-initialisation from co2.yaml (6 times in a 20h bench night, 2026-11-20)
+  static constexpr uint8_t SETUP_ATTEMPTS = 5;
+  static constexpr uint32_t SETUP_RETRY_MS = 5000;
+  uint8_t setup_attempt_{0};
+  void start_setup_();
   void setup_read_meter_control_();
   void setup_configure_abc_();
   void setup_write_abc_interval_();

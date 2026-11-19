@@ -111,7 +111,9 @@ All three I2C sensors keep an hour-scale EWMA duty cycle (`k30_unhealthy`, `ads_
 restart, and both also require `sys_uptime > 3600`, which self-rate-limits to one attempt an hour.
 
 - **CO2 (K30):** re-initialise on the first failure, then every 10th (5min) while it stays
-  down. Restart only at `k30_error_count >= 4` **and** `k30_unhealthy > 2400` (67% of the hour),
+  down. `senseair_i2c` runs its whole setup up to 5 times, 5s apart, before it gives up: one
+  re-initialisation that lost its setup used to leave CO2 off until the next one 5min later
+  (6 times in a 20h bench night, 2026-11-20). Restart only at `k30_error_count >= 4` **and** `k30_unhealthy > 2400` (67% of the hour),
   so a flaky sensor rides it out and only a near-dead one reboots.
 - **VOC/NOx (SGP4x):** **never restarts the device** — see `config/tvoc.yaml`. `sgp4x` only
   `mark_failed()`s in `setup()` and the self test, and upstream did so on the first lost
