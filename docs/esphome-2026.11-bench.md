@@ -79,3 +79,8 @@ coefficients), logged with `samba logs --level info` to `~/samba-bench/2026.11/`
 - WAN pull: skipped, the network serves other devices
 - Home-app sync: passed
 - K30: first three read failures each recovered at the next 30s check, with no `Sensor setup failed`
+
+### Sign-off: 2026-11-20
+
+Accepted on the results above. Night 2, the captive portal test and the ieqnet OTA from 2.0.x
+were not run.
