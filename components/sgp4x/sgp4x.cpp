@@ -1,4 +1,4 @@
-// Local copy of ESPHome 2026.9.0 components/sgp4x, changed only to retry the setup and self-test
+// Local copy of ESPHome 2026.11.0 components/sgp4x, changed only to retry the setup and self-test
 // transactions instead of marking the component failed on the first lost one (samba CLAUDE.md,
 // "Losing transactions on bus_a"). Re-diff against upstream on every ESPHome upgrade, and drop
 // this copy once upstream retries.
@@ -12,7 +12,7 @@
 
 namespace esphome::sgp4x {
 
-static const char *const TAG = "sgp4x";
+ESPHOME_LOG_TAG(TAG, "sgp4x");
 
 // Run a setup transaction up to SGP4X_SETUP_ATTEMPTS times; blocking is fine here, it is setup()
 template<typename F> static bool retry_setup(const char *what, F &&attempt) {
@@ -33,9 +33,7 @@ void SGP4xComponent::setup() {
   uint16_t raw_serial_number[3];
   if (!retry_setup("Serial number read",
                    [&]() { return this->get_register(SGP4X_CMD_GET_SERIAL_ID, raw_serial_number, 3, 1); })) {
-    ESP_LOGE(TAG, "Get serial number failed");
-    this->error_code_ = SERIAL_NUMBER_IDENTIFICATION_FAILED;
-    this->mark_failed();
+    this->mark_failed(LOG_STR("Get serial number failed"));
     return;
   }
   this->serial_number_ = (uint64_t(raw_serial_number[0]) << 32) | (uint64_t(raw_serial_number[1]) << 16) |
@@ -46,7 +44,7 @@ void SGP4xComponent::setup() {
   uint16_t featureset;
   if (!retry_setup("Feature set read", [&]() { return this->get_register(SGP4X_CMD_GET_FEATURESET, featureset, 1); })) {
     ESP_LOGD(TAG, "Get feature set failed");
-    this->mark_failed();
+    this->mark_failed(LOG_STR(ESP_LOG_MSG_COMM_FAIL));
     return;
   }
   featureset &= 0x1FF;
@@ -64,7 +62,7 @@ void SGP4xComponent::setup() {
     this->measure_time_ = SGP41_MEASURE_TIME;
   } else {
     ESP_LOGD(TAG, "Unknown feature set 0x%0X", featureset);
-    this->mark_failed();
+    this->mark_failed(LOG_STR("Unknown feature set"));
     return;
   }
 
@@ -133,9 +131,8 @@ void SGP4xComponent::self_test_(uint8_t attempt) {
   // A lost transaction re-runs the whole test; only a reply that reports a pixel fault fails it
   auto retry = [this, attempt]() {
     if (attempt >= SGP4X_SETUP_ATTEMPTS) {
-      this->error_code_ = COMMUNICATION_FAILED;
       ESP_LOGE(TAG, "Self-test: " ESP_LOG_MSG_COMM_FAIL " after %u attempts", attempt);
-      this->mark_failed();
+      this->mark_failed(LOG_STR(ESP_LOG_MSG_COMM_FAIL));
       return;
     }
     this->set_timeout(SGP4X_SETUP_RETRY_MS, [this, attempt]() { this->self_test_(attempt + 1); });
@@ -157,9 +154,8 @@ void SGP4xComponent::self_test_(uint8_t attempt) {
     // failures
     bool passed = this->sgp_type_ == SGP41 ? (reply & 0x0003) == 0 : (reply >> 8) == 0xD4;
     if (!passed) {
-      this->error_code_ = SELF_TEST_FAILED;
       ESP_LOGW(TAG, "Self-test failed (0x%X)", reply);
-      this->mark_failed();
+      this->mark_failed(LOG_STR("Self-test failed"));
       return;
     }
 
@@ -298,22 +294,7 @@ void SGP4xComponent::dump_config() {
   LOG_I2C_DEVICE(this);
   ESP_LOGCONFIG(TAG, "  Store baseline: %s", YESNO(this->store_baseline_));
 
-  if (this->is_failed()) {
-    switch (this->error_code_) {
-      case COMMUNICATION_FAILED:
-        ESP_LOGW(TAG, ESP_LOG_MSG_COMM_FAIL);
-        break;
-      case SERIAL_NUMBER_IDENTIFICATION_FAILED:
-        ESP_LOGW(TAG, "Get serial number failed");
-        break;
-      case SELF_TEST_FAILED:
-        ESP_LOGW(TAG, "Self-test failed");
-        break;
-      default:
-        ESP_LOGW(TAG, "Unknown error");
-        break;
-    }
-  } else {
+  if (!this->is_failed()) {
     ESP_LOGCONFIG(TAG,
                   "  Type: %s\n"
                   "  Serial number: %" PRIu64 "\n"

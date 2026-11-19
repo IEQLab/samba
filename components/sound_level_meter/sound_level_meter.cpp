@@ -81,7 +81,9 @@ void SoundLevelMeter::setup() {
   // audio task
   { std::lock_guard<std::mutex> lock(this->publish_mutex_); }
 
-  this->microphone_source_->add_data_callback([this](const std::vector<uint8_t> &data) {
+  // AudioCapture views the microphone's own buffer; the old vector signature made a heap copy of every block
+  this->microphone_source_->add_data_callback([this](const microphone::AudioCapture &capture) {
+    const auto &data = capture.data;
     auto ring_buffer = this->ring_buffer_weak_.lock();
     if (ring_buffer) {
       size_t bytes_free = ring_buffer->free();

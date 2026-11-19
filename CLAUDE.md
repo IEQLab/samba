@@ -5,7 +5,7 @@
 SAMBA is an ESPHome-based firmware for indoor environmental quality (IEQ) monitoring, developed by the IEQ Lab at The University of Sydney. It runs on an ESP32 WROOM-32E (16MB flash) using the ESP-IDF framework (not Arduino). The device measures temperature, humidity, globe temperature, air speed, CO2, PM2.5, VOC/NOx, illuminance, and sound pressure level, logging data to InfluxDB, Home Assistant, and SD card.
 
 **Current version:** Check `samba.yaml` for the latest version.
-**Min ESPHome version:** 2026.9.1
+**Min ESPHome version:** 2026.11.0
 
 ## Repository Structure
 
@@ -42,8 +42,8 @@ components/             # Custom external ESPHome components (C++ and Python)
   influxdb/             # InfluxDB v2 HTTP upload with tags
   sound_level_meter/    # I2S audio DSP for SPL measurement
   sd_file_server/       # HTTP service over the SD log + /settings and /action for the home app, digest auth (docs/home-sync.md)
-  captive_portal/       # Local copy of ESPHome 2026.9.1 captive_portal plus WPA2-Enterprise fields; re-diff on every upgrade
-  sgp4x/                # Local copy of ESPHome 2026.9.0 sgp4x (unchanged in 9.1) with setup retries; re-diff on every upgrade
+  captive_portal/       # Local copy of ESPHome 2026.11.0 captive_portal plus WPA2-Enterprise fields; re-diff on every upgrade
+  sgp4x/                # Local copy of ESPHome 2026.11.0 sgp4x with setup retries; re-diff on every upgrade
 firmware/               # Compiled binaries, manifest.json for OTA
 secrets.yaml            # Credentials (gitignored)
 .claude/skills/bump.md   # /bump skill: version bump and release procedure
@@ -58,7 +58,10 @@ pcb/                    # Hardware PCB design files
    SPL statistics come from a fixed 5min window inside `sound_level_meter` (`type: stats`), not
    from ESPHome `quantile` filters, which heap-allocate their window (see docs/v2-release-plan.md §13).
 2. Raw readings pass through filters (clamp, NaN rejection, median smoothing) then calibration lambdas.
-3. Every 5 minutes, `sensor_sample` script triggers: updates all template sensors, publishes to InfluxDB, appends CSV row to SD card, blinks LED white.
+3. Every 5 minutes, `sensor_sample` script triggers: updates all template sensors, appends CSV row to SD card, starts the InfluxDB upload, blinks LED white.
+   The upload is non-blocking (`http_request` `begin()` polled from `InfluxDB::loop()`), so the script
+   finishes as soon as it starts. The name lookup and TCP connect still block the loop; the TLS handshake
+   and the wait for the response do not. A publish that arrives while one is in flight aborts it.
 4. Upload is skipped if device uptime < 2 minutes (warm-up period).
 
 ### Calibration
@@ -150,10 +153,12 @@ longest run fell from 34s to 9s. The SGP4x samples at a fixed 1Hz (`sgp4x.cpp`
 against the K30 is still drawn per boot and it is most of what remains. SHT4x (30s) and OPT3001
 (20s) are still multiples of 2s.
 
-Two non-sensor traps in the same family. `http_request` raises the task WDT once for a whole
-request, then runs `esp_http_client_open` and the body write with no feed between them, so
-`watchdog_timeout` must exceed **twice** `timeout` (DNS is not bounded by `timeout` at all);
-ESPHome forces `CONFIG_ESP_TASK_WDT_PANIC`, so an overrun reboots. And a bare `millis() < N`
+Two non-sensor traps in the same family. `http_request` widens the task WDT to `watchdog_timeout`
+around each call that can wait, and `esp_http_client_open` can wait for DNS (not bounded by
+`timeout` at all) plus the TCP connect. Up to 2026.10 one widening covered the open and the
+body write together, hence the rule that `watchdog_timeout` exceeds **twice** `timeout`; since
+2026.11 each stage gets its own, so 2x is now margin, kept for DNS. ESPHome forces
+`CONFIG_ESP_TASK_WDT_PANIC`, so an overrun reboots. And a bare `millis() < N`
 boot guard re-engages for N ms at the 49.7-day rollover — latch it behind a bool global
 (`led_armed`, `sgp_warmed`). Differences of `millis()` are rollover-safe and need no latch.
 
@@ -176,7 +181,7 @@ purple are retired. See the Status LED table in README.md.
 
 ### Prerequisites
 
-- ESPHome 2026.9.1+ installed
+- ESPHome 2026.11.0+ installed
 - `secrets.yaml` copied from `secrets.yaml.example` (InfluxDB host, port, org and bucket only)
 - USB-C cable for initial flash
 

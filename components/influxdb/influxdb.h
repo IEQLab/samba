@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -23,8 +24,9 @@ namespace esphome::influxdb {
 /// only included in an upload when it has produced a filtered value since it was last uploaded,
 /// so a sensor that stops reporting drops out of the payload instead of re-sending its last
 /// value forever. Uploads go through the http_request component (which owns the socket
-/// timeout and task-watchdog handling); transient failures are retried from the scheduler after
-/// a backoff, though each attempt itself blocks the loop for up to the http_request timeout.
+/// timeout and task-watchdog handling) as non-blocking requests polled from loop(): only the
+/// name lookup and TCP connect still block, the TLS handshake and the wait for the response do
+/// not. Transient failures are retried from the scheduler after a backoff.
 class InfluxDB : public Component {
  public:
   // Must match MAX_MEASUREMENTS in __init__.py
@@ -35,6 +37,8 @@ class InfluxDB : public Component {
   static constexpr uint32_t RETRY_BACKOFF_RANGE_MS = 3000;
 
   void setup() override;
+  /// Advances the request in flight; disabled while there is none.
+  void loop() override;
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::AFTER_CONNECTION; }
 
@@ -92,8 +96,11 @@ class InfluxDB : public Component {
   size_t build_body_(const std::vector<sensor::Sensor *> *only);
   void append_tags_();
   void append_timestamp_();
-  /// POST body_; on a transient failure schedule a retry, otherwise finish.
+  /// Start a POST of body_; loop() polls it and finish_() handles the response.
   void send_();
+  void finish_(bool completed);
+  /// Abandon the request in flight, if any, without retrying it.
+  void abort_request_();
   void retry_or_drop_(const char *reason);
   /// Rebuild the Authorization header from whichever token is current.
   void update_auth_header_();
@@ -130,6 +137,8 @@ class InfluxDB : public Component {
   char mac_[MAC_ADDRESS_BUFFER_SIZE]{};
 
   std::string body_;  ///< payload buffer; capacity reserved in setup() and reused
+  /// The request being polled by loop(); it holds its own copy of body_ for the send
+  std::shared_ptr<http_request::HttpContainer> request_;
   uint8_t attempt_{0};
   bool in_flight_{false};  ///< body_ holds a payload that is being sent or awaiting a retry
 };

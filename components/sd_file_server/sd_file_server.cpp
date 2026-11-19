@@ -28,6 +28,7 @@ static constexpr size_t ACTION_PREFIX_LEN = 8;
 static constexpr size_t QUERY_MAX_LEN = 128;  // every key set at once is under 70 characters
 static constexpr uint32_t ACTION_DELAY_MS = 200;  // lets the 204 leave before a restart
 static constexpr uint32_t SAVE_DELAY_MS = 2000;   // as cal_save: the globals stage the change first
+static constexpr uint32_t SAVE_TIMEOUT_ID = 0;
 static constexpr size_t NAME_MAX_LEN = 40;
 static constexpr size_t YIELD_INTERVAL_BYTES = 16 * 1024;  // let the idle task run during a long stream
 
@@ -251,7 +252,7 @@ void SdFileServer::apply_settings_(uint8_t set, uint8_t on) {
     }
   }
   // Flush rather than wait out flash_write_interval, so a power cut does not undo the change
-  this->set_timeout("save", SAVE_DELAY_MS, []() {
+  this->set_timeout(SAVE_TIMEOUT_ID, SAVE_DELAY_MS, []() {
     if (!global_preferences->sync())
       ESP_LOGE(TAG, "Failed to save settings to flash; they will revert on power cycle");
   });

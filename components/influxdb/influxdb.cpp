@@ -14,10 +14,11 @@
 
 namespace esphome::influxdb {
 
-static const char *const TAG = "influxdb";
+ESPHOME_LOG_TAG(TAG, "influxdb");
 
 // InfluxDB explains a rejected write in the response body; this much is enough for its message.
 static constexpr size_t ERROR_BODY_LOG_BYTES = 200;
+static constexpr uint32_t RETRY_TIMEOUT_ID = 0;
 
 void InfluxDB::setup() {
   // Assign each distinct measurement a line, in order of first appearance
@@ -78,6 +79,20 @@ void InfluxDB::setup() {
   if (this->update_interval_ != UPDATE_INTERVAL_NEVER && this->update_interval_ > 0) {
     this->set_interval(this->update_interval_, [this]() { this->publish(); });
   }
+
+  // Enabled only while a request is in flight
+  this->disable_loop();
+}
+
+void InfluxDB::loop() {
+  if (this->request_ == nullptr) {
+    this->disable_loop();
+    return;
+  }
+  const auto progress = this->request_->poll();
+  if (progress == http_request::HttpRequestProgress::HTTP_REQUEST_PROGRESS_PENDING)
+    return;
+  this->finish_(progress == http_request::HttpRequestProgress::HTTP_REQUEST_PROGRESS_DONE);
 }
 
 void InfluxDB::set_token_override(const std::string &token) {
@@ -130,9 +145,10 @@ void InfluxDB::publish_(const std::vector<sensor::Sensor *> *only) {
     return;
 
   if (this->in_flight_) {
-    // A retry of the previous payload is still pending; the new data supersedes it.
+    // The previous payload is still being sent or awaiting a retry; the new data supersedes it.
     ESP_LOGW(TAG, "Dropping unsent payload from previous publish");
-    this->cancel_timeout("retry");
+    this->cancel_timeout(RETRY_TIMEOUT_ID);
+    this->abort_request_();
     this->in_flight_ = false;
   }
 
@@ -189,12 +205,12 @@ size_t InfluxDB::build_body_(const std::vector<sensor::Sensor *> *only) {
       // NaN/inf, and re-sending a stale value would fabricate data. Warn every time so a dead
       // sensor is visible in the log as well as by its missing field.
       if (!f.fresh) {
-        ESP_LOGW(TAG, "Skipping %s: no new value since last upload", f.sensor->get_name().c_str());
+        ESP_LOGW(TAG, "Skipping %s: no new value since last upload", LOG_STR_ARG(f.sensor->get_log_name()));
         continue;
       }
       f.fresh = false;
       if (!std::isfinite(f.sensor->state)) {
-        ESP_LOGW(TAG, "Skipping %s: value is %f", f.sensor->get_name().c_str(), f.sensor->state);
+        ESP_LOGW(TAG, "Skipping %s: value is %f", LOG_STR_ARG(f.sensor->get_log_name()), f.sensor->state);
         continue;
       }
       if (count++ > 0)
@@ -261,10 +277,31 @@ void InfluxDB::send_() {
   ESP_LOGI(TAG, "POST attempt %u/%u", this->attempt_, MAX_ATTEMPTS);
 #endif
 
-  // http_request applies its configured socket timeout and widens the task watchdog for the
-  // duration of the request, so a dead host cannot trip the watchdog and reboot the device.
-  auto response = this->http_request_->post(this->url_, this->body_, this->headers_);
-  if (response == nullptr) {
+  // Non-blocking: loop() polls the request and finish_() handles the outcome. http_request applies
+  // its socket timeout and widens the task watchdog around each call that can wait. The request
+  // takes a copy of the body, since body_ is kept for a retry.
+  this->request_ = this->http_request_->begin(this->url_.c_str(), "POST", std::string(this->body_), this->headers_, {},
+                                              this->http_request_->get_timeout());
+  if (this->request_ == nullptr) {
+    this->set_status_("connection failed");
+    this->retry_or_drop_("connection failed");
+    return;
+  }
+  this->enable_loop();
+}
+
+void InfluxDB::abort_request_() {
+  if (this->request_ == nullptr)
+    return;
+  this->request_->end();
+  this->request_.reset();
+}
+
+void InfluxDB::finish_(bool completed) {
+  // Released before any retry is scheduled, so loop() switches itself off on its next pass
+  auto response = std::move(this->request_);
+  if (!completed) {
+    response->end();
     this->set_status_("connection failed");
     this->retry_or_drop_("connection failed");
     return;
@@ -311,7 +348,7 @@ void InfluxDB::retry_or_drop_(const char *reason) {
   }
   const uint32_t backoff = RETRY_BACKOFF_MIN_MS + random_uint32() % RETRY_BACKOFF_RANGE_MS;
   ESP_LOGW(TAG, "Upload failed (%s); retrying in %" PRIu32 " ms", reason, backoff);
-  this->set_timeout("retry", backoff, [this]() { this->send_(); });
+  this->set_timeout(RETRY_TIMEOUT_ID, backoff, [this]() { this->send_(); });
 }
 
 void InfluxDB::append_escaped_(std::string &out, const char *value) {
